@@ -36,9 +36,10 @@ public class DeviceApprovalConfiguration : IEntityTypeConfiguration<DeviceApprov
                .HasMaxLength(50);
 
         // Configure relationships
+        // DeviceApproval is a one-to-one relationship with DeviceRegistrationRequest
         builder.HasOne(e => e.DeviceRegistrationRequest)
-               .WithMany()
-               .HasForeignKey(e => e.DeviceRegistrationRequestId)
+               .WithOne(dr => dr.DeviceApproval)
+               .HasForeignKey<DeviceApproval>(e => e.DeviceRegistrationRequestId)
                .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(e => e.ApprovedByUser)

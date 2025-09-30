@@ -99,11 +99,11 @@ public class RegistrationAuditLog : BaseEntity
 
     /// <summary>
     /// Registration request being audited
-    /// </summary>
-    [ForeignKey(nameof(DeviceRegistrationRequestId))]
-    public DeviceRegistrationRequest DeviceRegistrationRequest { get; set; } = null!;
-
     /// <summary>
+    /// Registration request being audited
+    /// </summary>
+    [ForeignKey("DeviceRegistrationRequestId")]
+    public DeviceRegistrationRequest DeviceRegistrationRequest { get; set; } = null!;
     /// User who performed the action (null for system actions)
     /// </summary>
     public User? User { get; set; }

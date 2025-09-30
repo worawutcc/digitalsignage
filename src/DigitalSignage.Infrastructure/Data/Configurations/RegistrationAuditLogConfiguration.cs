@@ -40,8 +40,9 @@ public class RegistrationAuditLogConfiguration : IEntityTypeConfiguration<Regist
                .HasMaxLength(50);
 
         // Configure relationships
+        // RegistrationAuditLog belongs to DeviceRegistrationRequest (one-to-many)
         builder.HasOne(e => e.DeviceRegistrationRequest)
-               .WithMany()
+               .WithMany(dr => dr.AuditLogs)
                .HasForeignKey(e => e.DeviceRegistrationRequestId)
                .OnDelete(DeleteBehavior.Cascade);
 

@@ -114,11 +114,11 @@ public class DeviceApproval : BaseEntity
 
     /// <summary>
     /// Registration request being approved/rejected
-    /// </summary>
-    [ForeignKey(nameof(DeviceRegistrationRequestId))]
-    public DeviceRegistrationRequest DeviceRegistrationRequest { get; set; } = null!;
-
     /// <summary>
+    /// Registration request being approved/rejected
+    /// </summary>
+    [ForeignKey("DeviceRegistrationRequestId")]
+    public DeviceRegistrationRequest DeviceRegistrationRequest { get; set; } = null!;
     /// Admin user who made the decision
     /// </summary>
     [Required]
