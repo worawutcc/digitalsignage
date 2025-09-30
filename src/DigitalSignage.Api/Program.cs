@@ -27,6 +27,7 @@ builder.Services
     .AddDatabaseServices(builder.Configuration)
     .AddAwsServices(builder.Configuration)
     .AddApplicationServices()
+    .AddPermissionServices()
     .AddJwtAuthentication(builder.Configuration)
     .AddHealthCheckServices()
     .AddApiDocumentation()

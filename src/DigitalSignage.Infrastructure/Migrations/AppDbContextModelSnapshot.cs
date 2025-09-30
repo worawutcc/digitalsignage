@@ -254,10 +254,23 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<int>("Level")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("ParentGroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasDefaultValue("");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -278,13 +291,21 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("CreatedByUserId");
 
-                    b.HasIndex("IsActive");
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("IX_DeviceGroups_IsActive");
 
                     b.HasIndex("Name")
-                        .IsUnique();
+                        .HasDatabaseName("IX_DeviceGroups_Name");
+
+                    b.HasIndex("ParentGroupId")
+                        .HasDatabaseName("IX_DeviceGroups_ParentGroupId");
 
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_DeviceGroup_UpdatedAt");
+
+                    b.HasIndex("ParentGroupId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("IX_DeviceGroups_ParentGroupId_Name");
 
                     b.ToTable("DeviceGroups");
                 });
@@ -353,6 +374,9 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
 
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
                     b.Property<string>("NetworkName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -362,6 +386,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<string>("QrCodeData")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -388,6 +416,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDatabaseName("IX_DeviceRegistrationRequest_CreatedAt");
 
                     b.HasIndex("MacAddress");
+
+                    b.HasIndex("Method");
 
                     b.HasIndex("Pin");
 
@@ -524,6 +554,89 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDatabaseName("IX_Media_UpdatedAt");
 
                     b.ToTable("Medias", (string)null);
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.PermissionAuditLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasComment("Action type: GRANTED, MODIFIED, REVOKED");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()")
+                        .HasComment("UTC timestamp when change occurred");
+
+                    b.Property<int>("ChangedBy")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Context")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasComment("Additional context (IP address, user agent, etc.)");
+
+                    b.Property<int>("DeviceGroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("NewPermission")
+                        .HasColumnType("integer")
+                        .HasComment("Permission level after change (null for deleted permissions)");
+
+                    b.Property<int?>("PreviousPermission")
+                        .HasColumnType("integer")
+                        .HasComment("Permission level before change (null for new permissions)");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasComment("Admin-provided reason for the permission change");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("IX_PermissionAuditLogs_Action");
+
+                    b.HasIndex("ChangedAt")
+                        .IsDescending()
+                        .HasDatabaseName("IX_PermissionAuditLogs_ChangedAt");
+
+                    b.HasIndex("ChangedBy")
+                        .HasDatabaseName("IX_PermissionAuditLogs_ChangedBy");
+
+                    b.HasIndex("DeviceGroupId")
+                        .HasDatabaseName("IX_PermissionAuditLogs_DeviceGroupId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_PermissionAuditLogs_UserId");
+
+                    b.HasIndex("UserId", "ChangedAt")
+                        .IsDescending(false, true)
+                        .HasDatabaseName("IX_PermissionAuditLogs_UserId_ChangedAt");
+
+                    b.ToTable("PermissionAuditLogs", null, t =>
+                        {
+                            t.HasComment("Immutable audit trail of all permission changes for compliance and security tracking");
+
+                            t.HasCheckConstraint("CK_PermissionAuditLogs_ActionConsistency", "(\"Action\" = 'GRANTED' AND \"PreviousPermission\" IS NULL AND \"NewPermission\" IS NOT NULL) OR (\"Action\" = 'MODIFIED' AND \"PreviousPermission\" IS NOT NULL AND \"NewPermission\" IS NOT NULL) OR (\"Action\" = 'REVOKED' AND \"PreviousPermission\" IS NOT NULL AND \"NewPermission\" IS NULL)");
+
+                            t.HasCheckConstraint("CK_PermissionAuditLogs_HasPermissionValue", "\"PreviousPermission\" IS NOT NULL OR \"NewPermission\" IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_PermissionAuditLogs_ValidAction", "\"Action\" IN ('GRANTED', 'MODIFIED', 'REVOKED')");
+
+                            t.HasCheckConstraint("CK_PermissionAuditLogs_ValidPermissionValues", "(\"PreviousPermission\" IS NULL OR (\"PreviousPermission\" >= 0 AND \"PreviousPermission\" <= 3)) AND (\"NewPermission\" IS NULL OR (\"NewPermission\" >= 0 AND \"NewPermission\" <= 3))");
+                        });
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.PlaybackState", b =>
@@ -1552,6 +1665,97 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.UserDeviceAssociation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("AssociatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("AssociationType")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DeviceId1")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("UserId1")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeviceId1");
+
+                    b.HasIndex("UserId1");
+
+                    b.ToTable("UserDeviceAssociations");
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.UserDeviceGroupPermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp with time zone")
+                        .HasDefaultValueSql("NOW()")
+                        .HasComment("UTC timestamp when permission was created");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DeviceGroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsExplicit")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasComment("True if explicitly assigned, False if inherited from parent group");
+
+                    b.Property<int>("Permission")
+                        .HasColumnType("integer")
+                        .HasComment("UserPermissionLevel enum: 0=NoAccess, 1=ViewOnly, 2=ManageContent, 3=FullControl");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedBy");
+
+                    b.HasIndex("DeviceGroupId")
+                        .HasDatabaseName("IX_UserDeviceGroupPermissions_DeviceGroupId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_UserDeviceGroupPermissions_UserId");
+
+                    b.HasIndex("UserId", "DeviceGroupId")
+                        .IsUnique()
+                        .HasDatabaseName("UQ_UserDeviceGroupPermissions_UserId_DeviceGroupId");
+
+                    b.ToTable("UserDeviceGroupPermissions", null, t =>
+                        {
+                            t.HasComment("Links users to device groups with specific permission levels, supporting hierarchical inheritance");
+
+                            t.HasCheckConstraint("CK_UserDeviceGroupPermissions_Permission", "\"Permission\" >= 0 AND \"Permission\" <= 3");
+                        });
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Device", b =>
                 {
                     b.HasOne("DigitalSignage.Domain.Entities.DeviceGroup", "DeviceGroup")
@@ -1614,7 +1818,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasForeignKey("CreatedByUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("DigitalSignage.Domain.Entities.DeviceGroup", "ParentGroup")
+                        .WithMany("ChildGroups")
+                        .HasForeignKey("ParentGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("CreatedByUser");
+
+                    b.Navigation("ParentGroup");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceRegistrationRequest", b =>
@@ -1642,6 +1853,36 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Navigation("Service");
 
                     b.Navigation("ServiceInstance");
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.PermissionAuditLog", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PermissionAuditLogs_Users_ChangedBy");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.DeviceGroup", "DeviceGroup")
+                        .WithMany()
+                        .HasForeignKey("DeviceGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PermissionAuditLogs_DeviceGroups_DeviceGroupId");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_PermissionAuditLogs_Users_UserId");
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("DeviceGroup");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.PlaybackState", b =>
@@ -1842,6 +2083,51 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Navigation("Service");
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.UserDeviceAssociation", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.Device", "Device")
+                        .WithMany()
+                        .HasForeignKey("DeviceId1");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId1");
+
+                    b.Navigation("Device");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.UserDeviceGroupPermission", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserDeviceGroupPermissions_Users_CreatedBy");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.DeviceGroup", "DeviceGroup")
+                        .WithMany("UserPermissions")
+                        .HasForeignKey("DeviceGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserDeviceGroupPermissions_DeviceGroups_DeviceGroupId");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "User")
+                        .WithMany("DeviceGroupPermissions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("FK_UserDeviceGroupPermissions_Users_UserId");
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("DeviceGroup");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Device", b =>
                 {
                     b.Navigation("Schedules");
@@ -1849,9 +2135,13 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceGroup", b =>
                 {
+                    b.Navigation("ChildGroups");
+
                     b.Navigation("Devices");
 
                     b.Navigation("PlaylistAssignments");
+
+                    b.Navigation("UserPermissions");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceRegistrationRequest", b =>
@@ -1899,6 +2189,8 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.User", b =>
                 {
+                    b.Navigation("DeviceGroupPermissions");
+
                     b.Navigation("ManagedDevices");
 
                     b.Navigation("RefreshTokens");

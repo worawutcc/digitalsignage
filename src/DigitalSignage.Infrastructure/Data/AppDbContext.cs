@@ -40,6 +40,11 @@ public class AppDbContext : DbContext
     public DbSet<DeviceRegistrationRequest> DeviceRegistrationRequests { get; set; }
     public DbSet<DeviceApproval> DeviceApprovals { get; set; }
     public DbSet<RegistrationAuditLog> RegistrationAuditLogs { get; set; }
+    
+    // Permission Management entities
+    public DbSet<UserDeviceGroupPermission> UserDeviceGroupPermissions { get; set; }
+    public DbSet<PermissionAuditLog> PermissionAuditLogs { get; set; }
+        public DbSet<UserDeviceAssociation> UserDeviceAssociations { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -70,6 +75,10 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new DeviceRegistrationRequestConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceApprovalConfiguration());
         modelBuilder.ApplyConfiguration(new RegistrationAuditLogConfiguration());
+        
+        // Permission Management configurations
+        modelBuilder.ApplyConfiguration(new UserDeviceGroupPermissionConfiguration());
+        modelBuilder.ApplyConfiguration(new PermissionAuditLogConfiguration());
 
         // Configure RefreshToken manually since it doesn't have a separate configuration class yet
         modelBuilder.Entity<RefreshToken>(entity =>

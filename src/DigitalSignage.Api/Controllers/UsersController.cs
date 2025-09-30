@@ -434,4 +434,21 @@ public class UsersController : ControllerBase
                 new { error = "An unexpected error occurred" });
         }
     }
+
+    /// <summary>
+    /// Get devices associated with a user
+    /// </summary>
+    /// <param name="userId">User ID</param>
+    /// <returns>List of associated devices</returns>
+    [HttpGet("{userId}/devices")]
+    [ProducesResponseType(typeof(List<DeviceDto>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<DeviceDto>>> GetUserDevices(Guid userId, [FromServices] IUserDeviceAssociationService associationService)
+    {
+        var associations = await associationService.GetAllAsync();
+        var deviceIds = associations.FindAll(a => a.UserId == userId).ConvertAll(a => a.DeviceId);
+        // TODO: Replace with actual device lookup via service/repository
+        var devices = new List<DeviceDto>();
+        // ...fetch devices by deviceIds...
+        return Ok(devices);
+    }
 }

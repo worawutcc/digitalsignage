@@ -1,0 +1,309 @@
+using DigitalSignage.Application.DTOs.AdminDeviceRegistration;
+using DigitalSignage.Application.DTOs.DeviceRegistration;
+using DigitalSignage.Application.Interfaces;
+using Microsoft.Extensions.Logging;
+
+namespace DigitalSignage.Application.Services;
+
+/// <summary>
+/// Device registration service - currently stubbed for build compatibility
+/// TODO: Complete implementation with proper entity/DTO mappings
+/// </summary>
+public class DeviceRegistrationService : IDeviceRegistrationService
+{
+    private readonly ILogger<DeviceRegistrationService> _logger;
+
+    public DeviceRegistrationService(ILogger<DeviceRegistrationService> logger)
+    {
+        _logger = logger;
+    }
+
+    public Task<InitiateRegistrationResponseDto> InitiateRegistrationAsync(InitiateRegistrationRequestDto request)
+    {
+        _logger.LogWarning("DeviceRegistrationService is stubbed - InitiateRegistrationAsync not implemented");
+        throw new NotImplementedException("Device registration service is not yet implemented");
+    }
+
+    public async Task<VerifyPinResponseDto> VerifyPinAsync(VerifyPinRequestDto request)
+    {
+        _logger.LogInformation("Verifying PIN: {Pin}", request.Pin);
+
+        var registration = await _deviceRegistrationRepository.GetByPinAsync(request.Pin);
+        if (registration == null)
+        {
+            _logger.LogWarning("PIN {Pin} not found", request.Pin);
+            return new VerifyPinResponseDto
+            {
+                IsValid = false,
+                Message = "Invalid PIN"
+            };
+        }
+
+        if (registration.ExpiresAt < DateTimeOffset.UtcNow)
+        {
+            _logger.LogWarning("PIN {Pin} has expired", request.Pin);
+            return new VerifyPinResponseDto
+            {
+                IsValid = false,
+                Message = "PIN has expired"
+            };
+        }
+
+        if (registration.Status != RegistrationStatus.Pending)
+        {
+            _logger.LogWarning("PIN {Pin} is not in pending status: {Status}", request.Pin, registration.Status);
+            return new VerifyPinResponseDto
+            {
+                IsValid = false,
+                Message = $"Registration is {registration.Status.ToString().ToLower()}"
+            };
+        }
+
+        return new VerifyPinResponseDto
+        {
+            IsValid = true,
+            RegistrationId = registration.Id,
+            DeviceInfo = new DeviceRegistrationResponseDto
+            {
+                RegistrationId = registration.Id,
+                MacAddress = registration.MacAddress,
+                DeviceName = registration.DeviceName,
+                Location = registration.Location,
+                Status = registration.Status,
+                RequestedAt = registration.RequestedAt,
+                ExpiresAt = registration.ExpiresAt
+            },
+            Message = "PIN is valid"
+        };
+    }
+
+    public async Task<CheckStatusResponseDto> CheckRegistrationStatusAsync(Guid registrationId)
+    {
+        _logger.LogInformation("Checking registration status for: {RegistrationId}", registrationId);
+
+        var registration = await _deviceRegistrationRepository.GetByIdAsync(registrationId);
+        if (registration == null)
+        {
+            _logger.LogWarning("Registration {RegistrationId} not found", registrationId);
+            return new CheckStatusResponseDto
+            {
+                Status = RegistrationStatus.NotFound,
+                Message = "Registration not found"
+            };
+        }
+
+        return new CheckStatusResponseDto
+        {
+            RegistrationId = registration.Id,
+            Status = registration.Status,
+            ApprovedAt = registration.ApprovedAt,
+            ApprovedByUserId = registration.ApprovedByUserId,
+            RejectedAt = registration.RejectedAt,
+            RejectedByUserId = registration.RejectedByUserId,
+            RejectionReason = registration.RejectionReason,
+            Message = GetStatusMessage(registration.Status)
+        };
+    }
+
+    public async Task<GetPendingRegistrationsResponseDto> GetPendingRegistrationsAsync()
+    {
+        _logger.LogInformation("Getting pending registrations");
+
+        var pendingRegistrations = await _deviceRegistrationRepository.GetPendingRegistrationsAsync();
+
+        var registrations = pendingRegistrations.Select(r => new DeviceRegistrationResponseDto
+        {
+            RegistrationId = r.Id,
+            MacAddress = r.MacAddress,
+            DeviceName = r.DeviceName,
+            Location = r.Location,
+            Status = r.Status,
+            RequestedAt = r.RequestedAt,
+            ExpiresAt = r.ExpiresAt
+        }).ToList();
+
+        return new GetPendingRegistrationsResponseDto
+        {
+            Registrations = registrations,
+            TotalCount = registrations.Count
+        };
+    }
+
+    public async Task<DeviceApprovalResponseDto> ApproveDeviceAsync(ApproveDeviceRequestDto request, string approvedByUserId)
+    {
+        _logger.LogInformation("Approving device registration: {RegistrationId}", request.RegistrationId);
+
+        var registration = await _deviceRegistrationRepository.GetByIdAsync(request.RegistrationId);
+        if (registration == null)
+        {
+            throw new ArgumentException("Registration not found");
+        }
+
+        if (registration.Status != RegistrationStatus.Pending)
+        {
+            throw new InvalidOperationException($"Cannot approve registration with status: {registration.Status}");
+        }
+
+        // Create device
+        var device = new Device
+        {
+            Name = registration.DeviceName,
+            MacAddress = registration.MacAddress,
+            Location = registration.Location,
+            Status = DeviceStatus.Active,
+            RegisteredAt = DateTimeOffset.UtcNow
+        };
+
+        await _deviceRepository.AddAsync(device);
+
+        // Update registration
+        registration.Status = RegistrationStatus.Approved;
+        registration.ApprovedAt = DateTimeOffset.UtcNow;
+        registration.ApprovedByUserId = int.Parse(approvedByUserId);
+        registration.DeviceId = device.Id;
+
+        await _deviceRegistrationRepository.UpdateAsync(registration);
+
+        // Add audit log
+        var auditLog = new RegistrationAuditLog
+        {
+            Id = Guid.NewGuid(),
+            RegistrationId = registration.Id,
+            MacAddress = registration.MacAddress,
+            Action = AuditAction.Approved,
+            PerformedByUserId = int.Parse(approvedByUserId),
+            PerformedAt = DateTimeOffset.UtcNow,
+            Result = AuditResult.Success,
+            Details = "Device registration approved"
+        };
+
+        await _deviceRegistrationRepository.AddAuditLogAsync(auditLog);
+
+        _logger.LogInformation("Approved device registration {RegistrationId}, created device {DeviceId}", 
+            registration.Id, device.Id);
+
+        return new DeviceApprovalResponseDto
+        {
+            RegistrationId = registration.Id,
+            DeviceId = device.Id,
+            ApprovedAt = registration.ApprovedAt.Value,
+            Message = "Device registration approved successfully"
+        };
+    }
+
+    public async Task<DeviceRejectionResponseDto> RejectDeviceAsync(RejectDeviceRequestDto request, string rejectedByUserId)
+    {
+        _logger.LogInformation("Rejecting device registration: {RegistrationId}", request.RegistrationId);
+
+        var registration = await _deviceRegistrationRepository.GetByIdAsync(request.RegistrationId);
+        if (registration == null)
+        {
+            throw new ArgumentException("Registration not found");
+        }
+
+        if (registration.Status != RegistrationStatus.Pending)
+        {
+            throw new InvalidOperationException($"Cannot reject registration with status: {registration.Status}");
+        }
+
+        // Update registration
+        registration.Status = RegistrationStatus.Rejected;
+        registration.RejectedAt = DateTimeOffset.UtcNow;
+        registration.RejectedByUserId = int.Parse(rejectedByUserId);
+        registration.RejectionReason = request.Reason;
+
+        await _deviceRegistrationRepository.UpdateAsync(registration);
+
+        // Add audit log
+        var auditLog = new RegistrationAuditLog
+        {
+            Id = Guid.NewGuid(),
+            RegistrationId = registration.Id,
+            MacAddress = registration.MacAddress,
+            Action = AuditAction.Rejected,
+            PerformedByUserId = int.Parse(rejectedByUserId),
+            PerformedAt = DateTimeOffset.UtcNow,
+            Result = AuditResult.Success,
+            Details = $"Device registration rejected: {request.Reason}"
+        };
+
+        await _deviceRegistrationRepository.AddAuditLogAsync(auditLog);
+
+        _logger.LogInformation("Rejected device registration {RegistrationId} with reason: {Reason}", 
+            registration.Id, request.Reason);
+
+        return new DeviceRejectionResponseDto
+        {
+            RegistrationId = registration.Id,
+            RejectedAt = registration.RejectedAt.Value,
+            Reason = request.Reason,
+            Message = "Device registration rejected"
+        };
+    }
+
+    public async Task<BulkApprovalResponseDto> BulkApproveDevicesAsync(BulkApprovalRequestDto request, string approvedByUserId)
+    {
+        _logger.LogInformation("Bulk approving {Count} device registrations", request.RegistrationIds.Count);
+
+        var results = new List<DeviceApprovalResponseDto>();
+        var failures = new List<string>();
+
+        foreach (var registrationId in request.RegistrationIds)
+        {
+            try
+            {
+                var approveRequest = new ApproveDeviceRequestDto { RegistrationId = registrationId };
+                var result = await ApproveDeviceAsync(approveRequest, approvedByUserId);
+                results.Add(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to approve registration {RegistrationId}", registrationId);
+                failures.Add($"Registration {registrationId}: {ex.Message}");
+            }
+        }
+
+        return new BulkApprovalResponseDto
+        {
+            SuccessfulApprovals = results,
+            FailedApprovals = failures,
+            TotalRequested = request.RegistrationIds.Count,
+            SuccessCount = results.Count,
+            FailureCount = failures.Count
+        };
+    }
+
+    public async Task<int> CleanupExpiredRegistrationsAsync()
+    {
+        _logger.LogInformation("Cleaning up expired registrations");
+
+        var expiredRegistrations = await _deviceRegistrationRepository.GetExpiredRegistrationsAsync();
+        var cleanupCount = 0;
+
+        foreach (var registration in expiredRegistrations)
+        {
+            if (registration.Status == RegistrationStatus.Pending)
+            {
+                registration.Status = RegistrationStatus.Expired;
+                await _deviceRegistrationRepository.UpdateAsync(registration);
+                cleanupCount++;
+            }
+        }
+
+        _logger.LogInformation("Cleaned up {Count} expired registrations", cleanupCount);
+        return cleanupCount;
+    }
+
+    private static string GetStatusMessage(RegistrationStatus status)
+    {
+        return status switch
+        {
+            RegistrationStatus.Pending => "Registration is pending approval",
+            RegistrationStatus.Approved => "Registration has been approved",
+            RegistrationStatus.Rejected => "Registration has been rejected",
+            RegistrationStatus.Expired => "Registration has expired",
+            RegistrationStatus.NotFound => "Registration not found",
+            _ => "Unknown status"
+        };
+    }
+}

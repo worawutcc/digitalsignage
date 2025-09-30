@@ -22,4 +22,5 @@ public class Device : BaseEntity
     public User? ManagedByUser { get; set; }
     public DeviceGroup? DeviceGroup { get; set; }
     public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
+    public ICollection<UserDeviceAssociation> UserAssociations { get; set; } = new List<UserDeviceAssociation>();
 }

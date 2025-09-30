@@ -1,5 +1,6 @@
 using DigitalSignage.Application.DTOs.DeviceRegistration;
 using DigitalSignage.Application.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DigitalSignage.Api.Controllers;
@@ -110,6 +111,101 @@ public class DeviceRegistrationController : ControllerBase
             {
                 Title = "Internal Server Error",
                 Detail = "An error occurred while verifying the PIN",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Initiate QR Code-based device registration
+    /// </summary>
+    /// <param name="request">QR Code registration request</param>
+    /// <returns>Registration details with QR Code for admin scanning</returns>
+    [HttpPost("initiate-qr")]
+    [ProducesResponseType(typeof(InitiateQrRegistrationResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<InitiateQrRegistrationResponseDto>> InitiateQrRegistration([FromBody] InitiateQrRegistrationRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for QR code registration initiation");
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Initiating QR code registration for MAC: {MacAddress}", request.MacAddress);
+            var response = await _deviceRegistrationService.InitiateQrRegistrationAsync(request);
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation during QR registration initiation for MAC: {MacAddress}", request.MacAddress);
+            return Conflict(new ProblemDetails
+            {
+                Title = "Registration Conflict",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating QR code registration for MAC: {MacAddress}", request.MacAddress);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while processing the QR registration request",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Approve device registration via QR Code scan
+    /// </summary>
+    /// <param name="request">QR Code approval request</param>
+    /// <returns>Approval result with device credentials</returns>
+    [HttpPost("approve-qr")]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(ApproveQrRegistrationResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ApproveQrRegistrationResponseDto>> ApproveQrRegistration([FromBody] ApproveQrRegistrationRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for QR code approval");
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Approving QR code registration: {RegistrationId} by Admin: {AdminUserId}", 
+                request.RegistrationId, request.AdminUserId);
+            var response = await _deviceRegistrationService.ApproveQrRegistrationAsync(request);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Registration not found for QR approval: {RegistrationId}", request.RegistrationId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Registration Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error approving QR code registration: {RegistrationId}", request.RegistrationId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while approving the QR registration",
                 Status = StatusCodes.Status500InternalServerError
             });
         }

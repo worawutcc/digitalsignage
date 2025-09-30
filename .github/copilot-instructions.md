@@ -7,6 +7,11 @@ Auto-generated from all feature plans. Last updated: 2025-09-29
 - Android TV Self-Registration with PIN-based admin approval workflow (011-android-tv-self)
 - C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 8, ASP.NET Core, PostgreSQL (Npgsql), JWT Authentication, AWS S3 (012-entity-model-extend)
 - PostgreSQL database with Entity Framework Core migrations (012-entity-model-extend)
+- C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AWS S3 SDK, log4net, PostgreSQL (Npgsql) (013-qr-code-system)
+- PostgreSQL database with Entity Framework Core migrations, AWS S3 for media files (013-qr-code-system)
+- C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9 + Entity Framework Core (PostgreSQL), ASP.NET Core MVC, log4net, AWS S3 SDK (014-basic-hierarchy)
+- C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AutoMapper, log4ne (015-admin-user-permission-management)
+- PostgreSQL with Npgsql provider for RBAC tables and audit logs (015-admin-user-permission-management)
 
 ## Project Structure
 ```
@@ -256,9 +261,9 @@ dotnet build
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
 ## Recent Changes
-- 012-entity-model-extend: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 8, ASP.NET Core, PostgreSQL (Npgsql), JWT Authentication, AWS S3
-- 002-setup-project-structure: Complete .NET 8 Clean Architecture setup with EF Core 8, AWS S3, log4net, multi-database support
-- 011-android-tv-self: Android TV self-registration with PIN-based admin approval workflow (Planning Phase Complete - Ready for Implementation)
+- 015-admin-user-permission-management: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AutoMapper, log4ne
+- 014-basic-hierarchy: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9 + Entity Framework Core (PostgreSQL), ASP.NET Core MVC, log4net, AWS S3 SDK
+- 013-qr-code-system: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AWS S3 SDK, log4net, PostgreSQL (Npgsql)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

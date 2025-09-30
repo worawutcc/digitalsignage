@@ -111,6 +111,17 @@ public class DeviceRegistrationRequest : BaseEntity
     /// </summary>
     public RegistrationStatus Status { get; set; } = RegistrationStatus.Pending;
 
+    /// <summary>
+    /// Registration method used (PIN, QR Code, etc.)
+    /// </summary>
+    public RegistrationMethod Method { get; set; } = RegistrationMethod.Pin;
+
+    /// <summary>
+    /// QR Code data for QR-based registration (Base64 encoded)
+    /// </summary>
+    [StringLength(2000)]
+    public string? QrCodeData { get; set; }
+
 
 
     /// <summary>

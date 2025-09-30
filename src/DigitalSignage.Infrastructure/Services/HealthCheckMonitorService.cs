@@ -176,7 +176,7 @@ public class HealthCheckMonitorService : BackgroundService
         context.Set<HealthCheckResult>().Add(healthCheckResult);
     }
 
-    private async Task HandleHealthCheckFailure(Service service, ServiceInstance instance, string reason)
+    private Task HandleHealthCheckFailure(Service service, ServiceInstance instance, string reason)
     {
         service.ConsecutiveHealthCheckFailures++;
         service.LastHealthCheck = DateTime.UtcNow;
@@ -210,6 +210,8 @@ public class HealthCheckMonitorService : BackgroundService
 
         _logger.LogWarning("Health check failed for service {ServiceName} instance {InstanceId}: {Reason} (Failure {FailureCount}/{MaxFailures})",
             service.Name, instance.InstanceId, reason, service.ConsecutiveHealthCheckFailures, instance.MaxConsecutiveFailures);
+        
+        return Task.CompletedTask;
     }
 
     private string? GetHealthCheckUrl(Service service, ServiceInstance instance)

@@ -23,6 +23,8 @@ public class User : BaseEntity
     // Navigation properties
     public ICollection<Device> ManagedDevices { get; set; } = new List<Device>();
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
+    public ICollection<UserDeviceGroupPermission> DeviceGroupPermissions { get; set; } = new List<UserDeviceGroupPermission>();
+    public ICollection<UserDeviceAssociation> DeviceAssociations { get; set; } = new List<UserDeviceAssociation>();
 
     // Computed properties
     public string FullName => $"{FirstName} {LastName}".Trim();

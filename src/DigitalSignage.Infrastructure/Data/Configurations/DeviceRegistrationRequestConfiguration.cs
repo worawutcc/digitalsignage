@@ -49,17 +49,24 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         builder.Property(e => e.HardwareSpecs)
                .HasMaxLength(1000);
 
+        // Configure QR Code support fields
+        builder.Property(e => e.QrCodeData)
+               .HasMaxLength(2000)
+               .IsRequired(false); // Optional field for QR-based registrations
 
-
-        // Configure enum conversion
+        // Configure enum conversions to integers for PostgreSQL
         builder.Property(e => e.Status)
                .HasConversion<string>()
                .HasMaxLength(50);
+
+        builder.Property(e => e.Method)
+               .HasConversion<int>(); // Store as integer in database
 
         // Configure indexes
         builder.HasIndex(e => e.Pin);
         builder.HasIndex(e => e.MacAddress);
         builder.HasIndex(e => e.Status);
+        builder.HasIndex(e => e.Method); // Index for filtering by registration method
 
     }
 }

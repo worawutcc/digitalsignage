@@ -21,6 +21,7 @@ public static class RepositoryServiceExtensions
         services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
         services.AddScoped<IDeviceRepository, DeviceRepository>();
         services.AddScoped<IDeviceRegistrationRepository, DeviceRegistrationRepository>();
+        services.AddScoped<IDeviceGroupRepository, DeviceGroupRepository>();
 
         return services;
     }

@@ -31,6 +31,20 @@ public interface IDeviceRegistrationService
     Task<CheckStatusResponseDto> CheckRegistrationStatusAsync(Guid registrationId);
     
     /// <summary>
+    /// Initiates QR Code-based device registration
+    /// </summary>
+    /// <param name="request">QR Code registration details</param>
+    /// <returns>Registration response with QR Code data</returns>
+    Task<InitiateQrRegistrationResponseDto> InitiateQrRegistrationAsync(InitiateQrRegistrationRequestDto request);
+    
+    /// <summary>
+    /// Approves device registration via QR Code scan
+    /// </summary>
+    /// <param name="request">QR Code approval details</param>
+    /// <returns>Approval response with device credentials</returns>
+    Task<ApproveQrRegistrationResponseDto> ApproveQrRegistrationAsync(ApproveQrRegistrationRequestDto request);
+    
+    /// <summary>
     /// Gets all pending device registration requests for admin review
     /// </summary>
     /// <returns>List of pending registrations</returns>
