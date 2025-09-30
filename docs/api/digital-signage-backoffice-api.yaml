@@ -1,0 +1,1288 @@
+openapi: 3.0.3
+info:
+  title: Digital Signage Backoffice API
+  description: |
+    Comprehensive API for Digital Signage System Management
+    
+    ## Overview
+    This API provides complete backoffice functionality for managing digital signage networks including:
+    - User and authentication management
+    - Device provisioning and monitoring
+    - Content and media management
+    - Schedule and playlist management
+    - Analytics and reporting
+    
+    ## Authentication
+    All endpoints require JWT Bearer token authentication except public endpoints.
+    Use `/api/auth/login` to obtain access tokens.
+    
+    ## Rate Limiting
+    - 1000 requests per hour for authenticated users
+    - 100 requests per hour for unauthenticated requests
+    
+    ## Environments
+    - Development: `https://dev-api.digitalsignage.com`
+    - Staging: `https://staging-api.digitalsignage.com`
+    - Production: `https://api.digitalsignage.com`
+    
+  version: 1.0.0
+  contact:
+    name: Digital Signage API Support
+    email: api-support@digitalsignage.com
+    url: https://docs.digitalsignage.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: https://api.digitalsignage.com/v1
+    description: Production server
+  - url: https://staging-api.digitalsignage.com/v1
+    description: Staging server
+  - url: https://dev-api.digitalsignage.com/v1
+    description: Development server
+  - url: http://localhost:8089/api
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+paths:
+  # =================================================================
+  # AUTHENTICATION & USER MANAGEMENT
+  # =================================================================
+  /auth/login:
+    post:
+      tags: [Authentication]
+      summary: User login
+      description: Authenticate user with email and password
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: admin@company.com
+              password: SecurePassword123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /auth/register:
+    post:
+      tags: [Authentication]
+      summary: Register new user
+      description: Register a new user account (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/refresh:
+    post:
+      tags: [Authentication]
+      summary: Refresh access token
+      description: Refresh expired access token using refresh token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshTokenRequest'
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshTokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /auth/logout:
+    post:
+      tags: [Authentication]
+      summary: User logout
+      description: Logout user and revoke refresh token
+      responses:
+        '204':
+          description: Logout successful
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # =================================================================
+  # USER MANAGEMENT
+  # =================================================================
+  /users:
+    get:
+      tags: [User Management]
+      summary: Get all users
+      description: Retrieve paginated list of users (Admin only)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: role
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserRole'
+          description: Filter by user role
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or email
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+          description: Filter by active status
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserResponse'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+    post:
+      tags: [User Management]
+      summary: Create new user
+      description: Create a new user account (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateUserRequest'
+      responses:
+        '201':
+          description: User created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /users/{userId}:
+    get:
+      tags: [User Management]
+      summary: Get user by ID
+      description: Retrieve specific user details
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: User retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [User Management] 
+      summary: Update user
+      description: Update user information (Admin or own profile)
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [User Management]
+      summary: Delete user
+      description: Soft delete user account (Admin only)
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '204':
+          description: User deleted successfully
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /users/profile:
+    get:
+      tags: [User Management]
+      summary: Get current user profile
+      description: Get authenticated user's profile information
+      responses:
+        '200':
+          description: Profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    put:
+      tags: [User Management]
+      summary: Update current user profile
+      description: Update authenticated user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /users/{userId}/change-password:
+    post:
+      tags: [User Management]
+      summary: Change user password
+      description: Change password for specific user (Admin) or current user
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+      responses:
+        '204':
+          description: Password changed successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  # =================================================================
+  # DEVICE MANAGEMENT
+  # =================================================================
+  /devices:
+    get:
+      tags: [Device Management]
+      summary: Get all devices
+      description: Retrieve paginated list of devices
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeviceStatus'
+          description: Filter by device status
+        - name: groupId
+          in: query
+          schema:
+            type: integer
+          description: Filter by device group
+        - name: location
+          in: query
+          schema:
+            type: string
+          description: Filter by location
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name or MAC address
+      responses:
+        '200':
+          description: Devices retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDeviceResponse'
+
+    post:
+      tags: [Device Management]
+      summary: Register new device
+      description: Register a new device (Admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceRequest'
+      responses:
+        '201':
+          description: Device registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /devices/{deviceId}:
+    get:
+      tags: [Device Management]
+      summary: Get device by ID
+      description: Retrieve specific device details
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '200':
+          description: Device retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      tags: [Device Management]
+      summary: Update device
+      description: Update device information
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeviceRequest'
+      responses:
+        '200':
+          description: Device updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Device Management]
+      summary: Delete device
+      description: Remove device from system
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '204':
+          description: Device deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/self-register:
+    post:
+      tags: [Device Management]
+      summary: Device self-registration
+      description: Allow device to register itself (Android TV, etc.)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SelfRegisterRequest'
+      responses:
+        '202':
+          description: Registration request submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfRegisterResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+
+  /devices/registration-status/{registrationId}:
+    get:
+      tags: [Device Management]
+      summary: Check registration status
+      description: Check status of self-registration request
+      security: []
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Registration request ID
+      responses:
+        '200':
+          description: Registration status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationStatusResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/pending-registrations:
+    get:
+      tags: [Device Management]
+      summary: Get pending device registrations
+      description: Retrieve devices waiting for admin approval
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Pending registrations retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedPendingDeviceResponse'
+
+  /devices/pending-registrations/{registrationId}/approve:
+    post:
+      tags: [Device Management]
+      summary: Approve device registration
+      description: Approve pending device registration (Admin only)
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRegistrationRequest'
+      responses:
+        '200':
+          description: Device registration approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/pending-registrations/{registrationId}/reject:
+    post:
+      tags: [Device Management]
+      summary: Reject device registration
+      description: Reject pending device registration (Admin only)
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: Reason for rejection
+      responses:
+        '204':
+          description: Device registration rejected
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /devices/{deviceId}/regenerate-key:
+    post:
+      tags: [Device Management]
+      summary: Regenerate device key
+      description: Generate new device key for security
+      parameters:
+        - $ref: '#/components/parameters/DeviceId'
+      responses:
+        '200':
+          description: Device key regenerated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deviceKey:
+                    type: string
+                    description: New device key
+                  qrCode:
+                    type: string
+                    description: Base64 QR code for easy setup
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # =================================================================
+  # DEVICE GROUPS
+  # =================================================================
+  /device-groups:
+    get:
+      tags: [Device Management]
+      summary: Get device groups
+      description: Retrieve all device groups
+      responses:
+        '200':
+          description: Device groups retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceGroupDto'
+
+    post:
+      tags: [Device Management]
+      summary: Create device group
+      description: Create a new device group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceGroupRequest'
+      responses:
+        '201':
+          description: Device group created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroupDto'
+
+  /device-groups/{groupId}:
+    get:
+      tags: [Device Management]
+      summary: Get device group by ID
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Device group retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroupDto'
+
+    put:
+      tags: [Device Management]
+      summary: Update device group
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDeviceGroupRequest'
+      responses:
+        '200':
+          description: Device group updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroupDto'
+
+    delete:
+      tags: [Device Management]
+      summary: Delete device group
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Device group deleted successfully
+
+# =================================================================
+# COMPONENTS
+# =================================================================
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: Page number for pagination
+
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+      description: Number of items per page
+
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: User ID
+
+    DeviceId:
+      name: deviceId
+      in: path
+      required: true
+      schema:
+        type: integer
+      description: Device ID
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized - invalid credentials
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    Forbidden:
+      description: Forbidden - insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+    TooManyRequests:
+      description: Too many requests - rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+
+  schemas:
+    # =================================================================
+    # AUTHENTICATION SCHEMAS
+    # =================================================================
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: admin@company.com
+        password:
+          type: string
+          format: password
+          minLength: 6
+          example: SecurePassword123
+
+    LoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (15 minutes)
+        refreshToken:
+          type: string
+          description: Refresh token (7 days)
+        expiresIn:
+          type: integer
+          description: Token expiry in seconds
+        tokenType:
+          type: string
+          example: Bearer
+        user:
+          $ref: '#/components/schemas/UserDto'
+
+    RegisterRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+        - role
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: John
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@company.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          example: SecurePassword123
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    RefreshTokenRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Valid refresh token
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: New JWT access token
+        refreshToken:
+          type: string
+          description: New refresh token (optional)
+        expiresIn:
+          type: integer
+          description: Token expiry in seconds
+
+    # =================================================================
+    # USER SCHEMAS
+    # =================================================================
+    UserDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        firstName:
+          type: string
+          example: John
+        lastName:
+          type: string
+          example: Doe
+        email:
+          type: string
+          format: email
+          example: john.doe@company.com
+        role:
+          $ref: '#/components/schemas/UserRole'
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    UserRole:
+      type: string
+      enum: [Admin, User]
+      description: User role in the system
+
+    CreateUserRequest:
+      type: object
+      required:
+        - firstName
+        - lastName
+        - email
+        - password
+        - role
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+          minLength: 8
+        role:
+          $ref: '#/components/schemas/UserRole'
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        email:
+          type: string
+          format: email
+        role:
+          $ref: '#/components/schemas/UserRole'
+        isActive:
+          type: boolean
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        firstName:
+          type: string
+          minLength: 2
+          maxLength: 50
+        lastName:
+          type: string
+          minLength: 2
+          maxLength: 50
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - currentPassword
+        - newPassword
+      properties:
+        currentPassword:
+          type: string
+          format: password
+        newPassword:
+          type: string
+          format: password
+          minLength: 8
+
+    PaginatedUserResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserDto'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # =================================================================
+    # DEVICE SCHEMAS
+    # =================================================================
+    DeviceDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Lobby Display 1
+        deviceKey:
+          type: string
+          description: Unique device authentication key
+        location:
+          type: string
+          example: Building A, Floor 1
+        deviceType:
+          type: string
+          example: Android TV
+        macAddress:
+          type: string
+          example: AA:BB:CC:DD:EE:FF
+        ipAddress:
+          type: string
+          example: 192.168.1.100
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        groupId:
+          type: integer
+          nullable: true
+        group:
+          $ref: '#/components/schemas/DeviceGroupDto'
+        isActive:
+          type: boolean
+          example: true
+        createdAt:
+          type: string
+          format: date-time
+        lastHeartbeat:
+          type: string
+          format: date-time
+          nullable: true
+        currentContent:
+          type: string
+          nullable: true
+          description: Currently playing content
+        softwareVersion:
+          type: string
+          example: 1.2.3
+        hardwareInfo:
+          type: string
+          example: Samsung Smart TV Q70A
+
+    DeviceStatus:
+      type: string
+      enum: [Online, Offline, Error, Maintenance]
+      description: Current device status
+
+    CreateDeviceRequest:
+      type: object
+      required:
+        - name
+        - location
+        - deviceType
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        location:
+          type: string
+          maxLength: 255
+        deviceType:
+          type: string
+          maxLength: 50
+        macAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+        groupId:
+          type: integer
+          nullable: true
+
+    UpdateDeviceRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        location:
+          type: string
+          maxLength: 255
+        deviceType:
+          type: string
+          maxLength: 50
+        groupId:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+
+    SelfRegisterRequest:
+      type: object
+      required:
+        - deviceInfo
+        - registrationMethod
+      properties:
+        deviceInfo:
+          $ref: '#/components/schemas/DeviceInfo'
+        registrationMethod:
+          type: string
+          enum: [QR, PIN, AutoDiscovery]
+        temporaryToken:
+          type: string
+          description: Temporary verification token
+
+    DeviceInfo:
+      type: object
+      required:
+        - macAddress
+        - deviceModel
+      properties:
+        macAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+        deviceModel:
+          type: string
+          example: Samsung Smart TV Q70A
+        androidVersion:
+          type: string
+          example: '11'
+        appVersion:
+          type: string
+          example: 1.0.0
+        ipAddress:
+          type: string
+          format: ipv4
+        networkName:
+          type: string
+          example: Office-WiFi
+        hardwareSpecs:
+          type: object
+          additionalProperties: true
+
+    SelfRegisterResponse:
+      type: object
+      properties:
+        registrationId:
+          type: string
+          example: reg_12345
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        qrCode:
+          type: string
+          description: Base64 encoded QR code image
+        pin:
+          type: string
+          example: '123456'
+        message:
+          type: string
+          example: Waiting for admin approval
+        expiresAt:
+          type: string
+          format: date-time
+
+    RegistrationStatusResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired]
+        deviceKey:
+          type: string
+          description: Device key if approved
+        deviceId:
+          type: integer
+          description: Device ID if approved
+        message:
+          type: string
+        rejectionReason:
+          type: string
+          nullable: true
+
+    PendingDeviceDto:
+      type: object
+      properties:
+        registrationId:
+          type: string
+        deviceInfo:
+          $ref: '#/components/schemas/DeviceInfo'
+        registrationMethod:
+          type: string
+        requestedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+
+    ApproveRegistrationRequest:
+      type: object
+      required:
+        - name
+        - location
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        location:
+          type: string
+          maxLength: 255
+        groupId:
+          type: integer
+          nullable: true
+
+    PaginatedDeviceResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceDto'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    PaginatedPendingDeviceResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingDeviceDto'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    # =================================================================
+    # DEVICE GROUP SCHEMAS
+    # =================================================================
+    DeviceGroupDto:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: Lobby Displays
+        description:
+          type: string
+          example: All displays in the main lobby area
+        deviceCount:
+          type: integer
+          example: 5
+        createdAt:
+          type: string
+          format: date-time
+
+    CreateDeviceGroupRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+
+    UpdateDeviceGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+
+    # =================================================================
+    # COMMON SCHEMAS
+    # =================================================================
+    PaginationInfo:
+      type: object
+      properties:
+        currentPage:
+          type: integer
+          example: 1
+        pageSize:
+          type: integer
+          example: 20
+        totalPages:
+          type: integer
+          example: 5
+        totalItems:
+          type: integer
+          example: 95
+        hasNextPage:
+          type: boolean
+          example: true
+        hasPreviousPage:
+          type: boolean
+          example: false
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type or code
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: object
+          additionalProperties: true
+          description: Additional error details
+        timestamp:
+          type: string
+          format: date-time
+        path:
+          type: string
+          description: API endpoint that generated the error
+
+tags:
+  - name: Authentication
+    description: User authentication and token management
+  - name: User Management
+    description: User account management and administration
+  - name: Device Management
+    description: Device registration, monitoring, and configuration
