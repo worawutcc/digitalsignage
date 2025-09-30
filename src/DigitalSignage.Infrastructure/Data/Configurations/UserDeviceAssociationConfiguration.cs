@@ -14,6 +14,7 @@ public class UserDeviceAssociationConfiguration : IEntityTypeConfiguration<UserD
             .HasMaxLength(32);
 
         builder.Property(x => x.AssociatedAt)
+            .HasColumnType("timestamp without time zone")
             .IsRequired();
 
         builder.Property(x => x.IsActive)

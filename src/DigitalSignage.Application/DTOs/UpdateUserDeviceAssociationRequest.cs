@@ -6,7 +6,7 @@ namespace DigitalSignage.Application.DTOs;
 public class UpdateUserDeviceAssociationRequest
 {
     [Required]
-    public Guid Id { get; set; }
+    public int Id { get; set; }
 
     [MaxLength(32)]
     public string? AssociationType { get; set; }

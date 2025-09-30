@@ -153,24 +153,23 @@ public class PermissionRepository : IPermissionRepository
             query = query.Where(al => al.DeviceGroupId == deviceGroupId.Value);
 
         if (changedBy.HasValue)
-            query = query.Where(al => al.ChangedBy == changedBy.Value);
+            query = query.Where(al => al.CreatedBy == changedBy.Value);
 
         if (!string.IsNullOrEmpty(action))
             query = query.Where(al => al.Action == action);
 
         if (fromDate.HasValue)
-            query = query.Where(al => al.ChangedAt >= fromDate.Value);
+            query = query.Where(al => al.CreatedAt >= fromDate.Value);
 
         if (toDate.HasValue)
-            query = query.Where(al => al.ChangedAt <= toDate.Value);
+            query = query.Where(al => al.CreatedAt <= toDate.Value);
 
         return await query
-            .OrderByDescending(al => al.ChangedAt)
+            .OrderByDescending(al => al.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .Include(al => al.User)
             .Include(al => al.DeviceGroup)
-            .Include(al => al.ChangedByUser)
             .ToListAsync();
     }
 
@@ -191,16 +190,16 @@ public class PermissionRepository : IPermissionRepository
             query = query.Where(al => al.DeviceGroupId == deviceGroupId.Value);
 
         if (changedBy.HasValue)
-            query = query.Where(al => al.ChangedBy == changedBy.Value);
+            query = query.Where(al => al.CreatedBy == changedBy.Value);
 
         if (!string.IsNullOrEmpty(action))
             query = query.Where(al => al.Action == action);
 
         if (fromDate.HasValue)
-            query = query.Where(al => al.ChangedAt >= fromDate.Value);
+            query = query.Where(al => al.CreatedAt >= fromDate.Value);
 
         if (toDate.HasValue)
-            query = query.Where(al => al.ChangedAt <= toDate.Value);
+            query = query.Where(al => al.CreatedAt <= toDate.Value);
 
         return await query.CountAsync();
     }

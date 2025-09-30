@@ -3,6 +3,7 @@ using System;
 using DigitalSignage.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DigitalSignage.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250930103238_UpdateAuditLogFields")]
+    partial class UpdateAuditLogFields
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1613,7 +1616,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastLoginAt")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("LastName")
                         .IsRequired()
@@ -1621,7 +1624,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<DateTime?>("LockoutUntil")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("PasswordHash")
                         .IsRequired()
@@ -1673,11 +1676,9 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.UserDeviceAssociation", b =>
                 {
-                    b.Property<int>("Id")
+                    b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
-
-                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+                        .HasColumnType("uuid");
 
                     b.Property<DateTime>("AssociatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -1691,7 +1692,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int>("CreatedBy")
                         .HasColumnType("integer");
 
-                    b.Property<int>("DeviceId")
+                    b.Property<Guid>("DeviceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("DeviceId1")
                         .HasColumnType("integer");
 
                     b.Property<bool>("IsActive")
@@ -1703,14 +1707,17 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int>("UpdatedBy")
                         .HasColumnType("integer");
 
-                    b.Property<int>("UserId")
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("UserId1")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("DeviceId");
+                    b.HasIndex("DeviceId1");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId1");
 
                     b.ToTable("UserDeviceAssociations");
                 });
@@ -2105,15 +2112,11 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     b.HasOne("DigitalSignage.Domain.Entities.Device", "Device")
                         .WithMany("UserAssociations")
-                        .HasForeignKey("DeviceId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("DeviceId1");
 
                     b.HasOne("DigitalSignage.Domain.Entities.User", "User")
                         .WithMany("DeviceAssociations")
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .HasForeignKey("UserId1");
 
                     b.Navigation("Device");
 

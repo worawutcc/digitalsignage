@@ -35,7 +35,7 @@ public class PermissionService : IPermissionService
                 Permission = request.Permission,
                 IsExplicit = true,
                 CreatedBy = adminUserId,
-                CreatedAt = DateTimeOffset.UtcNow
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             var result = await _permissionRepository.CreatePermissionAsync(permission);
@@ -169,27 +169,18 @@ public class PermissionService : IPermissionService
     }
 
     public async Task<(IEnumerable<PermissionAuditDto> auditLogs, int totalCount)> GetAuditLogsAsync(
-        int? userId = null,
-        int? deviceGroupId = null,
-        int? changedBy = null,
-        string? action = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        int page = 1,
-        int pageSize = 50)
+    int? userId = null,
+    int? deviceGroupId = null,
+    int? createdBy = null,
+    string? action = null,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    int page = 1,
+    int pageSize = 50)
     {
-        try
-        {
-            var auditLogs = await _permissionRepository.GetAuditLogsAsync(userId, deviceGroupId, changedBy, action, fromDate, toDate, page, pageSize);
-            var totalCount = await _permissionRepository.GetAuditLogCountAsync(userId, deviceGroupId, changedBy, action, fromDate, toDate);
-            var mappedLogs = _mapper.Map<IEnumerable<PermissionAuditDto>>(auditLogs);
-            return (mappedLogs, totalCount);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error getting permission audit log");
-            throw;
-        }
+        var logs = await _permissionRepository.GetAuditLogsAsync(userId, deviceGroupId, createdBy, action, fromDate, toDate, page, pageSize);
+        var totalCount = await _permissionRepository.GetAuditLogCountAsync(userId, deviceGroupId, createdBy, action, fromDate, toDate);
+        return (_mapper.Map<IEnumerable<PermissionAuditDto>>(logs), totalCount);
     }
 
     public async Task InvalidateUserPermissionCacheAsync(int userId)

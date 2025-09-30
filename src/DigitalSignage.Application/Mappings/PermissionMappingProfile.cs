@@ -25,7 +25,7 @@ public class PermissionMappingProfile : Profile
             .ForMember(dest => dest.UserName, opt => opt.MapFrom(src => src.User.FullName))
             .ForMember(dest => dest.DeviceGroupName, opt => opt.MapFrom(src => src.DeviceGroup.Name))
             .ForMember(dest => dest.DeviceGroupPath, opt => opt.MapFrom(src => src.DeviceGroup.Path))
-            .ForMember(dest => dest.ChangedBy, opt => opt.MapFrom(src => src.ChangedByUser.FullName));
+            .ForMember(dest => dest.ChangedBy, opt => opt.MapFrom(src => src.UpdatedBy));
 
         // DeviceGroup to DeviceGroupAccessDto
         CreateMap<DeviceGroup, DeviceGroupAccessDto>()

@@ -1,4 +1,5 @@
 using DigitalSignage.Domain.Enums;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.ComponentModel.DataAnnotations;
 
 namespace DigitalSignage.Domain.Entities;
@@ -114,7 +115,7 @@ public class DeviceApproval : BaseEntity
     /// <summary>
     /// Registration request being approved/rejected
     /// </summary>
-    [Required]
+    [ForeignKey(nameof(DeviceRegistrationRequestId))]
     public DeviceRegistrationRequest DeviceRegistrationRequest { get; set; } = null!;
 
     /// <summary>

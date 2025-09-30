@@ -38,6 +38,7 @@ public class UserDeviceGroupPermissionConfiguration : IEntityTypeConfiguration<U
 
         builder.Property(x => x.CreatedAt)
                .IsRequired()
+               .HasColumnType("timestamp without time zone")
                .HasDefaultValueSql("NOW()")
                .HasComment("UTC timestamp when permission was created");
 

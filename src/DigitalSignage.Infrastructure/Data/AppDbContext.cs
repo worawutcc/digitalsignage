@@ -122,8 +122,8 @@ public class AppDbContext : DbContext
 
     private void UpdateAuditFields()
     {
-        var currentUserId = _userContext?.GetCurrentUserId() ?? -1;
-        var now = DateTime.UtcNow;
+    var currentUserId = _userContext?.GetCurrentUserId() ?? -1;
+    var now = DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified);
 
         var entries = ChangeTracker.Entries<BaseEntity>();
 

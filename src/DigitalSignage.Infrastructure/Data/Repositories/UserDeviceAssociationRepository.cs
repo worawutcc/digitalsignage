@@ -16,7 +16,7 @@ public class UserDeviceAssociationRepository : IUserDeviceAssociationRepository
         _context = context;
     }
 
-    public async Task<UserDeviceAssociation?> GetByIdAsync(Guid id)
+    public async Task<UserDeviceAssociation?> GetByIdAsync(int id)
     {
         return await _context.UserDeviceAssociations.FindAsync(id);
     }
@@ -39,7 +39,7 @@ public class UserDeviceAssociationRepository : IUserDeviceAssociationRepository
         await _context.SaveChangesAsync();
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task DeleteAsync(int id)
     {
         var entity = await _context.UserDeviceAssociations.FindAsync(id);
         if (entity != null)
@@ -49,7 +49,7 @@ public class UserDeviceAssociationRepository : IUserDeviceAssociationRepository
         }
     }
 
-    public async Task<List<UserDeviceAssociation>> SearchAsync(Guid? userId = null, Guid? deviceId = null, string? associationType = null, int skip = 0, int take = 20)
+    public async Task<List<UserDeviceAssociation>> SearchAsync(int? userId = null, int? deviceId = null, string? associationType = null, int skip = 0, int take = 20)
     {
         var query = _context.UserDeviceAssociations.AsQueryable();
         if (userId.HasValue)

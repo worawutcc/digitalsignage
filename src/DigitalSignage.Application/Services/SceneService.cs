@@ -85,7 +85,7 @@ public class SceneService : ISceneService
             IsTemplate = request.IsTemplate,
             TemplateName = request.TemplateName,
             CreatedByUserId = userId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<Scene>().Add(scene);
@@ -112,7 +112,7 @@ public class SceneService : ISceneService
                     AnimationDuration = itemRequest.AnimationDuration,
                     DurationSeconds = itemRequest.DurationSeconds,
                     UseCustomDuration = itemRequest.UseCustomDuration,
-                    CreatedAt = DateTime.UtcNow
+                    CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
                 };
 
                 _context.Set<SceneItem>().Add(sceneItem);
@@ -139,7 +139,7 @@ public class SceneService : ISceneService
         scene.BackgroundImageId = request.BackgroundImageId;
         scene.IsTemplate = request.IsTemplate;
         scene.TemplateName = request.TemplateName;
-        scene.UpdatedAt = DateTime.UtcNow;
+    scene.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         await _context.SaveChangesAsync();
 
@@ -183,7 +183,7 @@ public class SceneService : ISceneService
             IsTemplate = false, // Duplicated scenes are not templates by default
             TemplateName = null,
             CreatedByUserId = originalScene.CreatedByUserId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<Scene>().Add(duplicatedScene);
@@ -208,7 +208,7 @@ public class SceneService : ISceneService
                 AnimationDuration = originalItem.AnimationDuration,
                 DurationSeconds = originalItem.DurationSeconds,
                 UseCustomDuration = originalItem.UseCustomDuration,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             _context.Set<SceneItem>().Add(duplicatedItem);
@@ -246,7 +246,7 @@ public class SceneService : ISceneService
             AnimationDuration = request.AnimationDuration,
             DurationSeconds = request.DurationSeconds,
             UseCustomDuration = request.UseCustomDuration,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<SceneItem>().Add(sceneItem);
@@ -280,7 +280,7 @@ public class SceneService : ISceneService
         sceneItem.AnimationDuration = request.AnimationDuration;
         sceneItem.DurationSeconds = request.DurationSeconds;
         sceneItem.UseCustomDuration = request.UseCustomDuration;
-        sceneItem.UpdatedAt = DateTime.UtcNow;
+    sceneItem.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         await _context.SaveChangesAsync();
 
@@ -321,7 +321,7 @@ public class SceneService : ISceneService
         sceneItem.Y = y;
         sceneItem.Width = width;
         sceneItem.Height = height;
-        sceneItem.UpdatedAt = DateTime.UtcNow;
+    sceneItem.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         var result = await _context.SaveChangesAsync() > 0;
 
@@ -341,7 +341,7 @@ public class SceneService : ISceneService
         if (sceneItem == null) return false;
 
         sceneItem.ZIndex = zIndex;
-        sceneItem.UpdatedAt = DateTime.UtcNow;
+    sceneItem.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         var result = await _context.SaveChangesAsync() > 0;
 
@@ -360,7 +360,7 @@ public class SceneService : ISceneService
 
         scene.IsTemplate = true;
         scene.TemplateName = templateName;
-        scene.UpdatedAt = DateTime.UtcNow;
+    scene.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         var result = await _context.SaveChangesAsync() > 0;
 
@@ -392,7 +392,7 @@ public class SceneService : ISceneService
             IsTemplate = false,
             TemplateName = null,
             CreatedByUserId = userId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<Scene>().Add(newScene);
@@ -417,7 +417,7 @@ public class SceneService : ISceneService
                 AnimationDuration = templateItem.AnimationDuration,
                 DurationSeconds = templateItem.DurationSeconds,
                 UseCustomDuration = templateItem.UseCustomDuration,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             _context.Set<SceneItem>().Add(newItem);
@@ -447,7 +447,7 @@ public class SceneService : ISceneService
         if (scene == null) return false;
 
         scene.LayoutType = layoutType;
-        scene.UpdatedAt = DateTime.UtcNow;
+    scene.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         var result = await _context.SaveChangesAsync() > 0;
 
@@ -466,7 +466,7 @@ public class SceneService : ISceneService
 
         scene.Width = width;
         scene.Height = height;
-        scene.UpdatedAt = DateTime.UtcNow;
+    scene.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         var result = await _context.SaveChangesAsync() > 0;
 
@@ -485,7 +485,7 @@ public class SceneService : ISceneService
 
         scene.BackgroundColor = backgroundColor;
         scene.BackgroundImageId = backgroundImageId;
-        scene.UpdatedAt = DateTime.UtcNow;
+    scene.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         var result = await _context.SaveChangesAsync() > 0;
 

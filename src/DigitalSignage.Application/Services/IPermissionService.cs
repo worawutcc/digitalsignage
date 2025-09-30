@@ -9,11 +9,11 @@ namespace DigitalSignage.Application.Services;
 public interface IPermissionService
 {
     // Permission Management
-    Task<UserPermissionDto> SetPermissionAsync(int userId, SetPermissionRequest request, int adminUserId, string? context = null);
-    Task<IEnumerable<UserPermissionDto>> SetPermissionsBatchAsync(int userId, IEnumerable<SetPermissionRequest> requests, int adminUserId, string? context = null);
-    Task RemovePermissionAsync(int userId, int deviceGroupId, int adminUserId, string? reason = null, string? context = null);
-    Task<UserPermissionDto?> GetUserPermissionAsync(int userId, int deviceGroupId, bool includeInherited = true);
-    Task<IEnumerable<UserPermissionDto>> GetUserPermissionsAsync(int userId, bool includeInherited = true, int? deviceGroupId = null);
+        public Task<UserPermissionDto> SetPermissionAsync(int userId, SetPermissionRequest request, int adminUserId, string? context = null);
+        public Task<IEnumerable<UserPermissionDto>> SetPermissionsBatchAsync(int userId, IEnumerable<SetPermissionRequest> requests, int adminUserId, string? context = null);
+        public Task RemovePermissionAsync(int userId, int deviceGroupId, int adminUserId, string? reason = null, string? context = null);
+        public Task<UserPermissionDto?> GetUserPermissionAsync(int userId, int deviceGroupId, bool includeInherited = true);
+        public Task<IEnumerable<UserPermissionDto>> GetUserPermissionsAsync(int userId, bool includeInherited = true, int? deviceGroupId = null);
 
     // Permission Validation
     Task<bool> HasPermissionAsync(int userId, int deviceGroupId, UserPermissionLevel requiredPermission);
@@ -26,20 +26,20 @@ public interface IPermissionService
 
     // Audit Trail
     Task<(IEnumerable<PermissionAuditDto> auditLogs, int totalCount)> GetAuditLogsAsync(
-        int? userId = null,
-        int? deviceGroupId = null,
-        int? changedBy = null,
-        string? action = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
-        int page = 1,
-        int pageSize = 50);
+    int? userId = null,
+    int? deviceGroupId = null,
+    int? createdBy = null,
+    string? action = null,
+    DateTime? fromDate = null,
+    DateTime? toDate = null,
+    int page = 1,
+    int pageSize = 50);
 
     // Cache Management
     Task InvalidateUserPermissionCacheAsync(int userId);
     Task InvalidateAllPermissionCacheAsync();
 
     // Hierarchy Operations
-    Task<IEnumerable<UserPermissionDto>> GetInheritedPermissionsAsync(int userId, int deviceGroupId);
-    Task<bool> ValidateDeviceGroupHierarchyAsync(int deviceGroupId);
+        public Task<IEnumerable<UserPermissionDto>> GetInheritedPermissionsAsync(int userId, int deviceGroupId);
+        public Task<bool> ValidateDeviceGroupHierarchyAsync(int deviceGroupId);
 }

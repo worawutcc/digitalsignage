@@ -1,5 +1,6 @@
 using DigitalSignage.Domain.Enums;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace DigitalSignage.Domain.Entities;
 
@@ -99,7 +100,7 @@ public class RegistrationAuditLog : BaseEntity
     /// <summary>
     /// Registration request being audited
     /// </summary>
-    [Required]
+    [ForeignKey(nameof(DeviceRegistrationRequestId))]
     public DeviceRegistrationRequest DeviceRegistrationRequest { get; set; } = null!;
 
     /// <summary>

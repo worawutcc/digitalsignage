@@ -2,12 +2,12 @@ using System;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class UserDeviceAssociation
+public class UserDeviceAssociation : BaseEntity
 {
-    public Guid Id { get; set; }
-    public Guid UserId { get; set; }
-    public Guid DeviceId { get; set; }
-    public DateTimeOffset AssociatedAt { get; set; } = DateTimeOffset.UtcNow;
+    public int Id { get; set; }
+    public int UserId { get; set; }
+    public int DeviceId { get; set; }
+    public DateTime AssociatedAt { get; set; } = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
     public string? AssociationType { get; set; } // e.g. Owner, Viewer, Manager
     public bool IsActive { get; set; } = true;
 

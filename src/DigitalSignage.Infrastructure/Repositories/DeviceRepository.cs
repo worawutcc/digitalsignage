@@ -53,7 +53,7 @@ public class DeviceRepository : IDeviceRepository
 
     public async Task<Device> CreateAsync(Device device)
     {
-        device.CreatedAt = DateTime.UtcNow;
+    device.CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         _context.Devices.Add(device);
         await _context.SaveChangesAsync();
         return device;
@@ -61,7 +61,7 @@ public class DeviceRepository : IDeviceRepository
 
     public async Task<Device> UpdateAsync(Device device)
     {
-        device.UpdatedAt = DateTime.UtcNow;
+    device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         _context.Devices.Update(device);
         await _context.SaveChangesAsync();
         return device;

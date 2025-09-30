@@ -78,6 +78,13 @@ if (app.Environment.IsDevelopment())
     Console.WriteLine();
 }
 
+// Seed admin user on startup
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<DigitalSignage.Infrastructure.Data.AppDbContext>();
+    await DigitalSignage.Infrastructure.Data.DbSeeder.SeedAdminUserAsync(db);
+}
+
 app.Run();
 
 // Make the implicit Program class public for testing

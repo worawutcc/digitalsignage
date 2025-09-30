@@ -23,10 +23,10 @@ public class UserDeviceAssociationService : IUserDeviceAssociationService
         _logger = logger;
     }
 
-    public async Task<UserDeviceAssociationDto?> GetByIdAsync(Guid id)
+    public async Task<UserDeviceAssociationDto?> GetByIdAsync(int id)
     {
         _logger.LogInformation("Getting UserDeviceAssociation by Id: {Id}", id);
-        var entity = await _repository.GetByIdAsync(id);
+    var entity = await _repository.GetByIdAsync(id);
         return entity == null ? null : _mapper.Map<UserDeviceAssociationDto>(entity);
     }
 
@@ -45,7 +45,7 @@ public class UserDeviceAssociationService : IUserDeviceAssociationService
         }
 
     // Audit logging stub
-    private void LogAudit(string action, Guid associationId, Guid userId)
+    private void LogAudit(string action, int associationId, int userId)
     {
         // TODO: Implement actual audit log persistence
         Console.WriteLine($"Audit: {action} for Association {associationId} by User {userId}");
@@ -55,10 +55,10 @@ public class UserDeviceAssociationService : IUserDeviceAssociationService
     {
         _logger.LogInformation("Creating UserDeviceAssociation: {@Request}", request);
         var entity = _mapper.Map<UserDeviceAssociation>(request);
-        entity.AssociatedAt = DateTimeOffset.UtcNow;
+    entity.AssociatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         entity.IsActive = true;
         var created = await _repository.AddAsync(entity);
-        LogAudit("Create", created.Id, created.UserId);
+    LogAudit("Create", created.Id, created.UserId);
         return _mapper.Map<UserDeviceAssociationDto>(created);
     }
 
@@ -72,13 +72,13 @@ public class UserDeviceAssociationService : IUserDeviceAssociationService
         if (request.IsActive.HasValue)
             entity.IsActive = request.IsActive.Value;
         await _repository.UpdateAsync(entity);
-        LogAudit("Update", entity.Id, entity.UserId);
+    LogAudit("Update", entity.Id, entity.UserId);
     }
 
-    public async Task DeleteAsync(Guid id)
+    public async Task DeleteAsync(int id)
     {
         _logger.LogInformation("Deleting UserDeviceAssociation: {Id}", id);
-        var entity = await _repository.GetByIdAsync(id);
+    var entity = await _repository.GetByIdAsync(id);
         if (entity != null)
         {
             await _repository.DeleteAsync(id);

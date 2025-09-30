@@ -31,6 +31,12 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(e => e.Role)
                .HasConversion<string>()
                .HasMaxLength(50);
+        
+        // Ensure LastLoginAt and LockoutUntil use 'timestamp without time zone'
+        builder.Property(e => e.LastLoginAt)
+               .HasColumnType("timestamp without time zone");
+        builder.Property(e => e.LockoutUntil)
+               .HasColumnType("timestamp without time zone");
 
         // Navigation properties
         builder.HasMany(e => e.ManagedDevices)

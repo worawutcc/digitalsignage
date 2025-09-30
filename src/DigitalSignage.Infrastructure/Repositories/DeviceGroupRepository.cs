@@ -262,7 +262,7 @@ public class DeviceGroupRepository : IDeviceGroupRepository
             throw new InvalidOperationException("Cannot move group to the specified parent");
 
         group.ParentGroupId = newParentId;
-        group.UpdatedAt = DateTime.UtcNow;
+    group.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         await _context.SaveChangesAsync();
     }

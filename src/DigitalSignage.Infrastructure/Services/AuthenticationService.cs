@@ -61,7 +61,7 @@ public class AuthenticationService : IAuthenticationService
             PasswordHash = hashedPassword,
             Role = UserRole.User, // Default role
             IsActive = true,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
             FailedLoginAttempts = 0
         };
 
@@ -89,7 +89,7 @@ public class AuthenticationService : IAuthenticationService
         }
 
         // Check if account is locked
-        if (user.LockoutUntil.HasValue && user.LockoutUntil.Value > DateTime.UtcNow)
+    if (user.LockoutUntil.HasValue && user.LockoutUntil.Value > DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified))
         {
             throw new InvalidOperationException($"Account is locked until {user.LockoutUntil.Value:yyyy-MM-dd HH:mm:ss UTC}");
         }
@@ -103,7 +103,7 @@ public class AuthenticationService : IAuthenticationService
             // Lock account after max failed attempts
             if (user.FailedLoginAttempts >= _expirationSettings.MaxFailedLoginAttempts)
             {
-                user.LockoutUntil = DateTime.UtcNow.AddMinutes(_expirationSettings.AccountLockoutMinutes);
+                user.LockoutUntil = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(_expirationSettings.AccountLockoutMinutes), DateTimeKind.Unspecified);
                 _logger.LogWarning("Account locked due to too many failed attempts: {Email}", request.Email);
                 throw new InvalidOperationException("Account has been locked due to too many failed login attempts");
             }
@@ -115,7 +115,7 @@ public class AuthenticationService : IAuthenticationService
         // Reset failed login attempts and update last login
         user.FailedLoginAttempts = 0;
         user.LockoutUntil = null;
-        user.LastLoginAt = DateTime.UtcNow;
+    user.LastLoginAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         await _userRepository.UpdateAsync(user);
 
         // Generate tokens
@@ -127,8 +127,8 @@ public class AuthenticationService : IAuthenticationService
         {
             TokenValue = refreshTokenValue,
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(_expirationSettings.RefreshTokenExpiryDays),
-            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(_expirationSettings.RefreshTokenExpiryDays), DateTimeKind.Unspecified),
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
             IsRevoked = false
         };
 
@@ -187,7 +187,7 @@ public class AuthenticationService : IAuthenticationService
     public async Task<RefreshTokenResponse> RefreshTokenAsync(RefreshTokenRequest request)
     {
         var refreshToken = await _refreshTokenRepository.GetByTokenAsync(request.RefreshToken);
-        if (refreshToken == null || refreshToken.IsRevoked || refreshToken.ExpiresAt <= DateTime.UtcNow)
+    if (refreshToken == null || refreshToken.IsRevoked || refreshToken.ExpiresAt <= DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified))
         {
             throw new UnauthorizedAccessException("Invalid or expired refresh token");
         }
@@ -211,8 +211,8 @@ public class AuthenticationService : IAuthenticationService
         {
             TokenValue = newRefreshTokenValue,
             UserId = user.Id,
-            ExpiresAt = DateTime.UtcNow.AddDays(_expirationSettings.RefreshTokenExpiryDays),
-            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(_expirationSettings.RefreshTokenExpiryDays), DateTimeKind.Unspecified),
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
             IsRevoked = false
         };
 

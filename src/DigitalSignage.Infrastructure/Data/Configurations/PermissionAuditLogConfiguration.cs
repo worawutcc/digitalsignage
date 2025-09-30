@@ -20,20 +20,20 @@ public class PermissionAuditLogConfiguration : IEntityTypeConfiguration<Permissi
         builder.HasIndex(x => x.DeviceGroupId)
                .HasDatabaseName("IX_PermissionAuditLogs_DeviceGroupId");
 
-        builder.HasIndex(x => x.ChangedAt)
+        builder.HasIndex(x => x.CreatedAt)
                .IsDescending()
-               .HasDatabaseName("IX_PermissionAuditLogs_ChangedAt");
+               .HasDatabaseName("IX_PermissionAuditLogs_CreatedAt");
 
-        builder.HasIndex(x => x.ChangedBy)
-               .HasDatabaseName("IX_PermissionAuditLogs_ChangedBy");
+        builder.HasIndex(x => x.CreatedBy)
+               .HasDatabaseName("IX_PermissionAuditLogs_CreatedBy");
 
         builder.HasIndex(x => x.Action)
                .HasDatabaseName("IX_PermissionAuditLogs_Action");
 
         // Composite index for common queries
-        builder.HasIndex(x => new { x.UserId, x.ChangedAt })
+        builder.HasIndex(x => new { x.UserId, x.CreatedAt })
                .IsDescending(false, true)
-               .HasDatabaseName("IX_PermissionAuditLogs_UserId_ChangedAt");
+               .HasDatabaseName("IX_PermissionAuditLogs_UserId_CreatedAt");
 
         // Property configurations
         builder.Property(x => x.PreviousPermission)
@@ -57,8 +57,9 @@ public class PermissionAuditLogConfiguration : IEntityTypeConfiguration<Permissi
                .HasMaxLength(1000)
                .HasComment("Additional context (IP address, user agent, etc.)");
 
-        builder.Property(x => x.ChangedAt)
+        builder.Property(x => x.CreatedAt)
                .IsRequired()
+               .HasColumnType("timestamp without time zone")
                .HasDefaultValueSql("NOW()")
                .HasComment("UTC timestamp when change occurred");
 
@@ -68,7 +69,7 @@ public class PermissionAuditLogConfiguration : IEntityTypeConfiguration<Permissi
         builder.Property(x => x.DeviceGroupId)
                .IsRequired();
 
-        builder.Property(x => x.ChangedBy)
+        builder.Property(x => x.CreatedBy)
                .IsRequired();
 
         // Immutable entity configuration - prevent updates
@@ -88,11 +89,12 @@ public class PermissionAuditLogConfiguration : IEntityTypeConfiguration<Permissi
                .OnDelete(DeleteBehavior.Restrict)
                .HasConstraintName("FK_PermissionAuditLogs_DeviceGroups_DeviceGroupId");
 
-        builder.HasOne(x => x.ChangedByUser)
+        // Removed ChangedByUser navigation, use CreatedBy for audit
+        builder.HasOne<User>()
                .WithMany()
-               .HasForeignKey(x => x.ChangedBy)
+               .HasForeignKey(x => x.CreatedBy)
                .OnDelete(DeleteBehavior.Restrict)
-               .HasConstraintName("FK_PermissionAuditLogs_Users_ChangedBy");
+               .HasConstraintName("FK_PermissionAuditLogs_Users_CreatedBy");
 
         // Table configuration with constraints
         builder.ToTable("PermissionAuditLogs", t =>

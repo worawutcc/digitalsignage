@@ -65,7 +65,7 @@ public class MediaService : IMediaService
             S3Key = request.S3Key,
             MimeType = request.MimeType,
             DurationSeconds = request.DurationSeconds,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<Media>().Add(media);
@@ -86,7 +86,7 @@ public class MediaService : IMediaService
         if (request.DurationSeconds.HasValue)
             media.DurationSeconds = request.DurationSeconds.Value;
 
-        media.UpdatedAt = DateTime.UtcNow;
+    media.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Updated media {MediaId}", id);
@@ -138,7 +138,7 @@ public class MediaService : IMediaService
             S3Key = s3Key,
             MimeType = contentType,
             DurationSeconds = 0,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<Media>().Add(media);
@@ -174,7 +174,7 @@ public class MediaService : IMediaService
                 S3Key = s3Key,
                 MimeType = contentType,
                 DurationSeconds = 0,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             _context.Set<Media>().Add(media);
@@ -183,7 +183,7 @@ public class MediaService : IMediaService
         {
             // Update existing media record
             media.FileSize = fileSize;
-            media.UpdatedAt = DateTime.UtcNow;
+            media.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         }
 
         await _context.SaveChangesAsync();
@@ -207,7 +207,7 @@ public class MediaService : IMediaService
             S3Key = s3Key,
             MimeType = request.ContentType,
             DurationSeconds = request.DurationSeconds ?? 0,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<Media>().Add(media);

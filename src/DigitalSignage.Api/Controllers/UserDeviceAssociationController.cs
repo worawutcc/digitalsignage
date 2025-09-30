@@ -43,7 +43,7 @@ public class UserDeviceAssociationController : ControllerBase
     [HttpGet("{id}")]
     [ProducesResponseType(typeof(UserDeviceAssociationDto), 200)]
     [ProducesResponseType(404)]
-    public async Task<ActionResult<UserDeviceAssociationDto>> GetById(Guid id)
+    public async Task<ActionResult<UserDeviceAssociationDto>> GetById(int id)
     {
         var result = await _service.GetByIdAsync(id);
         if (result == null) return NotFound();
@@ -73,7 +73,7 @@ public class UserDeviceAssociationController : ControllerBase
 
     [HttpPut("{id}")]
     [ProducesResponseType(204)]
-    public async Task<IActionResult> Update(Guid id, [FromBody] UpdateUserDeviceAssociationRequest request)
+    public async Task<IActionResult> Update(int id, [FromBody] UpdateUserDeviceAssociationRequest request)
     {
         request.Id = id;
         await _service.UpdateAsync(request);
@@ -82,7 +82,7 @@ public class UserDeviceAssociationController : ControllerBase
 
     [HttpDelete("{id}")]
     [ProducesResponseType(204)]
-    public async Task<IActionResult> Delete(Guid id)
+    public async Task<IActionResult> Delete(int id)
     {
         await _service.DeleteAsync(id);
         return NoContent();

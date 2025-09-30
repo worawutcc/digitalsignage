@@ -6,7 +6,7 @@ namespace DigitalSignage.Domain.Entities;
 /// <summary>
 /// Immutable audit trail of all permission changes for compliance and security tracking
 /// </summary>
-public class PermissionAuditLog
+public class PermissionAuditLog : BaseEntity
 {
     [Key]
     public int Id { get; set; }
@@ -36,12 +36,7 @@ public class PermissionAuditLog
     [MaxLength(500)]
     public string? Reason { get; set; }
 
-    [Required]
-    public int ChangedBy { get; set; }
-    public User ChangedByUser { get; set; } = null!;
-
-    [Required]
-    public DateTimeOffset ChangedAt { get; set; } = DateTimeOffset.UtcNow;
+    // Use ChangedBy and ChangedAt from BaseEntity
 
     /// <summary>
     /// Additional context (IP address, user agent, etc.)

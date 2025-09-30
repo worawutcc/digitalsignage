@@ -72,8 +72,8 @@ public class DeviceGroupService : IDeviceGroupService
             Description = request.Description,
             ParentGroupId = request.ParentGroupId,
             IsActive = request.IsActive,
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         var createdGroup = await _repository.CreateAsync(group);
@@ -93,7 +93,7 @@ public class DeviceGroupService : IDeviceGroupService
         group.Name = request.Name;
         group.Description = request.Description;
         group.IsActive = request.IsActive;
-        group.UpdatedAt = DateTime.UtcNow;
+    group.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
         var updatedGroup = await _repository.UpdateAsync(group);
         return MapToDto(updatedGroup);

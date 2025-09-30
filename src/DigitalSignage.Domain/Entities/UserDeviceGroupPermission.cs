@@ -6,7 +6,7 @@ namespace DigitalSignage.Domain.Entities;
 /// <summary>
 /// Links users to device groups with specific permission levels, supporting hierarchical inheritance and explicit overrides
 /// </summary>
-public class UserDeviceGroupPermission
+public class UserDeviceGroupPermission : BaseEntity
 {
     [Key]
     public int Id { get; set; }
@@ -28,10 +28,6 @@ public class UserDeviceGroupPermission
     [Required]
     public bool IsExplicit { get; set; } = true;
 
-    [Required]
-    public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.UtcNow;
-
-    [Required]
-    public int CreatedBy { get; set; }
+    // Use CreatedAt and CreatedBy from BaseEntity
     public User CreatedByUser { get; set; } = null!;
 }

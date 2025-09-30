@@ -283,8 +283,8 @@ public async Task CreateEntity_PopulatesAuditFields()
 All BaseEntity-inheriting tables include these columns:
 
 ```sql
-created_at TIMESTAMPTZ NOT NULL,
-updated_at TIMESTAMPTZ NOT NULL,
+created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
 created_by INTEGER NOT NULL,
 updated_by INTEGER NOT NULL
 ```
@@ -294,12 +294,12 @@ updated_by INTEGER NOT NULL
 ```csharp
 protected override void Up(MigrationBuilder migrationBuilder)
 {
-    migrationBuilder.AddColumn<DateTimeOffset>(
+    migrationBuilder.AddColumn<DateTime>(
         name: "created_at",
         table: "users",
-        type: "timestamp with time zone",
+        type: "timestamp without time zone",
         nullable: false,
-        defaultValue: new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)));
+        defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
 
     migrationBuilder.AddColumn<int>(
         name: "created_by",
@@ -308,12 +308,12 @@ protected override void Up(MigrationBuilder migrationBuilder)
         nullable: false,
         defaultValue: 0);
 
-    migrationBuilder.AddColumn<DateTimeOffset>(
+    migrationBuilder.AddColumn<DateTime>(
         name: "updated_at",
         table: "users",
-        type: "timestamp with time zone",
+        type: "timestamp without time zone",
         nullable: false,
-        defaultValue: new DateTimeOffset(new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)));
+        defaultValue: new DateTime(1, 1, 1, 0, 0, 0, 0, DateTimeKind.Unspecified));
 
     migrationBuilder.AddColumn<int>(
         name: "updated_by",

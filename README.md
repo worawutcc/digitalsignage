@@ -111,12 +111,29 @@ dotnet run --project src/DigitalSignage.Api
 
 ### Audit Trail
 All business entities inherit from `BaseEntity` and include:
-- `created_at` - Entity creation timestamp
-- `updated_at` - Last modification timestamp  
+- `created_at` - Entity creation timestamp (must use DateTimeKind.Unspecified for PostgreSQL)
+- `updated_at` - Last modification timestamp (must use DateTimeKind.Unspecified for PostgreSQL)
 - `created_by` - User who created the entity
 - `updated_by` - User who last modified the entity
 
 ## 🔧 Development
+### ⚠️ PostgreSQL DateTimeKind Troubleshooting
+
+**Important:** When using PostgreSQL with `timestamp without time zone`, all `DateTime` values must have `DateTimeKind.Unspecified`. Assigning `DateTime.UtcNow` or `DateTime.Now` with `DateTimeKind.Utc` will cause runtime errors:
+
+```
+System.ArgumentException: Cannot write DateTime with Kind=UTC to PostgreSQL type 'timestamp without time zone'
+```
+
+**Solution:**
+- Always assign audit fields (CreatedAt, UpdatedAt, etc.) using:
+  ```csharp
+  DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified)
+  ```
+- Ensure all automatic audit field population (e.g. in `AppDbContext.UpdateAuditFields`) uses this pattern.
+- Never use DateTimeKind.Utc for fields mapped to `timestamp without time zone`.
+
+See `src/DigitalSignage.Infrastructure/Data/AppDbContext.cs` and `src/DigitalSignage.Infrastructure/Data/DbSeeder.cs` for correct usage examples.
 
 ### Running Tests
 ```bash
