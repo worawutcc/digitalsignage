@@ -1,0 +1,774 @@
+openapi: 3.0.3
+info:
+  title: Digital Signage - Device Registration API
+  description: Android TV self-registration with admin approval API
+  version: 1.0.0
+  contact:
+    name: Digital Signage API Team
+    
+servers:
+  - url: https://api.digitalsignage.com/v1
+    description: Production server
+  - url: https://staging-api.digitalsignage.com/v1
+    description: Staging server
+
+paths:
+  /device-registration/register:
+    post:
+      tags:
+        - Device Registration
+      summary: Register a new Android TV device
+      description: Allows Android TV devices to self-register by providing device information
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistrationRequest'
+      responses:
+        '201':
+          description: Device registration request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRegistrationResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Device already registered (duplicate MAC address)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Registration not allowed from this network
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '429':
+          description: Too many registration requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /device-registration/status/{registrationId}:
+    get:
+      tags:
+        - Device Registration
+      summary: Check registration status
+      description: Allows devices to poll for approval status
+      operationId: getRegistrationStatus
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Registration request ID
+      responses:
+        '200':
+          description: Registration status retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RegistrationStatusResponse'
+        '404':
+          description: Registration not found or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/device-registration/pending:
+    get:
+      tags:
+        - Admin - Device Registration
+      summary: Get pending device registrations
+      description: Retrieve list of devices awaiting admin approval
+      operationId: getPendingRegistrations
+      security:
+        - JwtAuth: [admin]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+          description: Page number for pagination
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+          description: Number of items per page
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [createdAt, deviceModel, manufacturer, networkName]
+            default: createdAt
+          description: Sort field
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: desc
+          description: Sort order
+      responses:
+        '200':
+          description: Pending registrations retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingRegistrationsResponse'
+        '401':
+          description: Unauthorized - invalid or missing JWT token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/device-registration/{registrationId}/approve:
+    post:
+      tags:
+        - Admin - Device Registration
+      summary: Approve device registration
+      description: Approve a pending device registration request
+      operationId: approveDeviceRegistration
+      security:
+        - JwtAuth: [admin]
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Registration request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceApprovalRequest'
+      responses:
+        '200':
+          description: Device approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceApprovalResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Registration already processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/device-registration/{registrationId}/reject:
+    post:
+      tags:
+        - Admin - Device Registration
+      summary: Reject device registration
+      description: Reject a pending device registration request
+      operationId: rejectDeviceRegistration
+      security:
+        - JwtAuth: [admin]
+      parameters:
+        - name: registrationId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Registration request ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRejectionRequest'
+      responses:
+        '200':
+          description: Device rejected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRejectionResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Registration not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Registration already processed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /admin/device-registration/bulk-approve:
+    post:
+      tags:
+        - Admin - Device Registration
+      summary: Bulk approve device registrations
+      description: Approve multiple pending device registrations in a single request
+      operationId: bulkApproveDeviceRegistrations
+      security:
+        - JwtAuth: [admin]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkApprovalRequest'
+      responses:
+        '200':
+          description: Bulk approval completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkApprovalResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    JwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DeviceRegistrationRequest:
+      type: object
+      required:
+        - macAddress
+        - deviceModel
+        - manufacturer
+        - androidVersion
+        - appVersion
+        - ipAddress
+        - networkName
+      properties:
+        macAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: Device MAC address in AA:BB:CC:DD:EE:FF format
+          example: "AA:BB:CC:DD:EE:FF"
+        deviceModel:
+          type: string
+          maxLength: 100
+          description: Device model name
+          example: "Samsung QN65Q70AAFXZA"
+        manufacturer:
+          type: string
+          maxLength: 50
+          description: Device manufacturer
+          example: "Samsung"
+        androidVersion:
+          type: string
+          maxLength: 20
+          description: Android OS version
+          example: "11"
+        appVersion:
+          type: string
+          maxLength: 20
+          description: Digital Signage app version
+          example: "1.2.0"
+        ipAddress:
+          type: string
+          format: ipv4
+          description: Device IP address
+          example: "192.168.1.150"
+        networkName:
+          type: string
+          maxLength: 100
+          description: WiFi network SSID
+          example: "Office-WiFi-5G"
+        hardwareSpecs:
+          type: object
+          description: Hardware specifications as JSON
+          properties:
+            ram:
+              type: string
+              example: "4GB"
+            storage:
+              type: string
+              example: "32GB"
+            resolution:
+              type: string
+              example: "3840x2160"
+            processor:
+              type: string
+              example: "ARM Cortex-A78"
+
+    DeviceRegistrationResponse:
+      type: object
+      required:
+        - registrationId
+        - pin
+        - status
+        - expiresAt
+        - pollInterval
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+          description: Unique registration request identifier
+        pin:
+          type: string
+          pattern: '^[A-HJ-NP-Z2-9]{6}$'
+          description: 6-character PIN code for verification
+          example: "A1B2C3"
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired, cancelled]
+          description: Current registration status
+        message:
+          type: string
+          description: Human-readable status message
+          example: "Device registered. Waiting for admin approval."
+        expiresAt:
+          type: string
+          format: date-time
+          description: PIN expiration timestamp
+        pollInterval:
+          type: integer
+          minimum: 5
+          maximum: 300
+          description: Recommended polling interval in seconds
+          example: 10
+
+    RegistrationStatusResponse:
+      type: object
+      required:
+        - registrationId
+        - status
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, approved, rejected, expired, cancelled]
+        deviceKey:
+          type: string
+          description: Device key for API access (only present when approved)
+        deviceId:
+          type: integer
+          description: Assigned device ID (only present when approved)
+        message:
+          type: string
+          description: Status message for the device
+        configuration:
+          type: object
+          description: Device configuration (only present when approved)
+          properties:
+            name:
+              type: string
+            pollInterval:
+              type: integer
+            scheduleCheckInterval:
+              type: integer
+            heartbeatInterval:
+              type: integer
+
+    PendingRegistrationsResponse:
+      type: object
+      required:
+        - registrations
+        - pagination
+      properties:
+        registrations:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingDeviceRegistration'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+
+    PendingDeviceRegistration:
+      type: object
+      required:
+        - registrationId
+        - pin
+        - macAddress
+        - deviceModel
+        - manufacturer
+        - ipAddress
+        - networkName
+        - createdAt
+        - expiresAt
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        pin:
+          type: string
+        macAddress:
+          type: string
+        deviceModel:
+          type: string
+        manufacturer:
+          type: string
+        androidVersion:
+          type: string
+        appVersion:
+          type: string
+        ipAddress:
+          type: string
+        networkName:
+          type: string
+        hardwareSpecs:
+          type: object
+        createdAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        lastPolledAt:
+          type: string
+          format: date-time
+
+    DeviceApprovalRequest:
+      type: object
+      required:
+        - deviceName
+        - pin
+      properties:
+        deviceName:
+          type: string
+          maxLength: 100
+          description: Admin-assigned friendly name for the device
+          example: "Reception Display Main"
+        pin:
+          type: string
+          pattern: '^[A-HJ-NP-Z2-9]{6}$'
+          description: PIN verification from device screen
+          example: "A1B2C3"
+        location:
+          type: string
+          maxLength: 200
+          description: Physical location description
+          example: "Building A - Main Lobby"
+        deviceGroupId:
+          type: integer
+          description: Optional device group assignment
+        zoneId:
+          type: integer
+          description: Optional zone assignment
+        initialScheduleId:
+          type: integer
+          description: Initial content schedule assignment
+        tags:
+          type: object
+          description: Metadata tags as JSON
+          example:
+            department: "marketing"
+            priority: "high"
+        notes:
+          type: string
+          maxLength: 500
+          description: Admin notes about the approval
+
+    DeviceApprovalResponse:
+      type: object
+      required:
+        - registrationId
+        - deviceId
+        - deviceKey
+        - status
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        deviceId:
+          type: integer
+          description: Assigned device ID in main system
+        deviceKey:
+          type: string
+          description: Generated secure device key
+        status:
+          type: string
+          enum: [approved]
+        message:
+          type: string
+          example: "Device approved successfully"
+
+    DeviceRejectionRequest:
+      type: object
+      required:
+        - pin
+        - reason
+      properties:
+        pin:
+          type: string
+          pattern: '^[A-HJ-NP-Z2-9]{6}$'
+          description: PIN verification from device screen
+        reason:
+          type: string
+          maxLength: 500
+          description: Reason for rejection
+          example: "Unauthorized device from external network"
+        notes:
+          type: string
+          maxLength: 500
+          description: Additional admin notes
+
+    DeviceRejectionResponse:
+      type: object
+      required:
+        - registrationId
+        - status
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [rejected]
+        message:
+          type: string
+          example: "Device registration rejected"
+
+    BulkApprovalRequest:
+      type: object
+      required:
+        - approvals
+      properties:
+        approvals:
+          type: array
+          items:
+            type: object
+            required:
+              - registrationId
+              - deviceName
+              - pin
+            properties:
+              registrationId:
+                type: string
+                format: uuid
+              deviceName:
+                type: string
+                maxLength: 100
+              pin:
+                type: string
+                pattern: '^[A-HJ-NP-Z2-9]{6}$'
+              location:
+                type: string
+                maxLength: 200
+              deviceGroupId:
+                type: integer
+              zoneId:
+                type: integer
+              initialScheduleId:
+                type: integer
+              tags:
+                type: object
+              notes:
+                type: string
+                maxLength: 500
+
+    BulkApprovalResponse:
+      type: object
+      required:
+        - totalRequests
+        - successful
+        - failed
+        - results
+      properties:
+        totalRequests:
+          type: integer
+          description: Total number of approval requests processed
+        successful:
+          type: integer
+          description: Number of successful approvals
+        failed:
+          type: integer
+          description: Number of failed approvals
+        results:
+          type: array
+          items:
+            type: object
+            required:
+              - registrationId
+              - status
+            properties:
+              registrationId:
+                type: string
+                format: uuid
+              status:
+                type: string
+                enum: [approved, failed]
+              deviceId:
+                type: integer
+                description: Assigned device ID (only for successful approvals)
+              deviceKey:
+                type: string
+                description: Generated device key (only for successful approvals)
+              error:
+                type: string
+                description: Error message (only for failed approvals)
+
+    PaginationInfo:
+      type: object
+      required:
+        - page
+        - limit
+        - total
+        - pages
+      properties:
+        page:
+          type: integer
+          description: Current page number
+        limit:
+          type: integer
+          description: Items per page
+        total:
+          type: integer
+          description: Total number of items
+        pages:
+          type: integer
+          description: Total number of pages
+        hasNext:
+          type: boolean
+          description: Whether there are more pages
+        hasPrev:
+          type: boolean
+          description: Whether there are previous pages
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+      properties:
+        error:
+          type: string
+          description: Error code or type
+          example: "INVALID_REQUEST"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Invalid MAC address format"
+        details:
+          type: object
+          description: Additional error details
+        traceId:
+          type: string
+          description: Request trace ID for debugging
+          example: "123e4567-e89b-12d3-a456-426614174000"

@@ -1,0 +1,374 @@
+openapi: 3.0.3
+info:
+  title: Digital Signage QR Code Registration API
+  description: API contracts for QR Code device registration system
+  version: 1.0.0
+  contact:
+    name: Digital Signage Team
+    email: support@digitalsignage.com
+
+servers:
+  - url: https://api.digitalsignage.com
+    description: Production server
+  - url: https://staging-api.digitalsignage.com
+    description: Staging server
+
+paths:
+  /api/device-registration/initiate-qr:
+    post:
+      summary: Initiate QR Code device registration
+      description: Generate QR code for Android TV device registration
+      operationId: initiateQrRegistration
+      tags:
+        - Device Registration
+      security:
+        - ApiKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InitiateQrRegistrationRequest'
+            example:
+              macAddress: "AA:BB:CC:DD:EE:FF"
+              deviceModel: "Samsung QN65Q70AAFXZA"
+              manufacturer: "Samsung"
+              androidVersion: "11.0"
+              appVersion: "1.2.3"
+              ipAddress: "192.168.1.100"
+              networkName: "Corporate-WiFi"
+              preferredMethod: 2
+      responses:
+        '200':
+          description: QR code registration initiated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InitiateQrRegistrationResponse'
+              example:
+                registrationId: "123e4567-e89b-12d3-a456-426614174000"
+                qrCodeImage: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+                qrCodeData: "{\"registrationId\":\"123e4567-e89b-12d3-a456-426614174000\"}"
+                method: 2
+                status: 1
+                expiresAt: "2025-09-30T16:15:00Z"
+                message: "Scan QR code with admin app to approve device"
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblemDetails'
+        '409':
+          description: Device already registered or registration conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                title: "Registration Conflict"
+                detail: "Device with MAC address AA:BB:CC:DD:EE:FF is already registered"
+                status: 409
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+  /api/device-registration/approve-qr:
+    post:
+      summary: Approve QR Code device registration
+      description: Admin approval of device registration via QR code scan
+      operationId: approveQrRegistration
+      tags:
+        - Device Registration
+      security:
+        - JwtAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveQrRegistrationRequest'
+            example:
+              registrationId: "123e4567-e89b-12d3-a456-426614174000"
+              adminUserId: 42
+              deviceGroupId: 5
+              customDeviceName: "Lobby Display 1"
+              adminNotes: "Approved for main lobby installation"
+      responses:
+        '200':
+          description: Device registration approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproveQrRegistrationResponse'
+              example:
+                isSuccess: true
+                deviceId: 123
+                deviceKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                status: 2
+                message: "Device successfully registered and approved"
+                approvedAt: "2025-09-30T15:45:30Z"
+                approvedByAdmin: "John Smith"
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationProblemDetails'
+        '404':
+          description: Registration request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                title: "Registration Not Found"
+                detail: "No pending registration found for the provided ID"
+                status: 404
+        '410':
+          description: Registration request expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+              example:
+                title: "Registration Expired"
+                detail: "QR code has expired. Device must initiate new registration"
+                status: 410
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Device API key for authentication
+    JwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for admin authentication
+
+  schemas:
+    InitiateQrRegistrationRequest:
+      type: object
+      required:
+        - macAddress
+        - deviceModel
+        - manufacturer
+        - androidVersion
+        - appVersion
+      properties:
+        macAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          description: Device MAC address in AA:BB:CC:DD:EE:FF format
+          example: "AA:BB:CC:DD:EE:FF"
+        deviceModel:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: Device model name
+          example: "Samsung QN65Q70AAFXZA"
+        manufacturer:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Device manufacturer
+          example: "Samsung"
+        androidVersion:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Android OS version
+          example: "11.0"
+        appVersion:
+          type: string
+          minLength: 1
+          maxLength: 20
+          description: Digital Signage app version
+          example: "1.2.3"
+        ipAddress:
+          type: string
+          maxLength: 45
+          description: Device IP address (IPv4/IPv6)
+          example: "192.168.1.100"
+        networkName:
+          type: string
+          maxLength: 100
+          description: Network name (SSID)
+          example: "Corporate-WiFi"
+        preferredMethod:
+          $ref: '#/components/schemas/RegistrationMethod'
+
+    InitiateQrRegistrationResponse:
+      type: object
+      required:
+        - registrationId
+        - qrCodeImage
+        - qrCodeData
+        - method
+        - status
+        - expiresAt
+        - message
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+          description: Unique registration ID
+        qrCodeImage:
+          type: string
+          description: QR Code image data (Base64 encoded PNG)
+          example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+        qrCodeData:
+          type: string
+          description: QR Code raw data/payload (JSON)
+          example: "{\"registrationId\":\"123e4567-e89b-12d3-a456-426614174000\"}"
+        method:
+          $ref: '#/components/schemas/RegistrationMethod'
+        status:
+          $ref: '#/components/schemas/RegistrationStatus'
+        expiresAt:
+          type: string
+          format: date-time
+          description: QR Code expiration timestamp
+        message:
+          type: string
+          description: User-friendly message
+          example: "Scan QR code with admin app to approve device"
+        pin:
+          type: string
+          description: Optional PIN for hybrid QR+PIN method
+          example: "A1B2C3"
+
+    ApproveQrRegistrationRequest:
+      type: object
+      required:
+        - registrationId
+        - adminUserId
+      properties:
+        registrationId:
+          type: string
+          format: uuid
+          description: Registration ID from QR Code scan
+        adminUserId:
+          type: integer
+          description: Admin user ID performing the approval
+          example: 42
+        pin:
+          type: string
+          minLength: 6
+          maxLength: 6
+          description: Optional PIN verification for hybrid method
+          example: "A1B2C3"
+        deviceGroupId:
+          type: integer
+          description: Optional device group assignment
+          example: 5
+        customDeviceName:
+          type: string
+          maxLength: 100
+          description: Optional custom device name
+          example: "Lobby Display 1"
+        adminNotes:
+          type: string
+          maxLength: 500
+          description: Admin notes/comments
+          example: "Approved for main lobby installation"
+
+    ApproveQrRegistrationResponse:
+      type: object
+      required:
+        - isSuccess
+        - status
+        - message
+      properties:
+        isSuccess:
+          type: boolean
+          description: Registration success status
+        deviceId:
+          type: integer
+          description: Device ID assigned (if approved)
+          example: 123
+        deviceKey:
+          type: string
+          description: Device authentication key (JWT token)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        status:
+          $ref: '#/components/schemas/RegistrationStatus'
+        message:
+          type: string
+          description: Success/error message
+          example: "Device successfully registered and approved"
+        approvedAt:
+          type: string
+          format: date-time
+          description: Approval timestamp
+        approvedByAdmin:
+          type: string
+          description: Admin user who approved
+          example: "John Smith"
+
+    RegistrationMethod:
+      type: integer
+      enum: [1, 2, 3, 4]
+      description: |
+        Registration method:
+        * `1` - Pin: Traditional PIN-based registration
+        * `2` - QrCode: QR Code-based registration  
+        * `3` - QrCodePin: Hybrid QR Code + PIN verification
+        * `4` - PreApproved: Admin pre-approved via MAC whitelist
+      example: 2
+
+    RegistrationStatus:
+      type: integer
+      enum: [1, 2, 3, 4, 5]
+      description: |
+        Registration status:
+        * `1` - Pending: Awaiting admin approval
+        * `2` - Approved: Admin approved, device active
+        * `3` - Rejected: Admin rejected registration
+        * `4` - Expired: QR code/PIN expired before approval
+        * `5` - Cancelled: Registration cancelled by device
+      example: 1
+
+    ProblemDetails:
+      type: object
+      properties:
+        type:
+          type: string
+          description: URI reference to problem type
+        title:
+          type: string
+          description: Short, human-readable summary
+        status:
+          type: integer
+          description: HTTP status code
+        detail:
+          type: string
+          description: Human-readable explanation
+        instance:
+          type: string
+          description: URI reference to specific occurrence
+
+    ValidationProblemDetails:
+      allOf:
+        - $ref: '#/components/schemas/ProblemDetails'
+        - type: object
+          properties:
+            errors:
+              type: object
+              additionalProperties:
+                type: array
+                items:
+                  type: string
+              description: Validation error details per field
