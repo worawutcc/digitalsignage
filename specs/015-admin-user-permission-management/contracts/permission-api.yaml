@@ -1,0 +1,504 @@
+openapi: 3.0.3
+info:
+  title: Admin User Permission Management API
+  description: RBAC system for managing user permissions across hierarchical device groups
+  version: 1.0.0
+  contact:
+    name: Digital Signage API
+    
+servers:
+  - url: /api
+    description: API base path
+
+tags:
+  - name: Admin Permissions
+    description: Admin-only permission management operations
+  - name: User Permissions  
+    description: User permission queries and self-service operations
+
+security:
+  - JwtAuth: []
+
+paths:
+  /admin/users/{userId}/permissions:
+    get:
+      tags: [Admin Permissions]
+      summary: Get user permissions for all device groups
+      description: Returns effective and explicit permissions for specified user across all device groups they have access to
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID to get permissions for
+        - name: includeInherited
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include inherited permissions from parent groups
+        - name: deviceGroupId
+          in: query
+          schema:
+            type: integer
+          description: Filter to specific device group and its children
+      responses:
+        '200':
+          description: User permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: integer
+                  userName:
+                    type: string
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserPermissionDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: User not found
+          
+    post:
+      tags: [Admin Permissions]
+      summary: Set multiple permissions for user
+      description: Batch update user permissions for multiple device groups
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permissions:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/SetPermissionRequest'
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Reason for permission changes
+              required:
+                - permissions
+      responses:
+        '200':
+          description: Permissions updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: integer
+                    description: Number of permissions updated
+                  created:
+                    type: integer
+                    description: Number of new permissions created
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        deviceGroupId:
+                          type: integer
+                        error:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /admin/users/{userId}/permissions/{deviceGroupId}:
+    put:
+      tags: [Admin Permissions]
+      summary: Update specific user permission
+      description: Set or update permission level for user on specific device group
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: deviceGroupId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPermissionRequest'
+      responses:
+        '200':
+          description: Permission updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPermissionDto'
+        '201':
+          description: New permission created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPermissionDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: User or device group not found
+          
+    delete:
+      tags: [Admin Permissions]
+      summary: Remove explicit permission
+      description: Remove explicit permission (user will revert to inherited permission or no access)
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: deviceGroupId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: reason
+          in: query
+          schema:
+            type: string
+            maxLength: 500
+          description: Reason for removing permission
+      responses:
+        '204':
+          description: Permission removed successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          description: Permission not found or already inherited
+
+  /admin/permissions/audit:
+    get:
+      tags: [Admin Permissions]
+      summary: Get permission change audit log
+      description: Retrieve audit trail of permission changes with filtering and pagination
+      parameters:
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          description: Filter by user who received permission changes
+        - name: deviceGroupId
+          in: query
+          schema:
+            type: integer
+          description: Filter by device group
+        - name: changedBy
+          in: query
+          schema:
+            type: integer
+          description: Filter by admin who made changes
+        - name: action
+          in: query
+          schema:
+            type: string
+            enum: [GRANTED, MODIFIED, REVOKED]
+          description: Filter by type of change
+        - name: fromDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter changes from this date
+        - name: toDate
+          in: query
+          schema:
+            type: string
+            format: date-time
+          description: Filter changes to this date
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+            minimum: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 50
+            minimum: 1
+            maximum: 200
+      responses:
+        '200':
+          description: Audit log retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  auditLogs:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PermissionAuditDto'
+                  totalCount:
+                    type: integer
+                  page:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  hasNextPage:
+                    type: boolean
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /user/accessible-device-groups:
+    get:
+      tags: [User Permissions]
+      summary: Get device groups user has access to
+      description: Returns all device groups current user can access with their permission levels
+      parameters:
+        - name: permission
+          in: query
+          schema:
+            type: string
+            enum: [ViewOnly, ManageContent, FullControl]
+          description: Filter by minimum permission level required
+      responses:
+        '200':
+          description: Accessible device groups retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    deviceGroupId:
+                      type: integer
+                    deviceGroupName:
+                      type: string
+                    permission:
+                      $ref: '#/components/schemas/UserPermissionLevel'
+                    isInherited:
+                      type: boolean
+                    deviceCount:
+                      type: integer
+                    parentGroupId:
+                      type: integer
+                      nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /user/permissions:
+    get:
+      tags: [User Permissions]
+      summary: Get current user permissions
+      description: Returns effective permissions for the authenticated user across all device groups
+      responses:
+        '200':
+          description: User permissions retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: integer
+                  userName:
+                    type: string
+                  isAdmin:
+                    type: boolean
+                  permissions:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserPermissionDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  schemas:
+    UserPermissionLevel:
+      type: string
+      enum:
+        - NoAccess
+        - ViewOnly
+        - ManageContent
+        - FullControl
+      description: |
+        Permission levels in hierarchical order:
+        - NoAccess: Cannot see or interact with device group
+        - ViewOnly: Can view devices and content (read-only)
+        - ManageContent: Can manage content, upload media, create schedules
+        - FullControl: Complete control including device settings and user management
+
+    UserPermissionDto:
+      type: object
+      properties:
+        deviceGroupId:
+          type: integer
+        deviceGroupName:
+          type: string
+        deviceGroupPath:
+          type: string
+          description: Full path from root (e.g., "Corporate/Marketing/Lobby")
+        permission:
+          $ref: '#/components/schemas/UserPermissionLevel'
+        effectivePermission:
+          $ref: '#/components/schemas/UserPermissionLevel'
+          description: Actual permission after inheritance calculation
+        isExplicit:
+          type: boolean
+          description: True if explicitly assigned, false if inherited
+        isInherited:
+          type: boolean
+          description: True if inherited from parent group
+        inheritedFrom:
+          type: integer
+          nullable: true
+          description: Device group ID this permission is inherited from
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          description: Name of admin who created this permission
+      required:
+        - deviceGroupId
+        - deviceGroupName
+        - permission
+        - effectivePermission
+        - isExplicit
+        - isInherited
+        - createdAt
+
+    SetPermissionRequest:
+      type: object
+      properties:
+        deviceGroupId:
+          type: integer
+        permission:
+          $ref: '#/components/schemas/UserPermissionLevel'
+        reason:
+          type: string
+          maxLength: 500
+          description: Reason for this permission change
+      required:
+        - deviceGroupId
+        - permission
+
+    PermissionAuditDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        userName:
+          type: string
+        deviceGroupId:
+          type: integer
+        deviceGroupName:
+          type: string
+        deviceGroupPath:
+          type: string
+        previousPermission:
+          $ref: '#/components/schemas/UserPermissionLevel'
+          nullable: true
+        newPermission:
+          $ref: '#/components/schemas/UserPermissionLevel'
+          nullable: true
+        action:
+          type: string
+          enum: [GRANTED, MODIFIED, REVOKED]
+        reason:
+          type: string
+          nullable: true
+        changedBy:
+          type: string
+          description: Name of admin who made the change
+        changedAt:
+          type: string
+          format: date-time
+        context:
+          type: string
+          nullable: true
+          description: Additional context like IP address, user agent
+      required:
+        - id
+        - userId
+        - userName
+        - deviceGroupId
+        - deviceGroupName
+        - action
+        - changedBy
+        - changedAt
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters or validation errors
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: array
+                items:
+                  type: string
+                  
+    Unauthorized:
+      description: Authentication required or token invalid
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Authentication required"
+                
+    Forbidden:
+      description: Admin role required for this operation
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+                example: "Admin role required"
+
+  securitySchemes:
+    JwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token obtained from /api/auth/login endpoint.
+        Token must include admin role claim for admin operations.

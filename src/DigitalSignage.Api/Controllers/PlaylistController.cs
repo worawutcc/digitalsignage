@@ -1,0 +1,184 @@
+using Microsoft.AspNetCore.Mvc;
+using DigitalSignage.Application.DTOs;
+using DigitalSignage.Application.Interfaces;
+
+namespace DigitalSignage.Api.Controllers;
+
+[ApiController]
+[Route("api/[controller]")]
+public class PlaylistController : ControllerBase
+{
+    private readonly IPlaylistService _playlistService;
+    private readonly ILogger<PlaylistController> _logger;
+
+    public PlaylistController(IPlaylistService playlistService, ILogger<PlaylistController> logger)
+    {
+        _playlistService = playlistService;
+        _logger = logger;
+    }
+
+    /// <summary>
+    /// Get all playlists
+    /// </summary>
+    [HttpGet]
+    [ProducesResponseType(typeof(IEnumerable<PlaylistDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<PlaylistDto>>> GetPlaylists()
+    {
+        try
+        {
+            var playlists = await _playlistService.GetAllAsync();
+            return Ok(playlists);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting playlists");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get playlists by user ID
+    /// </summary>
+    [HttpGet("user/{userId}")]
+    [ProducesResponseType(typeof(IEnumerable<PlaylistDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<PlaylistDto>>> GetPlaylistsByUser(int userId)
+    {
+        try
+        {
+            var playlists = await _playlistService.GetByUserIdAsync(userId);
+            return Ok(playlists);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting playlists for user {UserId}", userId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get a specific playlist by ID
+    /// </summary>
+    [HttpGet("{id}")]
+    [ProducesResponseType(typeof(PlaylistDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistDto>> GetPlaylist(int id)
+    {
+        try
+        {
+            var playlist = await _playlistService.GetByIdAsync(id);
+            if (playlist == null)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return Ok(playlist);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Create a new playlist
+    /// </summary>
+    [HttpPost]
+    [ProducesResponseType(typeof(PlaylistDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistDto>> CreatePlaylist([FromBody] CreatePlaylistRequest request, [FromQuery] int userId = 1)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var playlist = await _playlistService.CreateAsync(request, userId);
+            return CreatedAtAction(nameof(GetPlaylist), new { id = playlist.Id }, playlist);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for creating playlist");
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating playlist");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Delete a playlist
+    /// </summary>
+    [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeletePlaylist(int id)
+    {
+        try
+        {
+            var deleted = await _playlistService.DeleteAsync(id);
+            if (!deleted)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Activate a playlist
+    /// </summary>
+    [HttpPost("{id}/activate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ActivatePlaylist(int id)
+    {
+        try
+        {
+            var result = await _playlistService.ActivateAsync(id);
+            if (!result)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error activating playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Deactivate a playlist
+    /// </summary>
+    [HttpPost("{id}/deactivate")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> DeactivatePlaylist(int id)
+    {
+        try
+        {
+            var result = await _playlistService.DeactivateAsync(id);
+            if (!result)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return Ok();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deactivating playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+}

@@ -1,0 +1,532 @@
+openapi: 3.0.3
+info:
+  title: Device Group Hierarchy API
+  description: API endpoints for managing hierarchical device groups in Digital Signage system
+  version: 1.0.0
+  contact:
+    name: Digital Signage API
+    
+servers:
+  - url: http://localhost:5100/api
+    description: Development server
+    
+security:
+  - bearerAuth: []
+
+paths:
+  /device-groups/tree:
+    get:
+      summary: Get complete device group hierarchy tree
+      description: Returns the full hierarchical tree structure of device groups
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: maxDepth
+          in: query
+          description: Maximum depth to retrieve (default 10)
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+        - name: includeDeviceCounts
+          in: query
+          description: Include device counts for each group
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Hierarchy tree retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceGroupTreeDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /device-groups/{id}/children:
+    get:
+      summary: Get direct children of a device group
+      description: Returns immediate child groups of the specified parent group
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Parent group ID
+          schema:
+            type: integer
+        - name: page
+          in: query
+          description: Page number for pagination
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          description: Number of items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Children retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceGroupTreeDto'
+                  totalCount:
+                    type: integer
+                  pageSize:
+                    type: integer
+                  currentPage:
+                    type: integer
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    
+    post:
+      summary: Create a new child device group
+      description: Creates a new device group as a child of the specified parent
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Parent group ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDeviceGroupRequest'
+      responses:
+        '201':
+          description: Child group created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroupTreeDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /device-groups/{id}/descendants:
+    get:
+      summary: Get all descendants of a device group
+      description: Returns all descendant groups (children, grandchildren, etc.) of the specified group
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Parent group ID
+          schema:
+            type: integer
+        - name: maxDepth
+          in: query
+          description: Maximum depth to retrieve relative to parent
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 10
+            default: 10
+        - name: flatten
+          in: query
+          description: Return flat list instead of nested tree
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Descendants retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceGroupTreeDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /device-groups/{id}/ancestors:
+    get:
+      summary: Get ancestors (breadcrumb path) of a device group
+      description: Returns the path from root to the specified group for breadcrumb navigation
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Group ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Ancestors retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeviceGroupBreadcrumbDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /device-groups/{id}/move:
+    put:
+      summary: Move a device group to a different parent
+      description: Moves a device group and all its descendants to a new parent group
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Group ID to move
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveDeviceGroupRequest'
+      responses:
+        '200':
+          description: Group moved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceGroupTreeDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Move would create circular reference or exceed depth limit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /device-groups/search:
+    get:
+      summary: Search device groups across hierarchy
+      description: Search for device groups by name across the entire hierarchy
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: query
+          in: query
+          required: true
+          description: Search term
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 100
+        - name: includeAncestors
+          in: query
+          description: Include ancestor path in results
+          schema:
+            type: boolean
+            default: true
+        - name: limit
+          in: query
+          description: Maximum number of results
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        '200':
+          description: Search results retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  results:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceGroupSearchResultDto'
+                  totalCount:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /device-groups/{id}/validate-move:
+    post:
+      summary: Validate if a group can be moved to a new parent
+      description: Validates move operation without executing it
+      tags:
+        - Device Groups - Hierarchy
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Group ID to validate move for
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                newParentId:
+                  type: integer
+                  nullable: true
+              required:
+                - newParentId
+      responses:
+        '200':
+          description: Move validation result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  canMove:
+                    type: boolean
+                  reason:
+                    type: string
+                    nullable: true
+                  newDepth:
+                    type: integer
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    DeviceGroupTreeDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+        parentGroupId:
+          type: integer
+          nullable: true
+        path:
+          type: string
+          description: Full breadcrumb path (e.g., "Company / Branch / Floor")
+        deviceCount:
+          type: integer
+          description: Direct device count
+        totalDeviceCount:
+          type: integer
+          description: Total devices including descendants
+        childGroupCount:
+          type: integer
+        level:
+          type: integer
+          description: Depth in hierarchy (0 = root)
+        hasChildren:
+          type: boolean
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceGroupTreeDto'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - path
+        - deviceCount
+        - totalDeviceCount
+        - childGroupCount
+        - level
+        - hasChildren
+        - children
+        - createdAt
+        - updatedAt
+
+    CreateDeviceGroupRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          nullable: true
+          maxLength: 1000
+      required:
+        - name
+
+    MoveDeviceGroupRequest:
+      type: object
+      properties:
+        newParentId:
+          type: integer
+          nullable: true
+          description: New parent group ID (null for root level)
+        reason:
+          type: string
+          nullable: true
+          maxLength: 500
+          description: Optional reason for the move
+      required:
+        - newParentId
+
+    DeviceGroupBreadcrumbDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        level:
+          type: integer
+      required:
+        - id
+        - name
+        - level
+
+    DeviceGroupSearchResultDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        path:
+          type: string
+        level:
+          type: integer
+        deviceCount:
+          type: integer
+        ancestors:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceGroupBreadcrumbDto'
+      required:
+        - id
+        - name
+        - path
+        - level
+        - deviceCount
+        - ancestors
+
+    ValidationErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+        - message
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+
+    Unauthorized:
+      description: Unauthorized
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                default: "Unauthorized"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                default: "Resource not found"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+                default: "An internal server error occurred"
