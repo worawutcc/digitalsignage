@@ -46,10 +46,33 @@ public static class DatabaseServiceExtensions
     public static IServiceCollection AddAwsServices(this IServiceCollection services, IConfiguration configuration)
     {
         // Configure AWS Services
-        services.Configure<AwsS3Settings>(
-            configuration.GetSection("AWS:S3"));
+        services.Configure<AwsS3Settings>(options =>
+        {
+            var awsSection = configuration.GetSection("AWS");
+            options.AccessKey = awsSection["AccessKey"] ?? string.Empty;
+            options.SecretKey = awsSection["SecretKey"] ?? string.Empty;
+            options.BucketName = awsSection["S3:BucketName"] ?? string.Empty;
+            options.Region = awsSection["S3:Region"] ?? string.Empty;
+            
+            if (TimeSpan.TryParse(awsSection["S3:PresignedUrlExpiry"], out var expiry))
+            {
+                options.PresignedUrlExpiryMinutes = (int)expiry.TotalMinutes;
+            }
+        });
 
+        // Configure AWS credentials and client
+        var awsAccessKey = configuration["AWS:AccessKey"];
+        var awsSecretKey = configuration["AWS:SecretKey"];
+        var awsRegion = configuration["AWS:S3:Region"];
+        
+        if (!string.IsNullOrEmpty(awsAccessKey) && !string.IsNullOrEmpty(awsSecretKey))
+        {
+            services.AddSingleton<Amazon.Runtime.AWSCredentials>(
+                new Amazon.Runtime.BasicAWSCredentials(awsAccessKey, awsSecretKey));
+        }
+        
         services.AddAWSService<IAmazonS3>();
+        
         services.AddScoped<IFileUploadService, S3FileUploadService>();
 
         return services;
