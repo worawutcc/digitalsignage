@@ -12,6 +12,10 @@ Auto-generated from all feature plans. Last updated: 2025-09-29
 - C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9 + Entity Framework Core (PostgreSQL), ASP.NET Core MVC, log4net, AWS S3 SDK (014-basic-hierarchy)
 - C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AutoMapper, log4ne (015-admin-user-permission-management)
 - PostgreSQL with Npgsql provider for RBAC tables and audit logs (015-admin-user-permission-management)
+- TypeScript 5.x (Frontend), C# .NET 8 (Backend) + Next.js 15, React 18, Redux Toolkit, Tailwind CSS, ASP.NET Core Web API (017-admin-menu-design)
+- PostgreSQL (backend data), LocalStorage/SessionStorage (menu state) (017-admin-menu-design)
+- TypeScript 5.x, Next.js 15 with App Router, React 18 + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, Lucide React, Axios, React Hook Form, Zod (017-design-ui-backoffice)
+- Browser LocalStorage/SessionStorage for client state, API integration with PostgreSQL backend via REST endpoints (017-design-ui-backoffice)
 
 ## Project Structure
 ```
@@ -261,9 +265,9 @@ dotnet build
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
 ## Recent Changes
+- 017-design-ui-backoffice: Added TypeScript 5.x, Next.js 15 with App Router, React 18 + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, Lucide React, Axios, React Hook Form, Zod
+- 017-admin-menu-design: Added TypeScript 5.x (Frontend), C# .NET 8 (Backend) + Next.js 15, React 18, Redux Toolkit, Tailwind CSS, ASP.NET Core Web API
 - 015-admin-user-permission-management: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AutoMapper, log4ne
-- 014-basic-hierarchy: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9 + Entity Framework Core (PostgreSQL), ASP.NET Core MVC, log4net, AWS S3 SDK
-- 013-qr-code-system: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AWS S3 SDK, log4net, PostgreSQL (Npgsql)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
