@@ -16,6 +16,12 @@ Auto-generated from all feature plans. Last updated: 2025-09-29
 - PostgreSQL (backend data), LocalStorage/SessionStorage (menu state) (017-admin-menu-design)
 - TypeScript 5.x, Next.js 15 with App Router, React 18 + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, Lucide React, Axios, React Hook Form, Zod (017-design-ui-backoffice)
 - Browser LocalStorage/SessionStorage for client state, API integration with PostgreSQL backend via REST endpoints (017-design-ui-backoffice)
+- C# .NET 8 with ASP.NET Core Web API + ASP.NET Core SignalR, Microsoft.AspNetCore.Authentication.JwtBearer, Entity Framework Core 9 (018-api-implement-websocket)
+- PostgreSQL (existing) for connection audit logs, in-memory for active connection tracking (018-api-implement-websocket)
+- C# .NET 8, TypeScript 5.x + ASP.NET Core Web API, Entity Framework Core 9, PostgreSQL (Npgsql), Next.js 15, React 18 (019-user-based-content)
+- PostgreSQL database with EF Core migrations (019-user-based-content)
+- TypeScript 5.x with Next.js 15 (React 19) (020-phase-1)
+- PostgreSQL (backend) via REST API, LocalStorage/SessionStorage for client state (020-phase-1)
 
 ## Project Structure
 ```
@@ -265,9 +271,9 @@ dotnet build
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
 ## Recent Changes
-- 017-design-ui-backoffice: Added TypeScript 5.x, Next.js 15 with App Router, React 18 + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, Lucide React, Axios, React Hook Form, Zod
-- 017-admin-menu-design: Added TypeScript 5.x (Frontend), C# .NET 8 (Backend) + Next.js 15, React 18, Redux Toolkit, Tailwind CSS, ASP.NET Core Web API
-- 015-admin-user-permission-management: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Bearer Authentication, AutoMapper, log4ne
+- 020-phase-1: Added TypeScript 5.x with Next.js 15 (React 19)
+- 019-user-based-content: Added C# .NET 8, TypeScript 5.x + ASP.NET Core Web API, Entity Framework Core 9, PostgreSQL (Npgsql), Next.js 15, React 18
+- 018-api-implement-websocket: Added C# .NET 8 with ASP.NET Core Web API + ASP.NET Core SignalR, Microsoft.AspNetCore.Authentication.JwtBearer, Entity Framework Core 9
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
