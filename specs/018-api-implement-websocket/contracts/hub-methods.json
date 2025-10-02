@@ -1,0 +1,173 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SignalR Hub Method Contracts",
+  "description": "Contracts for NotificationHub server and client methods",
+  "definitions": {
+    "ServerMethods": {
+      "description": "Methods that clients can invoke on the server hub",
+      "type": "object",
+      "properties": {
+        "SendHeartbeat": {
+          "description": "Client sends heartbeat to confirm it's still active",
+          "parameters": [],
+          "returns": "void"
+        },
+        "SubscribeToEvents": {
+          "description": "Client subscribes to specific event types (optional - all events sent by default based on RBAC)",
+          "parameters": [
+            {
+              "name": "eventTypes",
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "List of event types to subscribe to"
+            }
+          ],
+          "returns": "void"
+        },
+        "UnsubscribeFromEvents": {
+          "description": "Client unsubscribes from specific event types",
+          "parameters": [
+            {
+              "name": "eventTypes",
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "returns": "void"
+        },
+        "AcknowledgeEvent": {
+          "description": "Client acknowledges receipt of an event (for tracking/metrics)",
+          "parameters": [
+            {
+              "name": "eventType",
+              "type": "string",
+              "description": "Type of event being acknowledged"
+            },
+            {
+              "name": "timestamp",
+              "type": "string",
+              "format": "date-time",
+              "description": "Timestamp from original event"
+            }
+          ],
+          "returns": "void"
+        }
+      }
+    },
+    "ClientMethods": {
+      "description": "Methods that server can invoke on connected clients",
+      "type": "object",
+      "properties": {
+        "ReceiveEvent": {
+          "description": "Server sends an event to the client",
+          "parameters": [
+            {
+              "name": "event",
+              "type": "object",
+              "description": "Event message (see websocket-events.json schema)"
+            }
+          ],
+          "returns": "void"
+        },
+        "OnConnectionEstablished": {
+          "description": "Server confirms connection is established",
+          "parameters": [
+            {
+              "name": "connectionInfo",
+              "type": "object",
+              "properties": {
+                "connectionId": {
+                  "type": "string"
+                },
+                "userId": {
+                  "type": "string"
+                },
+                "serverTime": {
+                  "type": "string",
+                  "format": "date-time"
+                }
+              }
+            }
+          ],
+          "returns": "void"
+        },
+        "OnConnectionClosing": {
+          "description": "Server notifies client that connection will close soon",
+          "parameters": [
+            {
+              "name": "reason",
+              "type": "string"
+            },
+            {
+              "name": "message",
+              "type": "string"
+            },
+            {
+              "name": "closeInMs",
+              "type": "integer"
+            }
+          ],
+          "returns": "void"
+        },
+        "OnError": {
+          "description": "Server sends error message to client",
+          "parameters": [
+            {
+              "name": "error",
+              "type": "object",
+              "properties": {
+                "code": {
+                  "type": "string"
+                },
+                "message": {
+                  "type": "string"
+                },
+                "details": {
+                  "type": "string"
+                }
+              }
+            }
+          ],
+          "returns": "void"
+        }
+      }
+    }
+  },
+  "serverMethods": {
+    "$ref": "#/definitions/ServerMethods"
+  },
+  "clientMethods": {
+    "$ref": "#/definitions/ClientMethods"
+  },
+  "examples": {
+    "clientInvokingServer": {
+      "method": "SendHeartbeat",
+      "invocation": {
+        "type": 1,
+        "target": "SendHeartbeat",
+        "arguments": []
+      }
+    },
+    "serverInvokingClient": {
+      "method": "ReceiveEvent",
+      "invocation": {
+        "type": 1,
+        "target": "ReceiveEvent",
+        "arguments": [
+          {
+            "type": "device_status_changed",
+            "payload": {
+              "deviceId": "device-123",
+              "status": "offline"
+            },
+            "timestamp": "2025-10-01T10:00:00Z"
+          }
+        ]
+      }
+    }
+  }
+}

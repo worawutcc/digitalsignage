@@ -25,6 +25,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<ISceneService, SceneService>();
         services.AddScoped<IMediaService, MediaService>();
         services.AddScoped<IDeviceGroupService, DeviceGroupService>();
+        services.AddScoped<IDeviceService, DeviceService>();
+        services.AddScoped<IScheduleService, ScheduleService>();
         
         // Device Registration Services
         services.AddScoped<IPinGenerationService, PinGenerationService>();

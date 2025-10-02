@@ -53,6 +53,17 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         builder.Property(e => e.QrCodeData)
                .HasMaxLength(2000)
                .IsRequired(false); // Optional field for QR-based registrations
+        
+        // Configure user identification fields (Feature 019)
+        builder.Property(e => e.RequestedUsername)
+               .HasMaxLength(200)
+               .IsRequired()
+               .HasComment("Email or username provided by device during registration");
+        
+        builder.Property(e => e.RequestedUserDisplayName)
+               .HasMaxLength(200)
+               .IsRequired(false)
+               .HasComment("Optional friendly name provided by device");
 
         // Configure enum conversions to integers for PostgreSQL
         builder.Property(e => e.Status)
@@ -67,6 +78,21 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         builder.HasIndex(e => e.MacAddress);
         builder.HasIndex(e => e.Status);
         builder.HasIndex(e => e.Method); // Index for filtering by registration method
+        
+        // Indexes for user matching (Feature 019)
+        builder.HasIndex(e => e.RequestedUsername)
+               .HasDatabaseName("IX_DeviceRegistrationRequests_RequestedUsername");
+        
+        // Composite index for pending registration queries
+        builder.HasIndex(e => new { e.Status, e.CreatedAt })
+               .HasDatabaseName("IX_DeviceRegistrationRequests_Status_CreatedAt");
+        
+        // Navigation properties
+        // Matched user relationship (Feature 019)
+        builder.HasOne(e => e.MatchedUser)
+               .WithMany()
+               .HasForeignKey(e => e.MatchedUserId)
+               .OnDelete(DeleteBehavior.SetNull);
 
     }
 }

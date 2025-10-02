@@ -1,0 +1,687 @@
+openapi: 3.0.3
+info:
+  title: Device Registration API with User Identification
+  description: |
+    Enhanced device registration endpoints supporting user-based content assignment.
+    Devices provide email during registration, admins review and assign users, devices receive personalized content.
+  version: 2.0.0
+  contact:
+    name: Digital Signage Team
+
+servers:
+  - url: https://api.digitalsignage.example.com
+    description: Production server
+  - url: http://localhost:5000
+    description: Development server
+
+tags:
+  - name: Device Registration
+    description: Device registration with user identification
+  - name: Admin Approval
+    description: Admin review and user assignment
+
+paths:
+  /api/device/register:
+    post:
+      tags:
+        - Device Registration
+      summary: Register new device with user identification
+      description: |
+        Android TV device initiates registration by providing device info + requested user email.
+        System generates QR code with registration PIN.
+        
+        **New in v2.0**: Requires `requestedUsername` (email) and optional `requestedUserDisplayName`
+      operationId: registerDevice
+      security: []  # No authentication required for initial registration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistrationRequest'
+            examples:
+              withDisplayName:
+                summary: Registration with user display name
+                value:
+                  deviceName: "Conference Room A - TV"
+                  deviceModel: "Sony Bravia XR-55A90J"
+                  osVersion: "Android TV 12"
+                  screenResolution: "3840x2160"
+                  macAddress: "00:11:22:33:44:55"
+                  requestedUsername: "john.doe@company.com"
+                  requestedUserDisplayName: "John Doe - Marketing"
+              
+              emailOnly:
+                summary: Registration with email only
+                value:
+                  deviceName: "Lobby Display"
+                  deviceModel: "Samsung QM85R"
+                  osVersion: "Tizen 6.5"
+                  screenResolution: "3840x2160"
+                  macAddress: "AA:BB:CC:DD:EE:FF"
+                  requestedUsername: "lobby@company.com"
+      
+      responses:
+        '201':
+          description: Registration request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRegistrationResponse'
+              examples:
+                userMatched:
+                  summary: User auto-matched from database
+                  value:
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    registrationPin: "AB1234"
+                    qrCodeUrl: "https://api.digitalsignage.example.com/qr/550e8400-e29b-41d4-a716-446655440000"
+                    status: "Pending"
+                    expiresAt: "2025-10-02T10:15:00Z"
+                    matchedUser:
+                      userId: 42
+                      email: "john.doe@company.com"
+                      displayName: "John Doe"
+                      matchedAutomatically: true
+                    requestedUsername: "john.doe@company.com"
+                    requestedUserDisplayName: "John Doe - Marketing"
+                
+                userNotFound:
+                  summary: No matching user in database
+                  value:
+                    requestId: "660e8400-e29b-41d4-a716-446655440001"
+                    registrationPin: "CD5678"
+                    qrCodeUrl: "https://api.digitalsignage.example.com/qr/660e8400-e29b-41d4-a716-446655440001"
+                    status: "Pending"
+                    expiresAt: "2025-10-02T10:15:00Z"
+                    matchedUser: null
+                    requestedUsername: "newuser@company.com"
+                    requestedUserDisplayName: "New User"
+        
+        '400':
+          description: Invalid request - validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                missingEmail:
+                  summary: Missing required email
+                  value:
+                    error: "ValidationError"
+                    message: "The requestedUsername field is required"
+                    details:
+                      requestedUsername: ["Email address is required"]
+                
+                invalidEmail:
+                  summary: Invalid email format
+                  value:
+                    error: "ValidationError"
+                    message: "Invalid email format"
+                    details:
+                      requestedUsername: ["Must be valid email address"]
+                
+                duplicateMacAddress:
+                  summary: Device already registered
+                  value:
+                    error: "ConflictError"
+                    message: "Device with MAC address 00:11:22:33:44:55 already registered"
+        
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/device/registration/{requestId}/status:
+    get:
+      tags:
+        - Device Registration
+      summary: Poll registration status
+      description: |
+        Device polls this endpoint to check if admin has approved registration.
+        Should poll every 5 seconds until approved/rejected/expired.
+      operationId: getRegistrationStatus
+      security: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Registration request ID from registration response
+      
+      responses:
+        '200':
+          description: Registration status retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRegistrationStatusResponse'
+              examples:
+                pending:
+                  summary: Still pending approval
+                  value:
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Pending"
+                    expiresAt: "2025-10-02T10:15:00Z"
+                    assignedUser: null
+                
+                approved:
+                  summary: Approved with user assignment
+                  value:
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Approved"
+                    deviceKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    assignedUser:
+                      userId: 42
+                      email: "john.doe@company.com"
+                      displayName: "John Doe"
+                    signalRUrl: "wss://api.digitalsignage.example.com/hubs/notification"
+                
+                rejected:
+                  summary: Rejected by admin
+                  value:
+                    requestId: "550e8400-e29b-41d4-a716-446655440000"
+                    status: "Rejected"
+                    reason: "Device not authorized for this location"
+        
+        '404':
+          description: Registration request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/device-registrations/pending:
+    get:
+      tags:
+        - Admin Approval
+      summary: List pending device registrations
+      description: |
+        Get all pending device registration requests with auto-matched user information.
+        Admin can review requested username and decide whether to approve, change user, or reject.
+      operationId: getPendingRegistrations
+      security:
+        - BearerAuth: []
+      
+      responses:
+        '200':
+          description: List of pending registrations
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/PendingRegistrationDetail'
+                  totalCount:
+                    type: integer
+                    example: 3
+              examples:
+                mixedRequests:
+                  summary: Mix of matched and unmatched users
+                  value:
+                    data:
+                      - requestId: "550e8400-e29b-41d4-a716-446655440000"
+                        registrationPin: "AB1234"
+                        deviceInfo:
+                          deviceName: "Conference Room A - TV"
+                          deviceModel: "Sony Bravia XR-55A90J"
+                          osVersion: "Android TV 12"
+                          macAddress: "00:11:22:33:44:55"
+                        requestedUsername: "john.doe@company.com"
+                        requestedUserDisplayName: "John Doe - Marketing"
+                        matchedUser:
+                          userId: 42
+                          email: "john.doe@company.com"
+                          displayName: "John Doe"
+                          role: "ContentManager"
+                          matchedAutomatically: true
+                        requestedAt: "2025-10-02T09:45:00Z"
+                        expiresAt: "2025-10-02T10:15:00Z"
+                      
+                      - requestId: "660e8400-e29b-41d4-a716-446655440001"
+                        registrationPin: "CD5678"
+                        deviceInfo:
+                          deviceName: "Lobby Display"
+                          deviceModel: "Samsung QM85R"
+                          osVersion: "Tizen 6.5"
+                          macAddress: "AA:BB:CC:DD:EE:FF"
+                        requestedUsername: "newuser@company.com"
+                        requestedUserDisplayName: null
+                        matchedUser: null
+                        requestedAt: "2025-10-02T09:50:00Z"
+                        expiresAt: "2025-10-02T10:20:00Z"
+                    totalCount: 2
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/admin/device-registrations/{requestId}/approve:
+    post:
+      tags:
+        - Admin Approval
+      summary: Approve device registration with user assignment
+      description: |
+        Admin approves device registration and confirms/changes user assignment.
+        Can override auto-matched user or assign user if no match was found.
+      operationId: approveDeviceRegistration
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRegistrationRequest'
+            examples:
+              confirmAutoMatch:
+                summary: Accept auto-matched user
+                value:
+                  assignedUserId: 42
+                  deviceGroupId: 5
+                  notes: "Confirmed for Marketing department"
+              
+              overrideMatch:
+                summary: Override auto-match with different user
+                value:
+                  assignedUserId: 99
+                  deviceGroupId: 5
+                  notes: "Reassigned to different department head"
+              
+              assignNoMatch:
+                summary: Assign user when no auto-match
+                value:
+                  assignedUserId: 15
+                  deviceGroupId: 3
+                  notes: "Manually assigned to Lobby user account"
+      
+      responses:
+        '200':
+          description: Device approved and user assigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApproveRegistrationResponse'
+              examples:
+                success:
+                  value:
+                    deviceId: 123
+                    deviceKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                    assignedUser:
+                      userId: 42
+                      email: "john.doe@company.com"
+                      displayName: "John Doe"
+                    deviceGroup:
+                      groupId: 5
+                      groupName: "Marketing Floor"
+                    approvedAt: "2025-10-02T10:00:00Z"
+                    approvedBy:
+                      userId: 1
+                      username: "admin@company.com"
+        
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidUser:
+                  value:
+                    error: "ValidationError"
+                    message: "Assigned user not found or inactive"
+                
+                alreadyProcessed:
+                  value:
+                    error: "ConflictError"
+                    message: "Registration already processed"
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: Registration request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/device-registrations/{requestId}/reject:
+    post:
+      tags:
+        - Admin Approval
+      summary: Reject device registration
+      description: Admin rejects device registration request
+      operationId: rejectDeviceRegistration
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  maxLength: 500
+                  example: "Device not authorized for this location"
+              required:
+                - reason
+      
+      responses:
+        '204':
+          description: Registration rejected successfully
+        
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: Registration request not found
+
+components:
+  schemas:
+    DeviceRegistrationRequest:
+      type: object
+      required:
+        - deviceName
+        - deviceModel
+        - osVersion
+        - screenResolution
+        - macAddress
+        - requestedUsername
+      properties:
+        deviceName:
+          type: string
+          maxLength: 200
+          example: "Conference Room A - TV"
+          description: User-friendly device name
+        deviceModel:
+          type: string
+          maxLength: 200
+          example: "Sony Bravia XR-55A90J"
+        osVersion:
+          type: string
+          maxLength: 100
+          example: "Android TV 12"
+        screenResolution:
+          type: string
+          maxLength: 50
+          example: "3840x2160"
+        macAddress:
+          type: string
+          maxLength: 50
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+          example: "00:11:22:33:44:55"
+          description: Unique device identifier
+        requestedUsername:
+          type: string
+          format: email
+          maxLength: 200
+          example: "john.doe@company.com"
+          description: Email address of user who will use this device (NEW in v2.0)
+        requestedUserDisplayName:
+          type: string
+          maxLength: 200
+          nullable: true
+          example: "John Doe - Marketing"
+          description: Optional friendly name to help admin identify user (NEW in v2.0)
+    
+    DeviceRegistrationResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        registrationPin:
+          type: string
+          pattern: '^[A-Z0-9]{6}$'
+          example: "AB1234"
+        qrCodeUrl:
+          type: string
+          format: uri
+          example: "https://api.digitalsignage.example.com/qr/550e8400-e29b-41d4-a716-446655440000"
+        status:
+          type: string
+          enum: [Pending, Approved, Rejected, Expired]
+          example: "Pending"
+        expiresAt:
+          type: string
+          format: date-time
+          example: "2025-10-02T10:15:00Z"
+        requestedUsername:
+          type: string
+          example: "john.doe@company.com"
+        requestedUserDisplayName:
+          type: string
+          nullable: true
+          example: "John Doe - Marketing"
+        matchedUser:
+          $ref: '#/components/schemas/MatchedUserInfo'
+          nullable: true
+    
+    MatchedUserInfo:
+      type: object
+      properties:
+        userId:
+          type: integer
+          example: 42
+        email:
+          type: string
+          example: "john.doe@company.com"
+        displayName:
+          type: string
+          example: "John Doe"
+        matchedAutomatically:
+          type: boolean
+          example: true
+          description: Whether user was auto-matched by email
+    
+    DeviceRegistrationStatusResponse:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [Pending, Approved, Rejected, Expired]
+        expiresAt:
+          type: string
+          format: date-time
+        deviceKey:
+          type: string
+          nullable: true
+          description: JWT-like key for device authentication (only when Approved)
+        assignedUser:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/AssignedUserInfo'
+        signalRUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: WebSocket endpoint URL (only when Approved)
+        reason:
+          type: string
+          nullable: true
+          description: Rejection reason (only when Rejected)
+    
+    AssignedUserInfo:
+      type: object
+      properties:
+        userId:
+          type: integer
+        email:
+          type: string
+        displayName:
+          type: string
+    
+    PendingRegistrationDetail:
+      type: object
+      properties:
+        requestId:
+          type: string
+          format: uuid
+        registrationPin:
+          type: string
+        deviceInfo:
+          type: object
+          properties:
+            deviceName:
+              type: string
+            deviceModel:
+              type: string
+            osVersion:
+              type: string
+            macAddress:
+              type: string
+        requestedUsername:
+          type: string
+        requestedUserDisplayName:
+          type: string
+          nullable: true
+        matchedUser:
+          nullable: true
+          type: object
+          properties:
+            userId:
+              type: integer
+            email:
+              type: string
+            displayName:
+              type: string
+            role:
+              type: string
+            matchedAutomatically:
+              type: boolean
+        requestedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+    
+    ApproveRegistrationRequest:
+      type: object
+      required:
+        - assignedUserId
+      properties:
+        assignedUserId:
+          type: integer
+          description: User ID to assign to this device (can override auto-match)
+        deviceGroupId:
+          type: integer
+          nullable: true
+          description: Optional device group assignment
+        notes:
+          type: string
+          maxLength: 500
+          nullable: true
+    
+    ApproveRegistrationResponse:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        deviceKey:
+          type: string
+        assignedUser:
+          $ref: '#/components/schemas/AssignedUserInfo'
+        deviceGroup:
+          type: object
+          nullable: true
+          properties:
+            groupId:
+              type: integer
+            groupName:
+              type: string
+        approvedAt:
+          type: string
+          format: date-time
+        approvedBy:
+          type: object
+          properties:
+            userId:
+              type: integer
+            username:
+              type: string
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          example: "ValidationError"
+        message:
+          type: string
+          example: "Invalid request parameters"
+        details:
+          type: object
+          additionalProperties: true
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from admin login
+  
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "UnauthorizedError"
+            message: "Valid authentication token required"
+    
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "ForbiddenError"
+            message: "Admin or DeviceManager role required"

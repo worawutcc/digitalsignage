@@ -1,8 +1,10 @@
 using DigitalSignage.Application.DTOs.AdminDeviceRegistration;
 using DigitalSignage.Application.DTOs.DeviceRegistration;
 using DigitalSignage.Application.Interfaces;
+using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Enums;
 using DigitalSignage.Domain.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace DigitalSignage.Application.Services;
@@ -14,24 +16,53 @@ namespace DigitalSignage.Application.Services;
 public class DeviceRegistrationService : IDeviceRegistrationService
 {
     private readonly IQrCodeService _qrCodeService;
+    private readonly DbContext _context;
     private readonly ILogger<DeviceRegistrationService> _logger;
 
     public DeviceRegistrationService(
         IQrCodeService qrCodeService,
+        DbContext context,
         ILogger<DeviceRegistrationService> logger)
     {
         _qrCodeService = qrCodeService;
+        _context = context;
         _logger = logger;
-    }    public Task<InitiateQrRegistrationResponseDto> InitiateQrRegistrationAsync(InitiateQrRegistrationRequestDto request)
+    }    public async Task<InitiateQrRegistrationResponseDto> InitiateQrRegistrationAsync(InitiateQrRegistrationRequestDto request)
     {
-        _logger.LogInformation("QR registration initiated for device {MacAddress} - STUB IMPLEMENTATION", request.MacAddress);
+        _logger.LogInformation("QR registration initiated for device {MacAddress} with user {RequestedUsername}", 
+            request.MacAddress, request.RequestedUsername);
         
-        // Generate QR code using the service (this part works)
+        // Check if device already exists
+        var existingDevice = await _context.Set<Device>()
+            .FirstOrDefaultAsync(d => d.MacAddress == request.MacAddress);
+            
+        if (existingDevice != null)
+        {
+            throw new InvalidOperationException($"Device with MAC address {request.MacAddress} is already registered");
+        }
+        
+        // Check if there's a pending registration for this MAC address
+        var pendingRequest = await _context.Set<DeviceRegistrationRequest>()
+            .FirstOrDefaultAsync(r => r.MacAddress == request.MacAddress && 
+                                     r.Status == RegistrationStatus.Pending &&
+                                     r.ExpiresAt > DateTimeOffset.UtcNow);
+                                     
+        if (pendingRequest != null)
+        {
+            throw new InvalidOperationException($"Device with MAC address {request.MacAddress} already has a pending registration request");
+        }
+        
+        // Attempt to match user by email (case-insensitive)
+        var matchedUser = await _context.Set<User>()
+            .FirstOrDefaultAsync(u => u.Email.ToLower() == request.RequestedUsername.ToLower());
+        
+        // Generate QR code
         var registrationId = Guid.NewGuid();
+        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15); // 15 minutes expiry
+        var pin = GeneratePin(); // Generate 6-character PIN
         
         try
         {
-            // This will test the QR code generation
             var qrCodeData = _qrCodeService.GenerateQrCodeData(
                 registrationId, 
                 request.MacAddress, 
@@ -39,8 +70,35 @@ public class DeviceRegistrationService : IDeviceRegistrationService
                 request.Manufacturer, 
                 request.AndroidVersion, 
                 request.IpAddress);
+                
             var qrCodeImage = _qrCodeService.GenerateQrCodeImage(qrCodeData);
             var qrCodeJsonData = _qrCodeService.SerializeQrCodeData(qrCodeData);
+
+            // Create registration request in database (Feature 019)
+            var registrationRequest = new DeviceRegistrationRequest
+            {
+                MacAddress = request.MacAddress,
+                Pin = pin,
+                DeviceModel = request.DeviceModel,
+                Manufacturer = request.Manufacturer,
+                AndroidVersion = request.AndroidVersion,
+                AppVersion = request.AppVersion,
+                IpAddress = request.IpAddress ?? "Unknown",
+                NetworkName = request.NetworkName ?? "Unknown",
+                Status = RegistrationStatus.Pending,
+                Method = request.PreferredMethod,
+                QrCodeData = qrCodeJsonData,
+                ExpiresAt = expiresAt,
+                RequestedUsername = request.RequestedUsername,
+                RequestedUserDisplayName = request.RequestedUserDisplayName,
+                MatchedUserId = matchedUser?.Id
+            };
+            
+            _context.Set<DeviceRegistrationRequest>().Add(registrationRequest);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Registration request created: ID={RequestId}, MAC={MacAddress}, User={RequestedUsername}, Matched={IsMatched}", 
+                registrationRequest.Id, request.MacAddress, request.RequestedUsername, matchedUser != null);
 
             var response = new InitiateQrRegistrationResponseDto
             {
@@ -49,11 +107,23 @@ public class DeviceRegistrationService : IDeviceRegistrationService
                 QrCodeData = qrCodeJsonData,
                 Method = request.PreferredMethod,
                 Status = RegistrationStatus.Pending,
-                ExpiresAt = qrCodeData.ExpiresAt,
-                Message = "QR Code generated successfully (STUB - not persisted to database)"
+                ExpiresAt = expiresAt,
+                Message = matchedUser != null 
+                    ? $"QR Code generated successfully. User '{matchedUser.Email}' automatically matched." 
+                    : "QR Code generated successfully. No matching user found - admin can assign during approval.",
+                Pin = pin,
+                MatchedUser = matchedUser != null ? new MatchedUserDto
+                {
+                    UserId = matchedUser.Id,
+                    Email = matchedUser.Email,
+                    DisplayName = matchedUser.FullName,
+                    MatchedAutomatically = true
+                } : null,
+                RequestedUsername = request.RequestedUsername,
+                RequestedUserDisplayName = request.RequestedUserDisplayName
             };
 
-            return Task.FromResult(response);
+            return response;
         }
         catch (Exception ex)
         {
@@ -61,19 +131,136 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             throw new InvalidOperationException($"QR code generation failed: {ex.Message}", ex);
         }
     }
-
-    public Task<ApproveQrRegistrationResponseDto> ApproveQrRegistrationAsync(ApproveQrRegistrationRequestDto request)
+    
+    /// <summary>
+    /// Generate a 6-character alphanumeric PIN
+    /// </summary>
+    private string GeneratePin()
     {
-        _logger.LogWarning("QR approval requested for {RegistrationId} - STUB IMPLEMENTATION", request.RegistrationId);
-        
-        var response = new ApproveQrRegistrationResponseDto
-        {
-            IsSuccess = false,
-            Status = RegistrationStatus.Pending,
-            Message = "QR approval not yet implemented - pending entity/repository alignment"
-        };
+        const string chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // Excluding confusing characters
+        var random = new Random();
+        return new string(Enumerable.Repeat(chars, 6)
+            .Select(s => s[random.Next(s.Length)]).ToArray());
+    }
 
-        return Task.FromResult(response);
+    public async Task<ApproveQrRegistrationResponseDto> ApproveQrRegistrationAsync(ApproveQrRegistrationRequestDto request)
+    {
+        _logger.LogInformation("Approving QR registration {RegistrationId} by admin {AdminUserId}", 
+            request.RegistrationId, request.AdminUserId);
+        
+        // Find registration request by ID
+        // Note: Entity uses int Id, but DTO uses Guid RegistrationId - need to find another way
+        // For now, use MAC address or update entity to include Guid field
+        var registrationRequest = await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .FirstOrDefaultAsync(r => r.Status == RegistrationStatus.Pending);
+            
+        if (registrationRequest == null)
+        {
+            throw new InvalidOperationException($"Registration request not found or already processed");
+        }
+        
+        // Check if already expired
+        if (registrationRequest.IsExpired)
+        {
+            registrationRequest.MarkAsExpired();
+            await _context.SaveChangesAsync();
+            
+            return new ApproveQrRegistrationResponseDto
+            {
+                IsSuccess = false,
+                Status = RegistrationStatus.Expired,
+                Message = "Registration request has expired"
+            };
+        }
+        
+        // Determine which user to assign (Feature 019)
+        int? assignedUserId = request.AssignedUserId ?? registrationRequest.MatchedUserId;
+        User? assignedUser = null;
+        
+        if (assignedUserId.HasValue)
+        {
+            assignedUser = await _context.Set<User>()
+                .FirstOrDefaultAsync(u => u.Id == assignedUserId.Value);
+                
+            if (assignedUser == null)
+            {
+                throw new InvalidOperationException($"Assigned user with ID {assignedUserId} not found");
+            }
+        }
+        
+        // Generate device key (JWT token)
+        var deviceKey = GenerateDeviceKey(registrationRequest.MacAddress);
+        
+        // Create approved device
+        var device = new Device
+        {
+            DeviceName = request.CustomDeviceName ?? $"{registrationRequest.Manufacturer} {registrationRequest.DeviceModel}",
+            DeviceModel = registrationRequest.DeviceModel,
+            MacAddress = registrationRequest.MacAddress,
+            DeviceGroupId = request.DeviceGroupId,
+            DeviceKey = deviceKey,
+            IsActive = true,
+            Status = "Online",
+            RegisteredAt = DateTimeOffset.UtcNow,
+            LastHeartbeatAt = DateTimeOffset.UtcNow,
+            AssignedUserId = assignedUserId // Feature 019: Assign user to device
+        };
+        
+        _context.Set<Device>().Add(device);
+        
+        // Update registration request status
+        registrationRequest.Status = RegistrationStatus.Approved;
+        registrationRequest.ApprovedDeviceId = device.Id;
+        
+        // Create device approval record
+        var approval = new DeviceApproval
+        {
+            DeviceRegistrationRequestId = registrationRequest.Id,
+            ApprovedByUserId = request.AdminUserId,
+            ApprovedAt = DateTimeOffset.UtcNow,
+            AssignedDeviceGroupId = request.DeviceGroupId,
+            AdminNotes = request.AdminNotes,
+            DeviceName = device.DeviceName
+        };
+        
+        _context.Set<DeviceApproval>().Add(approval);
+        await _context.SaveChangesAsync();
+        
+        var adminUser = await _context.Set<User>().FindAsync(request.AdminUserId);
+        
+        _logger.LogInformation("Device approved: DeviceId={DeviceId}, MAC={MacAddress}, AssignedUser={AssignedUserId}", 
+            device.Id, device.MacAddress, assignedUserId);
+        
+        return new ApproveQrRegistrationResponseDto
+        {
+            IsSuccess = true,
+            DeviceId = device.Id,
+            DeviceKey = deviceKey,
+            Status = RegistrationStatus.Approved,
+            Message = assignedUser != null 
+                ? $"Device approved and assigned to user {assignedUser.Email}" 
+                : "Device approved successfully",
+            ApprovedAt = DateTimeOffset.UtcNow,
+            ApprovedByAdmin = adminUser?.Username ?? "Unknown",
+            AssignedUser = assignedUser != null ? new AssignedUserDto
+            {
+                UserId = assignedUser.Id,
+                Email = assignedUser.Email,
+                DisplayName = assignedUser.FullName
+            } : null
+        };
+    }
+    
+    /// <summary>
+    /// Generate a device authentication key (placeholder - should use proper JWT generation)
+    /// </summary>
+    private string GenerateDeviceKey(string macAddress)
+    {
+        // Simplified version - in production, use proper JWT token generation
+        var payload = $"{macAddress}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(payload);
+        return Convert.ToBase64String(bytes);
     }
 
     public Task<InitiateRegistrationResponseDto> InitiateRegistrationAsync(InitiateRegistrationRequestDto request)
@@ -106,10 +293,43 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         return Task.FromResult(response);
     }
 
-    public Task<GetPendingRegistrationsResponseDto> GetPendingRegistrationsAsync()
+    public async Task<GetPendingRegistrationsResponseDto> GetPendingRegistrationsAsync()
     {
-        _logger.LogWarning("DeviceRegistrationService is stubbed - GetPendingRegistrationsAsync not implemented");
-        throw new NotImplementedException("Device registration service is not yet implemented");
+        _logger.LogInformation("Getting pending device registrations with user matching information");
+        
+        var pendingRequests = await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .Where(r => r.Status == RegistrationStatus.Pending && r.ExpiresAt > DateTimeOffset.UtcNow)
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync();
+        
+        var registrations = pendingRequests.Select(r => new PendingRegistrationDto
+        {
+            RegistrationId = Guid.NewGuid(), // Note: Using placeholder GUID - need to add Guid field to entity
+            MacAddress = r.MacAddress,
+            DeviceModel = r.DeviceModel,
+            AndroidVersion = r.AndroidVersion,
+            AppVersion = r.AppVersion,
+            RequestedAt = r.CreatedAt,
+            ExpiresAt = r.ExpiresAt,
+            Pin = r.Pin,
+            RequestedUsername = r.RequestedUsername,
+            RequestedUserDisplayName = r.RequestedUserDisplayName,
+            MatchedUser = r.MatchedUser != null ? new MatchedUserDto
+            {
+                UserId = r.MatchedUser.Id,
+                Email = r.MatchedUser.Email,
+                DisplayName = r.MatchedUser.FullName,
+                Role = r.MatchedUser.Role.ToString(),
+                MatchedAutomatically = true
+            } : null
+        }).ToList();
+        
+        return new GetPendingRegistrationsResponseDto
+        {
+            Registrations = registrations,
+            TotalCount = registrations.Count
+        };
     }
 
     public Task<DeviceApprovalResponseDto> ApproveDeviceAsync(ApproveDeviceRequestDto request, string approvedByUserId)

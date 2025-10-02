@@ -29,6 +29,10 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         
         // Indexes
         builder.HasIndex(e => e.DeviceKey).IsUnique();
+        
+        // Index for user assignment queries (Feature 019)
+        builder.HasIndex(e => e.AssignedUserId)
+               .HasDatabaseName("IX_Devices_AssignedUserId");
 
         // Navigation properties
         builder.HasOne(e => e.ManagedByUser)
@@ -39,6 +43,12 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.HasOne(e => e.DeviceGroup)
                .WithMany(dg => dg.Devices)
                .HasForeignKey(e => e.DeviceGroupId)
+               .OnDelete(DeleteBehavior.SetNull);
+        
+        // User assignment for personalized content (Feature 019)
+        builder.HasOne(e => e.AssignedUser)
+               .WithMany()
+               .HasForeignKey(e => e.AssignedUserId)
                .OnDelete(DeleteBehavior.SetNull);
 
         builder.HasMany(e => e.Schedules)

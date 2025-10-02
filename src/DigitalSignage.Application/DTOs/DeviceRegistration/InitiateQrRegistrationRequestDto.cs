@@ -60,4 +60,18 @@ public class InitiateQrRegistrationRequestDto
     /// Registration method preference
     /// </summary>
     public RegistrationMethod PreferredMethod { get; set; } = RegistrationMethod.QrCode;
+    
+    /// <summary>
+    /// User email for user-based content assignment (Feature 019)
+    /// </summary>
+    [Required]
+    [EmailAddress]
+    [StringLength(200)]
+    public string RequestedUsername { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Optional display name for the user (Feature 019)
+    /// </summary>
+    [StringLength(200)]
+    public string? RequestedUserDisplayName { get; set; }
 }

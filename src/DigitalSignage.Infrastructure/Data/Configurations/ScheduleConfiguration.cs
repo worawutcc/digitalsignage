@@ -19,12 +19,28 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
         builder.Property(e => e.Name).HasMaxLength(200).IsRequired();
         builder.Property(e => e.RecurrencePattern).HasMaxLength(1000);
         
+        // Configure IsDefault for fallback schedules (Feature 019)
+        builder.Property(e => e.IsDefault)
+               .IsRequired()
+               .HasDefaultValue(false)
+               .HasComment("Marks this schedule as a fallback when user has no assigned schedules");
+        
         // Configure enum conversion
         builder.Property(e => e.Status)
                .HasConversion<string>()
                .HasMaxLength(50);
 
+        // Configure index for IsDefault (Feature 019)
+        builder.HasIndex(e => e.IsDefault)
+               .HasDatabaseName("IX_Schedules_IsDefault");
+
         // Navigation properties
+        builder.HasMany(e => e.UserSchedules)
+               .WithOne(us => us.Schedule)
+               .HasForeignKey(us => us.ScheduleId)
+               .OnDelete(DeleteBehavior.Cascade);
+        
+        // Existing navigation properties
         builder.HasOne(e => e.Device)
                .WithMany(d => d.Schedules)
                .HasForeignKey(e => e.DeviceId)
