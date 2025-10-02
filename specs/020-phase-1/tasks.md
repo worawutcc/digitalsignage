@@ -43,7 +43,7 @@
 
 ## Phase 3.1: Setup & Foundation (6 tasks, 4-6 hours)
 
-### T001 [P] Create TypeScript types for UserSchedule domain
+### T001 [P] [X] Create TypeScript types for UserSchedule domain
 **File**: `src/digital-signage-web/src/features/users/types/userSchedule.ts`
 **Description**: 
 - Create `UserSchedule` interface
@@ -56,8 +56,9 @@
 **Acceptance**: 
 - All types match data-model.md specifications
 - TypeScript compiles without errors
+**Status**: ✅ COMPLETED
 
-### T002 [P] Create TypeScript types for Schedule domain enhancements
+### T002 [P] [X] Create TypeScript types for Schedule domain enhancements
 **File**: `src/digital-signage-web/src/features/schedules/types/schedule.ts`
 **Description**:
 - Add `isDefault: boolean` to Schedule interface
@@ -71,8 +72,9 @@
 **Acceptance**:
 - Schedule type enhanced per data-model.md
 - No breaking changes to existing code
+**Status**: ✅ COMPLETED
 
-### T003 [P] Create Zod validation schemas
+### T003 [P] [X] Create Zod validation schemas
 **File**: `src/digital-signage-web/src/features/users/schemas/scheduleAssignment.schema.ts`
 **Description**:
 - Create `assignSchedulesSchema` with Zod
@@ -86,8 +88,9 @@
 **Acceptance**:
 - Schemas validate per business rules in data-model.md
 - Error messages are user-friendly
+**Status**: ✅ COMPLETED
 
-### T004 Implement userScheduleService API client
+### T004 [X] Implement userScheduleService API client
 **File**: `src/digital-signage-web/src/features/users/services/userScheduleService.ts`
 **Description**:
 - Implement `getUserSchedules(userId: number)` method
@@ -102,8 +105,9 @@
 - All 3 methods match user-schedules-api.md contracts
 - Error handling covers 401, 403, 404, 422, 500
 - Returns properly typed responses
+**Status**: ✅ COMPLETED
 
-### T005 Update scheduleService with new methods
+### T005 [X] Update scheduleService with new methods
 **File**: `src/digital-signage-web/src/features/schedules/services/scheduleService.ts`
 **Description**:
 - Add `getScheduleUsers(scheduleId: number)` method
@@ -116,8 +120,9 @@
 - New methods match user-schedules-api.md contracts
 - Existing functionality not broken
 - Supports pagination and search
+**Status**: ✅ COMPLETED
 
-### T006 Create Redux slice for schedule assignment UI state
+### T006 [X] Create Redux slice for schedule assignment UI state
 **File**: `src/digital-signage-web/src/store/slices/scheduleAssignmentSlice.ts`
 **Description**:
 - Create slice with initial state:
@@ -133,6 +138,7 @@
 - Redux DevTools shows state changes
 - Actions properly typed with TypeScript
 - Selectors return correct values
+**Status**: ✅ COMPLETED
 
 ---
 

@@ -1,0 +1,533 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "WebSocket Event Schemas",
+  "description": "JSON schemas for all real-time event messages in the Digital Signage WebSocket API",
+  "definitions": {
+    "BaseEvent": {
+      "type": "object",
+      "required": ["type", "payload", "timestamp"],
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Event type identifier"
+        },
+        "payload": {
+          "type": "object",
+          "description": "Event-specific data"
+        },
+        "timestamp": {
+          "type": "string",
+          "format": "date-time",
+          "description": "ISO 8601 timestamp when event occurred"
+        }
+      }
+    },
+    "DeviceStatusChanged": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "device_status_changed"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["deviceId", "status"],
+              "properties": {
+                "deviceId": {
+                  "type": "string",
+                  "description": "Unique identifier of the device"
+                },
+                "status": {
+                  "type": "string",
+                  "enum": ["online", "offline", "error"],
+                  "description": "New device status"
+                },
+                "lastSeen": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Last time device was seen online"
+                },
+                "errorMessage": {
+                  "type": ["string", "null"],
+                  "description": "Error description if status is 'error'"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "device_status_changed",
+          "payload": {
+            "deviceId": "device-123",
+            "status": "offline",
+            "lastSeen": "2025-10-01T10:30:00Z",
+            "errorMessage": null
+          },
+          "timestamp": "2025-10-01T10:30:01Z"
+        }
+      ]
+    },
+    "ScheduleConflictDetected": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "schedule_conflict_detected"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["scheduleId", "conflictType", "conflictingScheduleIds", "message"],
+              "properties": {
+                "scheduleId": {
+                  "type": "integer",
+                  "description": "ID of the schedule that caused the conflict"
+                },
+                "conflictType": {
+                  "type": "string",
+                  "enum": ["overlap", "device_unavailable", "resource_conflict"],
+                  "description": "Type of schedule conflict"
+                },
+                "conflictingScheduleIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "IDs of schedules that conflict"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable conflict description"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "schedule_conflict_detected",
+          "payload": {
+            "scheduleId": 456,
+            "conflictType": "overlap",
+            "conflictingScheduleIds": [123, 234],
+            "message": "New schedule overlaps with 2 existing schedules"
+          },
+          "timestamp": "2025-10-01T10:35:00Z"
+        }
+      ]
+    },
+    "ScheduleUpdated": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "schedule_updated"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["scheduleId", "action", "affectedDeviceIds"],
+              "properties": {
+                "scheduleId": {
+                  "type": "integer",
+                  "description": "ID of the schedule that was updated"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": ["created", "updated", "deleted"],
+                  "description": "Type of action performed"
+                },
+                "scheduleName": {
+                  "type": ["string", "null"],
+                  "description": "Name of the schedule"
+                },
+                "affectedDeviceIds": {
+                  "type": "array",
+                  "items": {
+                    "type": "integer"
+                  },
+                  "description": "Device IDs affected by this schedule change"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "schedule_updated",
+          "payload": {
+            "scheduleId": 789,
+            "action": "created",
+            "scheduleName": "Morning Announcements",
+            "affectedDeviceIds": [1, 2, 5]
+          },
+          "timestamp": "2025-10-01T10:40:00Z"
+        }
+      ]
+    },
+    "MediaUploaded": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "media_uploaded"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["mediaId", "fileName", "mediaType", "fileSizeBytes"],
+              "properties": {
+                "mediaId": {
+                  "type": "integer",
+                  "description": "ID of the uploaded media"
+                },
+                "fileName": {
+                  "type": "string",
+                  "description": "Original filename"
+                },
+                "mediaType": {
+                  "type": "string",
+                  "enum": ["image", "video", "html"],
+                  "description": "Type of media file"
+                },
+                "fileSizeBytes": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "File size in bytes"
+                },
+                "thumbnailUrl": {
+                  "type": ["string", "null"],
+                  "format": "uri",
+                  "description": "URL to media thumbnail (if available)"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "media_uploaded",
+          "payload": {
+            "mediaId": 234,
+            "fileName": "promo-video.mp4",
+            "mediaType": "video",
+            "fileSizeBytes": 15728640,
+            "thumbnailUrl": "https://s3.amazonaws.com/bucket/media/234/thumbnail.jpg"
+          },
+          "timestamp": "2025-10-01T10:45:00Z"
+        }
+      ]
+    },
+    "UserAction": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "user_action"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["userId", "userName", "action", "details"],
+              "properties": {
+                "userId": {
+                  "type": "string",
+                  "description": "ID of user who performed action"
+                },
+                "userName": {
+                  "type": "string",
+                  "description": "Display name of user"
+                },
+                "action": {
+                  "type": "string",
+                  "enum": ["permission_changed", "role_updated", "user_created", "user_deleted"],
+                  "description": "Type of administrative action"
+                },
+                "targetUserId": {
+                  "type": ["string", "null"],
+                  "description": "ID of user affected by action (if applicable)"
+                },
+                "details": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Action-specific details"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "user_action",
+          "payload": {
+            "userId": "user-admin-1",
+            "userName": "Admin User",
+            "action": "permission_changed",
+            "targetUserId": "user-456",
+            "details": {
+              "permission": "device.manage",
+              "granted": "true"
+            }
+          },
+          "timestamp": "2025-10-01T10:50:00Z"
+        }
+      ]
+    },
+    "SystemAlert": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "system_alert"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["severity", "source", "message", "metadata"],
+              "properties": {
+                "severity": {
+                  "type": "string",
+                  "enum": ["info", "warning", "error", "critical"],
+                  "description": "Alert severity level"
+                },
+                "source": {
+                  "type": "string",
+                  "enum": ["database", "s3", "api", "authentication", "system"],
+                  "description": "System component that triggered alert"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable alert message"
+                },
+                "details": {
+                  "type": ["string", "null"],
+                  "description": "Additional technical details"
+                },
+                "metadata": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "description": "Alert-specific metadata"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "system_alert",
+          "payload": {
+            "severity": "critical",
+            "source": "database",
+            "message": "Database connection pool exhausted",
+            "details": "All 50 connections in use, new requests queued",
+            "metadata": {
+              "poolSize": "50",
+              "activeConnections": "50",
+              "queuedRequests": "15"
+            }
+          },
+          "timestamp": "2025-10-01T10:55:00Z"
+        }
+      ]
+    },
+    "Heartbeat": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "heartbeat"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["activeConnections", "serverTime"],
+              "properties": {
+                "activeConnections": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Number of active WebSocket connections"
+                },
+                "serverTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Current server time (ISO 8601)"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "heartbeat",
+          "payload": {
+            "activeConnections": 42,
+            "serverTime": "2025-10-01T11:00:00Z"
+          },
+          "timestamp": "2025-10-01T11:00:00Z"
+        }
+      ]
+    },
+    "ConnectionEstablished": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "connection_established"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["connectionId", "userId", "serverTime"],
+              "properties": {
+                "connectionId": {
+                  "type": "string",
+                  "description": "Unique connection identifier"
+                },
+                "userId": {
+                  "type": "string",
+                  "description": "Authenticated user ID"
+                },
+                "serverTime": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Server timestamp when connection established"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "connection_established",
+          "payload": {
+            "connectionId": "conn-abc123",
+            "userId": "user-456",
+            "serverTime": "2025-10-01T10:00:00Z"
+          },
+          "timestamp": "2025-10-01T10:00:00Z"
+        }
+      ]
+    },
+    "ConnectionClosing": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "connection_closing"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["reason", "message", "closeIn"],
+              "properties": {
+                "reason": {
+                  "type": "string",
+                  "enum": ["auth_expired", "server_shutdown", "idle_timeout", "rate_limit"],
+                  "description": "Reason for closing connection"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable closure message"
+                },
+                "closeIn": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "description": "Milliseconds until connection closes"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "connection_closing",
+          "payload": {
+            "reason": "server_shutdown",
+            "message": "Server restarting, please reconnect in 30 seconds",
+            "closeIn": 10000
+          },
+          "timestamp": "2025-10-01T11:05:00Z"
+        }
+      ]
+    },
+    "Error": {
+      "allOf": [
+        { "$ref": "#/definitions/BaseEvent" },
+        {
+          "properties": {
+            "type": {
+              "const": "error"
+            },
+            "payload": {
+              "type": "object",
+              "required": ["code", "message"],
+              "properties": {
+                "code": {
+                  "type": "string",
+                  "enum": [
+                    "INVALID_MESSAGE_FORMAT",
+                    "INSUFFICIENT_PERMISSIONS",
+                    "MESSAGE_TOO_LARGE",
+                    "RATE_LIMIT_EXCEEDED",
+                    "UNKNOWN_EVENT_TYPE"
+                  ],
+                  "description": "Error code for programmatic handling"
+                },
+                "message": {
+                  "type": "string",
+                  "description": "Human-readable error message"
+                },
+                "details": {
+                  "type": ["string", "null"],
+                  "description": "Additional error details"
+                },
+                "eventType": {
+                  "type": ["string", "null"],
+                  "description": "Event type that caused error (if applicable)"
+                }
+              }
+            }
+          }
+        }
+      ],
+      "examples": [
+        {
+          "type": "error",
+          "payload": {
+            "code": "INSUFFICIENT_PERMISSIONS",
+            "message": "User lacks permission to receive this event type",
+            "eventType": "system_alert"
+          },
+          "timestamp": "2025-10-01T11:10:00Z"
+        }
+      ]
+    }
+  },
+  "oneOf": [
+    { "$ref": "#/definitions/DeviceStatusChanged" },
+    { "$ref": "#/definitions/ScheduleConflictDetected" },
+    { "$ref": "#/definitions/ScheduleUpdated" },
+    { "$ref": "#/definitions/MediaUploaded" },
+    { "$ref": "#/definitions/UserAction" },
+    { "$ref": "#/definitions/SystemAlert" },
+    { "$ref": "#/definitions/Heartbeat" },
+    { "$ref": "#/definitions/ConnectionEstablished" },
+    { "$ref": "#/definitions/ConnectionClosing" },
+    { "$ref": "#/definitions/Error" }
+  ]
+}

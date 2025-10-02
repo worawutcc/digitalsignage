@@ -1,0 +1,471 @@
+openapi: 3.0.3
+info:
+  title: Content Delivery API
+  description: |
+    Device endpoints for retrieving personalized content based on user assignment.
+    Implements priority-based content delivery: User-specific → Device Group → Default.
+  version: 1.0.0
+  contact:
+    name: Digital Signage Team
+
+servers:
+  - url: https://api.digitalsignage.example.com
+    description: Production server
+  - url: http://localhost:5000
+    description: Development server
+
+tags:
+  - name: Content Delivery
+    description: Device content retrieval with user-based personalization
+
+paths:
+  /api/device/next-schedule:
+    get:
+      tags:
+        - Content Delivery
+      summary: Get next schedule for device with user-based priority
+      description: |
+        Device retrieves the next content schedule to display.
+        
+        **Priority Logic:**
+        1. User-specific schedules (if device has AssignedUserId)
+        2. Device group schedules (if device belongs to a group)
+        3. Default schedules (IsDefault = true)
+        
+        Returns the highest priority active schedule from the applicable tier.
+        If no active schedules found, returns empty response.
+      operationId: getNextSchedule
+      security:
+        - DeviceKeyAuth: []
+      
+      responses:
+        '200':
+          description: Schedule retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleResponse'
+              examples:
+                userSpecificSchedule:
+                  summary: Device with user assignment gets personalized content
+                  value:
+                    scheduleId: 10
+                    scheduleName: "Marketing Campaign Q4"
+                    priority: 10
+                    startDate: "2025-10-01T00:00:00Z"
+                    endDate: "2025-12-31T23:59:59Z"
+                    startTime: null
+                    endTime: null
+                    source: "UserAssignment"
+                    assignedUser:
+                      userId: 42
+                      email: "john.doe@company.com"
+                      displayName: "John Doe"
+                    media:
+                      - mediaId: 100
+                        fileName: "campaign-video.mp4"
+                        mediaType: "Video"
+                        duration: 30
+                        displayOrder: 1
+                        presignedUrl: "https://s3.amazonaws.com/..."
+                      - mediaId: 101
+                        fileName: "product-image.jpg"
+                        mediaType: "Image"
+                        duration: 10
+                        displayOrder: 2
+                        presignedUrl: "https://s3.amazonaws.com/..."
+                
+                deviceGroupSchedule:
+                  summary: Device without user gets group-level content
+                  value:
+                    scheduleId: 20
+                    scheduleName: "Lobby Announcements"
+                    priority: 5
+                    startDate: "2025-09-01T00:00:00Z"
+                    endDate: "2025-12-31T23:59:59Z"
+                    startTime: "09:00:00"
+                    endTime: "17:00:00"
+                    source: "DeviceGroup"
+                    deviceGroup:
+                      groupId: 3
+                      groupName: "Lobby Displays"
+                    media:
+                      - mediaId: 200
+                        fileName: "lobby-welcome.mp4"
+                        mediaType: "Video"
+                        duration: 20
+                        displayOrder: 1
+                        presignedUrl: "https://s3.amazonaws.com/..."
+                
+                defaultSchedule:
+                  summary: Device with no assignment gets default content
+                  value:
+                    scheduleId: 5
+                    scheduleName: "Generic Corporate Content"
+                    priority: 0
+                    startDate: "2025-01-01T00:00:00Z"
+                    endDate: "2025-12-31T23:59:59Z"
+                    startTime: null
+                    endTime: null
+                    source: "Default"
+                    media:
+                      - mediaId: 300
+                        fileName: "company-logo.jpg"
+                        mediaType: "Image"
+                        duration: 5
+                        displayOrder: 1
+                        presignedUrl: "https://s3.amazonaws.com/..."
+                
+                noContent:
+                  summary: No active schedules available
+                  value:
+                    scheduleId: null
+                    scheduleName: null
+                    source: "None"
+                    message: "No active schedules available for this device"
+                    media: []
+        
+        '401':
+          description: Invalid or missing device key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "UnauthorizedError"
+                message: "Invalid device key"
+        
+        '404':
+          description: Device not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error: "NotFoundError"
+                message: "Device not found or inactive"
+        
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/device/heartbeat:
+    post:
+      tags:
+        - Content Delivery
+      summary: Send device heartbeat with user context
+      description: |
+        Device sends periodic heartbeat to indicate it's online.
+        Response includes whether user assignment has changed (triggers content refresh).
+      operationId: sendHeartbeat
+      security:
+        - DeviceKeyAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HeartbeatRequest'
+            examples:
+              normal:
+                summary: Normal heartbeat
+                value:
+                  currentScheduleId: 10
+                  playbackPosition: 45
+                  status: "Playing"
+                  cachedAssignedUserId: 42
+      
+      responses:
+        '200':
+          description: Heartbeat received
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HeartbeatResponse'
+              examples:
+                noChanges:
+                  summary: No changes, continue playing
+                  value:
+                    status: "Ok"
+                    assignedUserChanged: false
+                    currentAssignedUserId: 42
+                    shouldRefreshContent: false
+                    serverTime: "2025-10-02T10:00:00Z"
+                
+                userChanged:
+                  summary: User assignment changed - refresh content
+                  value:
+                    status: "Ok"
+                    assignedUserChanged: true
+                    currentAssignedUserId: 55
+                    previousAssignedUserId: 42
+                    shouldRefreshContent: true
+                    serverTime: "2025-10-02T10:00:00Z"
+                
+                userRemoved:
+                  summary: User assignment removed - revert to group/default
+                  value:
+                    status: "Ok"
+                    assignedUserChanged: true
+                    currentAssignedUserId: null
+                    previousAssignedUserId: 42
+                    shouldRefreshContent: true
+                    serverTime: "2025-10-02T10:00:00Z"
+        
+        '401':
+          description: Invalid device key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        
+        '500':
+          $ref: '#/components/responses/ServerError'
+
+  /api/device/current-assignment:
+    get:
+      tags:
+        - Content Delivery
+      summary: Get current user assignment for device
+      description: |
+        Device queries its current user assignment.
+        Used during app startup to determine content delivery strategy.
+      operationId: getCurrentAssignment
+      security:
+        - DeviceKeyAuth: []
+      
+      responses:
+        '200':
+          description: Assignment information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceAssignmentResponse'
+              examples:
+                withUser:
+                  summary: Device assigned to user
+                  value:
+                    deviceId: 123
+                    deviceName: "Conference Room A - TV"
+                    assignedUser:
+                      userId: 42
+                      email: "john.doe@company.com"
+                      displayName: "John Doe"
+                      assignedSchedulesCount: 3
+                    deviceGroup:
+                      groupId: 5
+                      groupName: "Marketing Floor"
+                    contentSource: "UserAssignment"
+                
+                withoutUser:
+                  summary: Device not assigned to user
+                  value:
+                    deviceId: 456
+                    deviceName: "Lobby Display"
+                    assignedUser: null
+                    deviceGroup:
+                      groupId: 3
+                      groupName: "Lobby Displays"
+                    contentSource: "DeviceGroup"
+                
+                noAssignment:
+                  summary: Device with no assignment
+                  value:
+                    deviceId: 789
+                    deviceName: "Unassigned TV"
+                    assignedUser: null
+                    deviceGroup: null
+                    contentSource: "Default"
+        
+        '401':
+          description: Invalid device key
+        
+        '404':
+          description: Device not found
+
+components:
+  schemas:
+    ScheduleResponse:
+      type: object
+      properties:
+        scheduleId:
+          type: integer
+          nullable: true
+        scheduleName:
+          type: string
+          nullable: true
+        priority:
+          type: integer
+          nullable: true
+        startDate:
+          type: string
+          format: date-time
+          nullable: true
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        startTime:
+          type: string
+          pattern: '^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$'
+          nullable: true
+          example: "09:00:00"
+        endTime:
+          type: string
+          pattern: '^([01]\d|2[0-3]):([0-5]\d):([0-5]\d)$'
+          nullable: true
+          example: "17:00:00"
+        source:
+          type: string
+          enum: [UserAssignment, DeviceGroup, Default, None]
+          description: Where this schedule came from
+        assignedUser:
+          nullable: true
+          type: object
+          properties:
+            userId:
+              type: integer
+            email:
+              type: string
+            displayName:
+              type: string
+        deviceGroup:
+          nullable: true
+          type: object
+          properties:
+            groupId:
+              type: integer
+            groupName:
+              type: string
+        media:
+          type: array
+          items:
+            $ref: '#/components/schemas/MediaItem'
+        message:
+          type: string
+          nullable: true
+          description: Informational message (e.g., "No content available")
+    
+    MediaItem:
+      type: object
+      properties:
+        mediaId:
+          type: integer
+        fileName:
+          type: string
+        mediaType:
+          type: string
+          enum: [Image, Video, Html]
+        duration:
+          type: integer
+          description: Display duration in seconds
+        displayOrder:
+          type: integer
+        presignedUrl:
+          type: string
+          format: uri
+          description: S3 presigned URL for downloading content (valid for 24 hours)
+    
+    HeartbeatRequest:
+      type: object
+      properties:
+        currentScheduleId:
+          type: integer
+          nullable: true
+          description: Schedule currently being played
+        playbackPosition:
+          type: integer
+          nullable: true
+          description: Current position in playlist (seconds)
+        status:
+          type: string
+          enum: [Playing, Paused, Idle, Error]
+        cachedAssignedUserId:
+          type: integer
+          nullable: true
+          description: User ID device thinks it's assigned to (for change detection)
+    
+    HeartbeatResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [Ok, Warning, Error]
+        assignedUserChanged:
+          type: boolean
+          description: Whether user assignment has changed since last heartbeat
+        currentAssignedUserId:
+          type: integer
+          nullable: true
+          description: Current user assignment (null if removed)
+        previousAssignedUserId:
+          type: integer
+          nullable: true
+          description: Previous user assignment (only if changed)
+        shouldRefreshContent:
+          type: boolean
+          description: Whether device should call /next-schedule immediately
+        serverTime:
+          type: string
+          format: date-time
+          description: Current server time (for time sync)
+    
+    DeviceAssignmentResponse:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        deviceName:
+          type: string
+        assignedUser:
+          nullable: true
+          type: object
+          properties:
+            userId:
+              type: integer
+            email:
+              type: string
+            displayName:
+              type: string
+            assignedSchedulesCount:
+              type: integer
+        deviceGroup:
+          nullable: true
+          type: object
+          properties:
+            groupId:
+              type: integer
+            groupName:
+              type: string
+        contentSource:
+          type: string
+          enum: [UserAssignment, DeviceGroup, Default]
+          description: Current content delivery strategy
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  securitySchemes:
+    DeviceKeyAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Device key (JWT-like token) issued during registration approval
+  
+  responses:
+    ServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "InternalServerError"
+            message: "An unexpected error occurred"

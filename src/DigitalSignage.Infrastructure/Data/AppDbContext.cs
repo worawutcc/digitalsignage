@@ -44,7 +44,13 @@ public class AppDbContext : DbContext
     // Permission Management entities
     public DbSet<UserDeviceGroupPermission> UserDeviceGroupPermissions { get; set; }
     public DbSet<PermissionAuditLog> PermissionAuditLogs { get; set; }
-        public DbSet<UserDeviceAssociation> UserDeviceAssociations { get; set; }
+    public DbSet<UserDeviceAssociation> UserDeviceAssociations { get; set; }
+    
+    // User-based content entities (Feature 019)
+    public DbSet<UserSchedule> UserSchedules { get; set; }
+    
+    // WebSocket entities
+    public DbSet<WebSocketConnectionLog> WebSocketConnectionLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -79,6 +85,12 @@ public class AppDbContext : DbContext
         // Permission Management configurations
         modelBuilder.ApplyConfiguration(new UserDeviceGroupPermissionConfiguration());
         modelBuilder.ApplyConfiguration(new PermissionAuditLogConfiguration());
+        
+        // User-based content configurations (Feature 019)
+        modelBuilder.ApplyConfiguration(new UserScheduleConfiguration());
+        
+        // WebSocket configurations
+        modelBuilder.ApplyConfiguration(new WebSocketConnectionLogConfiguration());
 
         // Configure RefreshToken manually since it doesn't have a separate configuration class yet
         modelBuilder.Entity<RefreshToken>(entity =>

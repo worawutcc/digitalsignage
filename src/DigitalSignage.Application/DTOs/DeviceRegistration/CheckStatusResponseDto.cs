@@ -76,4 +76,9 @@ public class CheckStatusResponseDto
     /// User-friendly status message
     /// </summary>
     public string Message { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Assigned user information (only present when approved and user assigned) (Feature 019)
+    /// </summary>
+    public AssignedUserDto? AssignedUser { get; set; }
 }

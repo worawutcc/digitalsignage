@@ -41,4 +41,19 @@ public class ApproveQrRegistrationResponseDto
     /// Admin user who approved
     /// </summary>
     public string? ApprovedByAdmin { get; set; }
+    
+    /// <summary>
+    /// Assigned user information (Feature 019)
+    /// </summary>
+    public AssignedUserDto? AssignedUser { get; set; }
+}
+
+/// <summary>
+/// DTO for assigned user information
+/// </summary>
+public class AssignedUserDto
+{
+    public int UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
 }
