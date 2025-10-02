@@ -141,7 +141,7 @@ public class ContentDeliveryService : IContentDeliveryService
         var mediaItems = new List<ScheduleMediaDto>();
         foreach (var scheduleMedia in selectedSchedule.ScheduleMedias.OrderBy(sm => sm.Order))
         {
-            var presignedUrl = await _fileUploadService.GetPresignedDownloadUrlAsync(
+            var presignedUrl = await _fileUploadService.GetPresignedUrlAsync(
                 scheduleMedia.Media.S3Key,
                 TimeSpan.FromHours(24) // 24-hour expiry
             );

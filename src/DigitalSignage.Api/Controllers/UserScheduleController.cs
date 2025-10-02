@@ -103,9 +103,6 @@ public class UserScheduleController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Admin {AdminUserId} assigning {Count} schedules to user {UserId}", 
-                adminUserId, request.ScheduleIds.Count, userId);
-            
             var response = await _userScheduleService.AssignUserSchedulesAsync(
                 userId, 
                 request.ScheduleIds, 

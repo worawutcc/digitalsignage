@@ -10,9 +10,9 @@ public class PlaylistAssignmentDto
     public int DeviceId { get; set; }
     public string DeviceName { get; set; } = string.Empty;
     public int Priority { get; set; }
-    public DateTimeOffset? StartTime { get; set; }
-    public DateTimeOffset? EndTime { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTime? StartTime { get; set; }
+    public DateTime? EndTime { get; set; }
+    public DateTime CreatedAt { get; set; }
     public int CreatedById { get; set; }
     public string CreatedByName { get; set; } = string.Empty;
 }
@@ -28,6 +28,6 @@ public class PlaybackStateDto
     public string? CurrentItemName { get; set; }
     public PlaybackStatus Status { get; set; }
     public TimeSpan? Position { get; set; }
-    public DateTimeOffset LastUpdated { get; set; }
+    public DateTime LastUpdated { get; set; }
     public string? ErrorMessage { get; set; }
 }

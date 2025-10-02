@@ -80,7 +80,7 @@ public class ScheduleService : IScheduleService
                 ScheduleName = schedule.Name,
                 AffectedDeviceIds = new[] { deviceId }
             },
-            Timestamp = DateTimeOffset.UtcNow.ToString("o")
+            Timestamp = DateTime.UtcNow.ToString("o")
         });
         
         _logger.LogInformation("Schedule created: {ScheduleId} - {ScheduleName}", schedule.Id, schedule.Name);
@@ -100,7 +100,7 @@ public class ScheduleService : IScheduleService
                     ConflictingScheduleIds = conflictingSchedules.ToArray(),
                     Message = $"Schedule '{schedule.Name}' overlaps with {conflictingSchedules.Length} existing schedule(s)"
                 },
-                Timestamp = DateTimeOffset.UtcNow.ToString("o")
+                Timestamp = DateTime.UtcNow.ToString("o")
             });
             
             _logger.LogWarning("Schedule conflict detected: {ScheduleId} overlaps with {ConflictCount} schedules", 
@@ -149,7 +149,7 @@ public class ScheduleService : IScheduleService
                 ScheduleName = schedule.Name,
                 AffectedDeviceIds = new[] { schedule.DeviceId }
             },
-            Timestamp = DateTimeOffset.UtcNow.ToString("o")
+            Timestamp = DateTime.UtcNow.ToString("o")
         });
         
         _logger.LogInformation("Schedule updated: {ScheduleId} - {ScheduleName}", schedule.Id, schedule.Name);
@@ -186,7 +186,7 @@ public class ScheduleService : IScheduleService
                 ScheduleName = scheduleName,
                 AffectedDeviceIds = new[] { deviceId }
             },
-            Timestamp = DateTimeOffset.UtcNow.ToString("o")
+            Timestamp = DateTime.UtcNow.ToString("o")
         });
         
         _logger.LogInformation("Schedule deleted: {ScheduleId} - {ScheduleName}", scheduleId, scheduleName);

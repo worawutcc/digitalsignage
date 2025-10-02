@@ -101,7 +101,7 @@ public static class WebApiServiceExtensions
     public static IServiceCollection AddJwtAuthentication(this IServiceCollection services, IConfiguration configuration)
     {
         // Configure JWT settings
-        services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
+        services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
 
         var jwtSettings = configuration.GetSection("JwtSettings").Get<JwtSettings>();
         if (jwtSettings == null || string.IsNullOrEmpty(jwtSettings.SecretKey))

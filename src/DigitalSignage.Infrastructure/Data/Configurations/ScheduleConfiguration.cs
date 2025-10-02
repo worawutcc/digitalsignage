@@ -30,6 +30,17 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
                .HasConversion<string>()
                .HasMaxLength(50);
 
+        // Configure DateTime properties as timestamp without time zone
+        builder.Property(e => e.StartDate)
+               .HasColumnName("start_date")
+               .HasColumnType("timestamp without time zone")
+               .IsRequired();
+
+        builder.Property(e => e.EndDate)
+               .HasColumnName("end_date")
+               .HasColumnType("timestamp without time zone")
+               .IsRequired();
+
         // Configure index for IsDefault (Feature 019)
         builder.HasIndex(e => e.IsDefault)
                .HasDatabaseName("IX_Schedules_IsDefault");

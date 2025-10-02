@@ -11,6 +11,9 @@ public class UserDeviceGroupPermissionConfiguration : IEntityTypeConfiguration<U
 {
     public void Configure(EntityTypeBuilder<UserDeviceGroupPermission> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(x => x.Id);
 
         // Composite unique constraint for (UserId, DeviceGroupId)

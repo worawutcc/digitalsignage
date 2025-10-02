@@ -11,7 +11,7 @@ public class UserAssignmentDto
     
     public string UserEmail { get; set; } = string.Empty;
     
-    public DateTimeOffset AssignedAt { get; set; }
+    public DateTime AssignedAt { get; set; }
     
     public AssignedByUserDto? AssignedBy { get; set; }
 }

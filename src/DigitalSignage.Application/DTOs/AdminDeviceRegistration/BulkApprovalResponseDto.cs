@@ -35,7 +35,7 @@ public class BulkApprovalResponseDto
     /// <summary>
     /// Timestamp of bulk operation
     /// </summary>
-    public DateTimeOffset ProcessedAt { get; set; }
+    public DateTime ProcessedAt { get; set; }
 
     /// <summary>
     /// Admin who performed the bulk approval

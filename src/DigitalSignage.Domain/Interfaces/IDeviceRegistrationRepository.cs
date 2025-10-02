@@ -20,12 +20,12 @@ public interface IDeviceRegistrationRepository
     Task<List<DeviceRegistrationRequest>> GetPendingRegistrationsAsync();
     Task<List<DeviceRegistrationRequest>> GetExpiredRegistrationsAsync();
     Task<List<DeviceRegistrationRequest>> GetRegistrationsByStatusAsync(RegistrationStatus status);
-    Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate);
+    Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTime startDate, DateTime endDate);
     Task<List<DeviceRegistrationRequest>> SearchRegistrationsAsync(
         string? searchTerm = null,
         RegistrationStatus? status = null,
-        DateTimeOffset? startDate = null,
-        DateTimeOffset? endDate = null,
+        DateTime? startDate = null,
+        DateTime? endDate = null,
         int skip = 0,
         int take = 50);
 
@@ -42,8 +42,8 @@ public interface IDeviceRegistrationRepository
     // Audit log operations
     Task<RegistrationAuditLog> AddAuditLogAsync(RegistrationAuditLog auditLog);
     Task<List<RegistrationAuditLog>> GetAuditLogsAsync(Guid registrationId);
-    Task<List<RegistrationAuditLog>> GetAuditLogsByDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate);
+    Task<List<RegistrationAuditLog>> GetAuditLogsByDateRangeAsync(DateTime startDate, DateTime endDate);
     Task<List<RegistrationAuditLog>> GetAuditLogsByActionAsync(AuditAction action);
     Task<List<RegistrationAuditLog>> GetAuditLogsByMacAddressAsync(string macAddress);
-    Task CleanupOldAuditLogsAsync(DateTimeOffset beforeDate);
+    Task CleanupOldAuditLogsAsync(DateTime beforeDate);
 }

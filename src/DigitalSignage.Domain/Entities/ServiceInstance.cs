@@ -3,7 +3,7 @@ using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class ServiceInstance
+public class ServiceInstance : BaseEntity
 {
     public int Id { get; set; }
     
@@ -26,8 +26,6 @@ public class ServiceInstance
     
     [MaxLength(1000)]
     public string? InstanceMetadata { get; set; } // JSON metadata specific to this instance
-    
-    public DateTime RegisteredAt { get; set; }
     
     public DateTime? LastSeen { get; set; }
     

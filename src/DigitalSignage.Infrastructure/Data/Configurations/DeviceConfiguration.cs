@@ -22,6 +22,11 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         builder.Property(e => e.IpAddress).HasMaxLength(45);
         builder.Property(e => e.Resolution).HasMaxLength(50);
         
+        // Configure LastHeartbeat as timestamp without time zone
+        builder.Property(e => e.LastHeartbeat)
+               .HasColumnName("last_heartbeat")
+               .HasColumnType("timestamp without time zone");
+        
         // Configure enum conversion
         builder.Property(e => e.Status)
                .HasConversion<string>()

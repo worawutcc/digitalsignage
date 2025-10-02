@@ -21,14 +21,9 @@ public class WebSocketConnectionLog : BaseEntity
     public int? UserId { get; set; }
     
     /// <summary>
-    /// Connection timestamp
-    /// </summary>
-    public DateTimeOffset ConnectedAt { get; set; }
-    
-    /// <summary>
     /// Disconnection timestamp (null if still connected)
     /// </summary>
-    public DateTimeOffset? DisconnectedAt { get; set; }
+    public DateTime? DisconnectedAt { get; set; }
     
     /// <summary>
     /// Client IP address

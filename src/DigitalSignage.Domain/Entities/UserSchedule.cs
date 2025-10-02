@@ -19,11 +19,6 @@ public class UserSchedule : BaseEntity
     public int ScheduleId { get; set; }
     
     /// <summary>
-    /// When this assignment was created (UTC)
-    /// </summary>
-    public DateTimeOffset AssignedAt { get; set; }
-    
-    /// <summary>
     /// Admin who made this assignment
     /// </summary>
     public int? AssignedByUserId { get; set; }

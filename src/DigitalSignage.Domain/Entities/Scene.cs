@@ -2,7 +2,7 @@ using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class Scene
+public class Scene : BaseEntity
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -14,8 +14,6 @@ public class Scene
     public int? BackgroundImageId { get; set; }
     public bool IsTemplate { get; set; } = false;
     public string? TemplateName { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
 
     // Foreign keys
     public int? CreatedByUserId { get; set; }

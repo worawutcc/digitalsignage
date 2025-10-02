@@ -35,7 +35,7 @@ public class InitiateQrRegistrationResponseDto
     /// <summary>
     /// QR Code expiration timestamp
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// User-friendly message
@@ -61,15 +61,4 @@ public class InitiateQrRegistrationResponseDto
     /// Requested user display name from registration request (Feature 019)
     /// </summary>
     public string? RequestedUserDisplayName { get; set; }
-}
-
-/// <summary>
-/// DTO for matched user information
-/// </summary>
-public class MatchedUserDto
-{
-    public int UserId { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-    public bool MatchedAutomatically { get; set; }
 }

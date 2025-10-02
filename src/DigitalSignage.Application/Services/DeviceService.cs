@@ -69,7 +69,7 @@ public class DeviceService : IDeviceService
                     LastSeen = device.LastHeartbeat?.ToString("o"),
                     ErrorMessage = errorMessage
                 },
-                Timestamp = DateTimeOffset.UtcNow.ToString("o")
+                Timestamp = DateTime.UtcNow.ToString("o")
             });
             
             _logger.LogInformation(
@@ -119,7 +119,7 @@ public class DeviceService : IDeviceService
                     LastSeen = now.ToString("o"),
                     ErrorMessage = null
                 },
-                Timestamp = DateTimeOffset.UtcNow.ToString("o")
+                Timestamp = DateTime.UtcNow.ToString("o")
             });
             
             _logger.LogInformation("Device came online: {DeviceKey}", deviceKey);
@@ -196,7 +196,7 @@ public class DeviceService : IDeviceService
                     LastSeen = device.LastHeartbeat?.ToString("o"),
                     ErrorMessage = null
                 },
-                Timestamp = DateTimeOffset.UtcNow.ToString("o")
+                Timestamp = DateTime.UtcNow.ToString("o")
             });
         }
         
@@ -207,7 +207,7 @@ public class DeviceService : IDeviceService
             AssignedUserChanged = userChanged,
             CurrentAssignedUserId = currentUserId,
             ShouldRefreshContent = userChanged,
-            ServerTime = DateTimeOffset.UtcNow
+            ServerTime = DateTime.UtcNow
         };
         
         if (userChanged)

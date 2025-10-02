@@ -71,13 +71,13 @@ public class DeviceRegistrationRepository : IDeviceRegistrationRepository
         return Task.FromResult(new List<DeviceRegistrationRequest>());
     }
 
-    public Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate)
+    public Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTime startDate, DateTime endDate)
     {
         _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetRegistrationsByDateRangeAsync not implemented");
         return Task.FromResult(new List<DeviceRegistrationRequest>());
     }
 
-    public Task<List<DeviceRegistrationRequest>> SearchRegistrationsAsync(string? searchTerm = null, RegistrationStatus? status = null, DateTimeOffset? startDate = null, DateTimeOffset? endDate = null, int skip = 0, int take = 50)
+    public Task<List<DeviceRegistrationRequest>> SearchRegistrationsAsync(string? searchTerm = null, RegistrationStatus? status = null, DateTime? startDate = null, DateTime? endDate = null, int skip = 0, int take = 50)
     {
         _logger.LogWarning("DeviceRegistrationRepository is stubbed - SearchRegistrationsAsync not implemented");
         return Task.FromResult(new List<DeviceRegistrationRequest>());
@@ -131,7 +131,7 @@ public class DeviceRegistrationRepository : IDeviceRegistrationRepository
         return Task.FromResult(new List<RegistrationAuditLog>());
     }
 
-    public Task<List<RegistrationAuditLog>> GetAuditLogsByDateRangeAsync(DateTimeOffset startDate, DateTimeOffset endDate)
+    public Task<List<RegistrationAuditLog>> GetAuditLogsByDateRangeAsync(DateTime startDate, DateTime endDate)
     {
         _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetAuditLogsByDateRangeAsync not implemented");
         return Task.FromResult(new List<RegistrationAuditLog>());
@@ -149,7 +149,7 @@ public class DeviceRegistrationRepository : IDeviceRegistrationRepository
         return Task.FromResult(new List<RegistrationAuditLog>());
     }
 
-    public Task CleanupOldAuditLogsAsync(DateTimeOffset beforeDate)
+    public Task CleanupOldAuditLogsAsync(DateTime beforeDate)
     {
         _logger.LogWarning("DeviceRegistrationRepository is stubbed - CleanupOldAuditLogsAsync not implemented");
         return Task.CompletedTask;

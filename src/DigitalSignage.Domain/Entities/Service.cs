@@ -3,7 +3,7 @@ using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class Service
+public class Service : BaseEntity
 {
     public int Id { get; set; }
     
@@ -39,15 +39,11 @@ public class Service
     
     public bool IsActive { get; set; } = true;
     
-    public DateTime RegisteredAt { get; set; }
-    
     public DateTime? LastHeartbeat { get; set; }
     
     public DateTime? LastHealthCheck { get; set; }
     
     public int ConsecutiveHealthCheckFailures { get; set; } = 0;
-    
-    public DateTime? UpdatedAt { get; set; }
     
     // Navigation properties
     public virtual ICollection<ServiceInstance> ServiceInstances { get; set; } = new List<ServiceInstance>();

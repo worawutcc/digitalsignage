@@ -74,17 +74,17 @@ public class PendingDeviceDto
     /// <summary>
     /// Registration creation timestamp
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     /// <summary>
     /// PIN expiration timestamp
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// Last time device polled for status
     /// </summary>
-    public DateTimeOffset? LastPolledAt { get; set; }
+    public DateTime? LastPolledAt { get; set; }
 }
 
 /// <summary>

@@ -15,6 +15,6 @@ public class UserPermissionDto
     public bool IsExplicit { get; set; }
     public bool IsInherited { get; set; }
     public int? InheritedFrom { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
     public string CreatedBy { get; set; } = string.Empty;
 }

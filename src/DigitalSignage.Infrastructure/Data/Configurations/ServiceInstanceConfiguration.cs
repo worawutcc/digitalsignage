@@ -8,6 +8,9 @@ public class ServiceInstanceConfiguration : IEntityTypeConfiguration<ServiceInst
 {
     public void Configure(EntityTypeBuilder<ServiceInstance> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(si => si.Id);
 
         builder.Property(si => si.InstanceId)
@@ -27,9 +30,6 @@ public class ServiceInstanceConfiguration : IEntityTypeConfiguration<ServiceInst
         builder.Property(si => si.IsActive)
             .HasDefaultValue(true);
 
-        builder.Property(si => si.RegisteredAt)
-            .IsRequired();
-
         builder.Property(si => si.HealthCheckIntervalSeconds)
             .HasDefaultValue(30);
 
@@ -39,13 +39,21 @@ public class ServiceInstanceConfiguration : IEntityTypeConfiguration<ServiceInst
         builder.Property(si => si.MaxConsecutiveFailures)
             .HasDefaultValue(3);
 
+        // Configure DateTime properties as timestamp without time zone
+        builder.Property(si => si.LastSeen)
+               .HasColumnName("last_seen")
+               .HasColumnType("timestamp without time zone");
+
+        builder.Property(si => si.DeregisteredAt)
+               .HasColumnName("deregistered_at")
+               .HasColumnType("timestamp without time zone");
+
         // Indexes
         builder.HasIndex(si => new { si.ServiceId, si.InstanceId })
             .IsUnique();
         builder.HasIndex(si => si.Status);
         builder.HasIndex(si => si.IsActive);
         builder.HasIndex(si => si.LastSeen);
-        builder.HasIndex(si => si.RegisteredAt);
         builder.HasIndex(si => si.EndpointUrl);
 
         // Relationships

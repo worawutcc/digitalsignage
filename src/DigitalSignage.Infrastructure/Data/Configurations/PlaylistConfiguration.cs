@@ -9,6 +9,9 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
 {
     public void Configure(EntityTypeBuilder<Playlist> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(p => p.Id);
 
         builder.Property(p => p.Name)
@@ -28,14 +31,10 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
         builder.Property(p => p.IsLooped)
             .HasDefaultValue(false);
 
-        builder.Property(p => p.CreatedAt)
-            .IsRequired();
-
         // Indexes
         builder.HasIndex(p => p.Name);
         builder.HasIndex(p => p.Status);
         builder.HasIndex(p => p.CreatedByUserId);
-        builder.HasIndex(p => p.CreatedAt);
 
         // Relationships
         builder.HasOne(p => p.CreatedByUser)

@@ -9,6 +9,9 @@ public class SceneConfiguration : IEntityTypeConfiguration<Scene>
 {
     public void Configure(EntityTypeBuilder<Scene> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(s => s.Id);
 
         builder.Property(s => s.Name)
@@ -37,16 +40,12 @@ public class SceneConfiguration : IEntityTypeConfiguration<Scene>
         builder.Property(s => s.TemplateName)
             .HasMaxLength(100);
 
-        builder.Property(s => s.CreatedAt)
-            .IsRequired();
-
         // Indexes
         builder.HasIndex(s => s.Name);
         builder.HasIndex(s => s.LayoutType);
         builder.HasIndex(s => s.IsTemplate);
         builder.HasIndex(s => s.TemplateName);
         builder.HasIndex(s => s.CreatedByUserId);
-        builder.HasIndex(s => s.CreatedAt);
 
         // Relationships
         builder.HasOne(s => s.CreatedByUser)

@@ -28,9 +28,9 @@ namespace DigitalSignage.Infrastructure.Migrations
                     NetworkName = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     HardwareSpecs = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
                     Status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    ExpiresAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
-                    LastPolledAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    ExpiresAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    LastPolledAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
                     ApprovedDeviceId = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>
@@ -59,7 +59,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     InitialScheduleId = table.Column<int>(type: "integer", nullable: true),
                     Tags = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
                     Notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    ApprovedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    ApprovedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     DeviceKey = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
                     DeviceRegistrationRequestId1 = table.Column<int>(type: "integer", nullable: true)
                 },
@@ -111,7 +111,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     UserAgent = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
                     Result = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     ErrorMessage = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    CreatedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     DeviceRegistrationRequestId1 = table.Column<int>(type: "integer", nullable: true)
                 },
                 constraints: table =>

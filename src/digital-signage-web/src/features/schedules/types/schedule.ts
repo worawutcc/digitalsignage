@@ -94,8 +94,8 @@ export interface ScheduleUsersResponse {
   scheduleName: string
   /** Array of assigned users */
   users: ScheduleAssignedUser[]
-  /** Total count of assigned users */
-  totalCount: number
+  /** Total count of assigned users (optional since API may not provide it) */
+  totalCount?: number
 }
 
 /**

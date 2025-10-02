@@ -48,6 +48,9 @@ app.UseHttpsRedirection();
 // Configure CORS
 app.UseCors();
 
+// Enable WebSocket support for SignalR
+app.UseWebSockets();
+
 // Configure Authentication & Authorization
 app.UseAuthentication();
 app.UseAuthorization();
@@ -86,7 +89,8 @@ if (app.Environment.IsDevelopment())
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DigitalSignage.Infrastructure.Data.AppDbContext>();
-    await DigitalSignage.Infrastructure.Data.DbSeeder.SeedAdminUserAsync(db);
+    var passwordHashService = scope.ServiceProvider.GetRequiredService<DigitalSignage.Application.Interfaces.IPasswordHashService>();
+    await DigitalSignage.Infrastructure.Data.DbSeeder.SeedAdminUserAsync(db, passwordHashService);
 }
 
 app.Run();

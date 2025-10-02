@@ -28,7 +28,7 @@ public class DeviceRegistrationResponseDto
     /// <summary>
     /// PIN expiration timestamp
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// Recommended polling interval in seconds

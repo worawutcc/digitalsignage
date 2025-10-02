@@ -67,6 +67,7 @@ tests/
 - Routing: `[Route("api/[controller]")]` with REST conventions
 - Always validate input with `ModelState.IsValid` or FluentValidation
 - **ProducesResponseType Attributes**: Document all possible HTTP status codes with response types
+- **DateTime Handling**: Always use `DateTime` (not `DateTimeOffset`) for all API inputs/outputs. All datetime values should be in UTC and stored without timezone information.
 
 **API Documentation Pattern:**
 ```csharp
@@ -133,6 +134,7 @@ public class MediaService : IMediaService
 - Connection via `appsettings.{Environment}.json` + Environment Variables
 - Migrations: `dotnet ef migrations add <Name> -p src/DigitalSignage.Infrastructure -s src/DigitalSignage.Api`
 - Provider switching via `DatabaseProvider` configuration key
+- **DateTime Configuration**: All datetime properties use `DateTime` type with `timestamp without time zone` PostgreSQL column type. Store all times in UTC.
 
 ### AWS S3 Integration
 - `S3FileUploadService` for media file storage
@@ -185,7 +187,7 @@ Schedule Management:
 - **PascalCase**: Public members, classes, methods
 - **camelCase**: Local variables, method parameters
 - **_camelCase**: Private fields
-- **DateTimeOffset**: For timezone-aware data storage
+- **DateTime (UTC)**: Use `DateTime` without timezone for all datetime properties and database storage. Store all times in UTC. Use `timestamp without time zone` for PostgreSQL columns.
 
 ### Testing Strategy
 - **xUnit**: Test framework

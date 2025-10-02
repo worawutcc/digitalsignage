@@ -153,7 +153,7 @@ public class DeviceApproval : BaseEntity
     {
         if (Status == ApprovalStatus.Approved)
         {
-            DeviceKey = $"dev_{Guid.NewGuid():N}_{DateTimeOffset.UtcNow.Ticks}";
+            DeviceKey = $"dev_{Guid.NewGuid():N}_{DateTime.UtcNow.Ticks}";
         }
     }
 

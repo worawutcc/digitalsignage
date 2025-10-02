@@ -1,6 +1,6 @@
 namespace DigitalSignage.Domain.Entities;
 
-public class SceneItem
+public class SceneItem : BaseEntity
 {
     public int Id { get; set; }
     public int SceneId { get; set; }
@@ -17,8 +17,6 @@ public class SceneItem
     public int AnimationDuration { get; set; } = 0;
     public int DurationSeconds { get; set; }
     public bool UseCustomDuration { get; set; } = false;
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
 
     // Navigation properties
     public Scene Scene { get; set; } = null!;

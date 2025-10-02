@@ -3,17 +3,20 @@ using System;
 using DigitalSignage.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 #nullable disable
 
-namespace DigitalSignage.Infrastructure.Migrations
+namespace DigitalSignage.Infrastructure.Data.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251002131356_FixRefreshTokenDateTimeColumns")]
+    partial class FixRefreshTokenDateTimeColumns
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -62,8 +65,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("boolean");
 
                     b.Property<DateTime?>("LastHeartbeat")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("last_heartbeat");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Location")
                         .IsRequired()
@@ -465,17 +467,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                    b.Property<DateTime>("CheckedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("ErrorMessage")
                         .HasMaxLength(5000)
@@ -499,31 +492,15 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_HealthCheckResult_CreatedAt");
+                    b.HasIndex("CheckedAt");
 
                     b.HasIndex("Status");
 
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_HealthCheckResult_UpdatedAt");
+                    b.HasIndex("ServiceId", "CheckedAt");
 
-                    b.HasIndex("ServiceId", "CreatedAt");
-
-                    b.HasIndex("ServiceInstanceId", "CreatedAt");
+                    b.HasIndex("ServiceInstanceId", "CheckedAt");
 
                     b.ToTable("HealthCheckResults");
                 });
@@ -627,15 +604,11 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()")
                         .HasComment("UTC timestamp when change occurred");
 
                     b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("integer");
 
                     b.Property<int>("DeviceGroupId")
                         .HasColumnType("integer");
@@ -654,16 +627,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasComment("Admin-provided reason for the permission change");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                        .HasColumnType("integer");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
@@ -682,9 +649,6 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("DeviceGroupId")
                         .HasDatabaseName("IX_PermissionAuditLogs_DeviceGroupId");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_PermissionAuditLog_UpdatedAt");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_PermissionAuditLogs_UserId");
@@ -715,18 +679,6 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
-
                     b.Property<int>("CurrentItemIndex")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("integer")
@@ -753,8 +705,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("EstimatedEndAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("estimated_end_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("IsLooping")
                         .ValueGeneratedOnAdd()
@@ -769,8 +720,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<DateTime?>("LastSyncAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateTime>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("PlaylistId")
                         .HasColumnType("integer");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
@@ -789,31 +746,15 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int?>("TotalLoops")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_PlaybackState_CreatedAt");
-
                     b.HasIndex("IsSynced");
+
+                    b.HasIndex("LastUpdatedAt");
 
                     b.HasIndex("PlaylistId");
 
                     b.HasIndex("Status");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_PlaybackState_UpdatedAt");
 
                     b.HasIndex("DeviceId", "PlaylistId")
                         .IsUnique();
@@ -830,16 +771,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("integer");
@@ -870,31 +802,18 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_Playlist_CreatedAt");
+                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("CreatedByUserId");
 
                     b.HasIndex("Name");
 
                     b.HasIndex("Status");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_Playlist_UpdatedAt");
 
                     b.ToTable("Playlists");
                 });
@@ -911,16 +830,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DaysOfWeek")
                         .HasMaxLength(20)
@@ -933,8 +843,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("EndDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("end_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<TimeOnly?>("EndTime")
                         .HasColumnType("time without time zone");
@@ -962,30 +871,17 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("start_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<TimeOnly?>("StartTime")
                         .HasColumnType("time without time zone");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
                     b.HasIndex("AssignedByUserId");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_PlaylistAssignment_CreatedAt");
 
                     b.HasIndex("DeviceGroupId");
 
@@ -998,9 +894,6 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("Priority");
 
                     b.HasIndex("StartDate");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_PlaylistAssignment_UpdatedAt");
 
                     b.HasIndex("PlaylistId", "DeviceGroupId");
 
@@ -1021,16 +914,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("DurationSeconds")
                         .HasColumnType("integer");
@@ -1065,17 +949,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("UseCustomDuration")
                         .ValueGeneratedOnAdd()
@@ -1084,13 +959,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_PlaylistItem_CreatedAt");
-
                     b.HasIndex("MediaId");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_PlaylistItem_UpdatedAt");
 
                     b.HasIndex("PlaylistId", "OrderIndex")
                         .IsUnique();
@@ -1276,16 +1145,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("integer");
@@ -1317,17 +1177,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Width")
                         .ValueGeneratedOnAdd()
@@ -1338,8 +1189,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("BackgroundImageId");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_Scene_CreatedAt");
+                    b.HasIndex("CreatedAt");
 
                     b.HasIndex("CreatedByUserId");
 
@@ -1350,9 +1200,6 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("Name");
 
                     b.HasIndex("TemplateName");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_Scene_UpdatedAt");
 
                     b.ToTable("Scenes");
                 });
@@ -1379,16 +1226,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("character varying(50)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("DurationSeconds")
                         .HasColumnType("integer");
@@ -1414,17 +1252,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int>("SceneId")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("UseCustomDuration")
                         .ValueGeneratedOnAdd()
@@ -1447,13 +1276,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_SceneItem_CreatedAt");
-
                     b.HasIndex("MediaId");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_SceneItem_UpdatedAt");
 
                     b.HasIndex("SceneId", "ZIndex");
 
@@ -1484,8 +1307,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     b.Property<DateTime>("EndDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("end_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<TimeSpan>("EndTime")
                         .HasColumnType("interval");
@@ -1509,8 +1331,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("character varying(1000)");
 
                     b.Property<DateTime>("StartDate")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("start_date");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<TimeSpan>("StartTime")
                         .HasColumnType("interval");
@@ -1626,18 +1447,6 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -1655,12 +1464,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<DateTime?>("LastHealthCheck")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("last_health_check");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime?>("LastHeartbeat")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("last_heartbeat");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Metadata")
                         .HasMaxLength(2000)
@@ -1676,6 +1483,9 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasDefaultValue(0);
 
+                    b.Property<DateTime>("RegisteredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
@@ -1686,17 +1496,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Version")
                         .IsRequired()
@@ -1705,21 +1506,17 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_Service_CreatedAt");
-
                     b.HasIndex("IsActive");
 
                     b.HasIndex("LastHeartbeat");
 
                     b.HasIndex("Name");
 
+                    b.HasIndex("RegisteredAt");
+
                     b.HasIndex("Status");
 
                     b.HasIndex("Type");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_Service_UpdatedAt");
 
                     b.HasIndex("Name", "Version")
                         .IsUnique();
@@ -1735,21 +1532,8 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
-                    b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
-
                     b.Property<DateTime?>("DeregisteredAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("deregistered_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("EndpointUrl")
                         .IsRequired()
@@ -1785,8 +1569,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDefaultValue(true);
 
                     b.Property<DateTime?>("LastSeen")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("last_seen");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("MaxConsecutiveFailures")
                         .ValueGeneratedOnAdd()
@@ -1796,28 +1579,16 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int?>("Port")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime>("RegisteredAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int>("ServiceId")
                         .HasColumnType("integer");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
 
-                    b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
-
-                    b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
-
                     b.HasKey("Id");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_ServiceInstance_CreatedAt");
 
                     b.HasIndex("EndpointUrl");
 
@@ -1825,10 +1596,9 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("LastSeen");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("RegisteredAt");
 
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_ServiceInstance_UpdatedAt");
+                    b.HasIndex("Status");
 
                     b.HasIndex("ServiceId", "InstanceId")
                         .IsUnique();
@@ -1986,15 +1756,11 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
                         .HasDefaultValueSql("NOW()")
                         .HasComment("UTC timestamp when permission was created");
 
                     b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("integer");
 
                     b.Property<int>("DeviceGroupId")
                         .HasColumnType("integer");
@@ -2010,32 +1776,20 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasComment("UserPermissionLevel enum: 0=NoAccess, 1=ViewOnly, 2=ManageContent, 3=FullControl");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                        .HasColumnType("integer");
 
                     b.Property<int>("UserId")
                         .HasColumnType("integer");
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_UserDeviceGroupPermission_CreatedAt");
-
                     b.HasIndex("CreatedBy");
 
                     b.HasIndex("DeviceGroupId")
                         .HasDatabaseName("IX_UserDeviceGroupPermissions_DeviceGroupId");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_UserDeviceGroupPermission_UpdatedAt");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("IX_UserDeviceGroupPermissions_UserId");
@@ -2059,6 +1813,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("integer");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasComment("When this schedule was assigned to the user (UTC)");
 
                     b.Property<int?>("AssignedByUserId")
                         .HasColumnType("integer");
@@ -2124,26 +1882,22 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<DateTime>("ConnectedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<string>("ConnectionId")
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
 
                     b.Property<DateTime>("CreatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("created_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("CreatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("created_by");
+                        .HasColumnType("integer");
 
                     b.Property<DateTime?>("DisconnectedAt")
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("disconnected_at");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("DisconnectionReason")
                         .HasMaxLength(256)
@@ -2155,16 +1909,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnType("character varying(45)");
 
                     b.Property<DateTime>("UpdatedAt")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp without time zone")
-                        .HasColumnName("updated_at")
-                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("UpdatedBy")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("integer")
-                        .HasDefaultValue(-1)
-                        .HasColumnName("updated_by");
+                        .HasColumnType("integer");
 
                     b.Property<string>("UserAgent")
                         .IsRequired()
@@ -2176,14 +1924,11 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("ConnectedAt")
+                        .HasDatabaseName("IX_WebSocketConnectionLog_ConnectedAt");
+
                     b.HasIndex("ConnectionId")
                         .HasDatabaseName("IX_WebSocketConnectionLog_ConnectionId");
-
-                    b.HasIndex("CreatedAt")
-                        .HasDatabaseName("IX_WebSocketConnectionLog_CreatedAt");
-
-                    b.HasIndex("UpdatedAt")
-                        .HasDatabaseName("IX_WebSocketConnectionLog_UpdatedAt");
 
                     b.HasIndex("UserId", "DisconnectedAt")
                         .HasDatabaseName("IX_WebSocketConnectionLog_UserId_DisconnectedAt");

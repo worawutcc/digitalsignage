@@ -1,6 +1,6 @@
 namespace DigitalSignage.Domain.Entities;
 
-public class PlaylistAssignment
+public class PlaylistAssignment : BaseEntity
 {
     public int Id { get; set; }
     public int PlaylistId { get; set; }
@@ -16,8 +16,6 @@ public class PlaylistAssignment
     public string? RecurrencePattern { get; set; }
     public string? DaysOfWeek { get; set; }
     public int? AssignedByUserId { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
 
     // Navigation properties
     public Playlist Playlist { get; set; } = null!;

@@ -25,7 +25,7 @@ public class InitiateRegistrationResponseDto
     /// <summary>
     /// PIN expiration timestamp
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// User-friendly message

@@ -99,6 +99,14 @@ public class AppDbContext : DbContext
             
             entity.HasKey(e => e.Id);
             entity.Property(e => e.TokenValue).HasMaxLength(255).IsRequired();
+            
+            // Configure DateTime properties to use timestamp without time zone
+            entity.Property(e => e.ExpiresAt)
+                  .HasColumnType("timestamp without time zone")
+                  .IsRequired();
+                  
+            entity.Property(e => e.RevokedAt)
+                  .HasColumnType("timestamp without time zone");
 
             entity.HasOne(e => e.User)
                   .WithMany(u => u.RefreshTokens)

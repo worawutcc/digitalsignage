@@ -15,7 +15,7 @@
  * @see specs/020-phase-1/contracts/component-contracts.md
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { User, Mail, Calendar, Loader2, AlertCircle } from 'lucide-react'
 import { UserScheduleAssignmentProps } from './UserScheduleAssignment.types'
 import { AssignedSchedulesList } from './AssignedSchedulesList'
@@ -42,7 +42,7 @@ function UserScheduleAssignmentContent({
   const [selectedScheduleIds, setSelectedScheduleIds] = useState<number[]>([])
   
   // Fetch user's current schedules
-  const { data: userSchedulesData, isLoading: isLoadingSchedules, error } = useUserSchedules(userId)
+  const { data: userSchedulesData, isLoading: isLoadingSchedules, error } = useUserSchedules(userId) as any
   
   // Fetch available schedules for the selector
   const { data: availableSchedules = [], isLoading: isLoadingAvailable } = useQuery({
@@ -67,7 +67,7 @@ function UserScheduleAssignmentContent({
     },
   })
   
-  const currentSchedules = userSchedulesData?.schedules || []
+  const currentSchedules = (userSchedulesData as any)?.schedules || []
   const hasExistingSchedules = currentSchedules.length > 0
   
   // Reset selected schedules when opening modal
@@ -158,7 +158,7 @@ function UserScheduleAssignmentContent({
         </div>
         
         {/* Loading State */}
-        {isLoadingSchedules && (
+        {isLoadingSchedules && !error && (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
           </div>
@@ -174,7 +174,7 @@ function UserScheduleAssignmentContent({
                   Failed to load schedules
                 </h4>
                 <p className="mt-1 text-sm text-red-700 dark:text-red-300">
-                  {error.message}
+                  {error instanceof Error ? error.message : 'Unknown error'}
                 </p>
               </div>
             </div>
@@ -184,7 +184,7 @@ function UserScheduleAssignmentContent({
         {/* Schedules List */}
         {!isLoadingSchedules && !error && (
           <AssignedSchedulesList
-            schedules={currentSchedules.map(us => ({
+            schedules={currentSchedules.map((us: any) => ({
               id: us.scheduleId,
               name: us.scheduleName,
               ...(us.scheduleDescription && { description: us.scheduleDescription }),

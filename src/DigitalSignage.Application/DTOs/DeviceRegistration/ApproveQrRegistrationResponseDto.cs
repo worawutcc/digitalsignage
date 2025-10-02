@@ -35,7 +35,7 @@ public class ApproveQrRegistrationResponseDto
     /// <summary>
     /// Approval timestamp
     /// </summary>
-    public DateTimeOffset? ApprovedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
 
     /// <summary>
     /// Admin user who approved
@@ -46,14 +46,4 @@ public class ApproveQrRegistrationResponseDto
     /// Assigned user information (Feature 019)
     /// </summary>
     public AssignedUserDto? AssignedUser { get; set; }
-}
-
-/// <summary>
-/// DTO for assigned user information
-/// </summary>
-public class AssignedUserDto
-{
-    public int UserId { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
 }

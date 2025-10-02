@@ -231,7 +231,7 @@ public class MediaService : IMediaService
                 FileSizeBytes = media.FileSize,
                 ThumbnailUrl = null // Thumbnail URL can be generated later if needed
             },
-            Timestamp = DateTimeOffset.UtcNow.ToString("o")
+            Timestamp = DateTime.UtcNow.ToString("o")
         });
         
         return MapToDto(media);

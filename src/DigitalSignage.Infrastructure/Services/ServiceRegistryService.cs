@@ -49,7 +49,7 @@ public class ServiceRegistryService : IServiceRegistryService
                     Metadata = request.Metadata,
                     Priority = request.Priority,
                     Status = ServiceStatus.Unknown,
-                    RegisteredAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
                     IsActive = true
                 };
 
@@ -87,7 +87,7 @@ public class ServiceRegistryService : IServiceRegistryService
                     Port = request.Port,
                     Status = ServiceStatus.Healthy,
                     InstanceMetadata = request.InstanceMetadata,
-                    RegisteredAt = DateTime.UtcNow,
+                    CreatedAt = DateTime.UtcNow,
                     LastSeen = DateTime.UtcNow,
                     IsActive = true,
                     HealthCheckIntervalSeconds = request.HealthCheckIntervalSeconds,
@@ -350,7 +350,7 @@ public class ServiceRegistryService : IServiceRegistryService
         }
 
         var healthChecks = await query
-            .OrderByDescending(hc => hc.CheckedAt)
+            .OrderByDescending(hc => hc.CreatedAt)
             .Take(maxResults)
             .ToListAsync();
 
@@ -360,7 +360,7 @@ public class ServiceRegistryService : IServiceRegistryService
             ServiceId = hc.ServiceId,
             ServiceInstanceId = hc.ServiceInstanceId,
             Status = hc.Status,
-            CheckedAt = hc.CheckedAt,
+            CheckedAt = hc.CreatedAt,
             ResponseTimeMs = hc.ResponseTimeMs,
             ResponseMessage = hc.ResponseMessage,
             ErrorMessage = hc.ErrorMessage,
@@ -462,7 +462,7 @@ public class ServiceRegistryService : IServiceRegistryService
         var cutoffTime = DateTime.UtcNow - retentionPeriod;
         
         var staleResults = await _context.HealthCheckResults
-            .Where(hc => hc.CheckedAt < cutoffTime)
+            .Where(hc => hc.CreatedAt < cutoffTime)
             .ToListAsync();
 
         _context.HealthCheckResults.RemoveRange(staleResults);
@@ -477,7 +477,7 @@ public class ServiceRegistryService : IServiceRegistryService
             .Include(si => si.Service)
             .Where(si => si.Service.Name == serviceName && si.IsActive && si.Status == ServiceStatus.Healthy)
             .OrderBy(si => si.Service.Priority)
-            .ThenBy(si => si.RegisteredAt) // Simple round-robin by registration time
+            .ThenBy(si => si.CreatedAt) // Simple round-robin by registration time
             .FirstOrDefaultAsync();
 
         if (instance == null) return null;
@@ -491,7 +491,7 @@ public class ServiceRegistryService : IServiceRegistryService
             Port = instance.Port,
             Status = instance.Status,
             InstanceMetadata = instance.InstanceMetadata,
-            RegisteredAt = instance.RegisteredAt,
+            RegisteredAt = instance.CreatedAt,
             LastSeen = instance.LastSeen,
             IsActive = instance.IsActive,
             HealthCheckIntervalSeconds = instance.HealthCheckIntervalSeconds,
@@ -522,7 +522,7 @@ public class ServiceRegistryService : IServiceRegistryService
             Port = instance.Port,
             Status = instance.Status,
             InstanceMetadata = instance.InstanceMetadata,
-            RegisteredAt = instance.RegisteredAt,
+            RegisteredAt = instance.CreatedAt,
             LastSeen = instance.LastSeen,
             IsActive = instance.IsActive,
             HealthCheckIntervalSeconds = instance.HealthCheckIntervalSeconds,
@@ -572,7 +572,7 @@ public class ServiceRegistryService : IServiceRegistryService
             Port = si.Port,
             Status = si.Status,
             InstanceMetadata = si.InstanceMetadata,
-            RegisteredAt = si.RegisteredAt,
+            RegisteredAt = si.CreatedAt,
             LastSeen = si.LastSeen,
             IsActive = si.IsActive,
             HealthCheckIntervalSeconds = si.HealthCheckIntervalSeconds,
@@ -594,7 +594,7 @@ public class ServiceRegistryService : IServiceRegistryService
             Metadata = service.Metadata,
             Priority = service.Priority,
             IsActive = service.IsActive,
-            RegisteredAt = service.RegisteredAt,
+            RegisteredAt = service.CreatedAt,
             LastHeartbeat = service.LastHeartbeat,
             LastHealthCheck = service.LastHealthCheck,
             ConsecutiveHealthCheckFailures = service.ConsecutiveHealthCheckFailures,

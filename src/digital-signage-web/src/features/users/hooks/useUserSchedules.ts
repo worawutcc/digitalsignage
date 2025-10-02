@@ -59,15 +59,13 @@ export function useUserSchedules(
     refetchOnWindowFocus = true,
   } = options
   
-  return useQuery<GetUserSchedulesResponse, Error>({
+  return useQuery({
     queryKey: ['userSchedules', userId],
     queryFn: () => userScheduleService.getUserSchedules(userId),
     enabled: enabled && userId > 0,
     staleTime: refetchInterval || 300000,
     refetchInterval: refetchInterval || false,
     refetchOnWindowFocus,
-    // Keep previous data while refetching to prevent UI flicker
-    placeholderData: (previousData) => previousData,
   })
 }
 

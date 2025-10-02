@@ -32,11 +32,11 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         _logger.LogInformation("QR registration initiated for device {MacAddress} with user {RequestedUsername}", 
             request.MacAddress, request.RequestedUsername);
         
-        // Check if device already exists
-        var existingDevice = await _context.Set<Device>()
-            .FirstOrDefaultAsync(d => d.MacAddress == request.MacAddress);
+        // Check if there's an approved registration for this MAC address
+        var existingRegistration = await _context.Set<DeviceRegistrationRequest>()
+            .FirstOrDefaultAsync(r => r.MacAddress == request.MacAddress && r.Status == RegistrationStatus.Approved);
             
-        if (existingDevice != null)
+        if (existingRegistration != null)
         {
             throw new InvalidOperationException($"Device with MAC address {request.MacAddress} is already registered");
         }
@@ -45,7 +45,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         var pendingRequest = await _context.Set<DeviceRegistrationRequest>()
             .FirstOrDefaultAsync(r => r.MacAddress == request.MacAddress && 
                                      r.Status == RegistrationStatus.Pending &&
-                                     r.ExpiresAt > DateTimeOffset.UtcNow);
+                                     r.ExpiresAt > DateTime.UtcNow);
                                      
         if (pendingRequest != null)
         {
@@ -58,7 +58,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         
         // Generate QR code
         var registrationId = Guid.NewGuid();
-        var expiresAt = DateTimeOffset.UtcNow.AddMinutes(15); // 15 minutes expiry
+        var expiresAt = DateTime.UtcNow.AddMinutes(15); // 15 minutes expiry
         var pin = GeneratePin(); // Generate 6-character PIN
         
         try
@@ -195,15 +195,14 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         // Create approved device
         var device = new Device
         {
-            DeviceName = request.CustomDeviceName ?? $"{registrationRequest.Manufacturer} {registrationRequest.DeviceModel}",
-            DeviceModel = registrationRequest.DeviceModel,
-            MacAddress = registrationRequest.MacAddress,
-            DeviceGroupId = request.DeviceGroupId,
+            Name = request.CustomDeviceName ?? $"{registrationRequest.Manufacturer} {registrationRequest.DeviceModel}",
             DeviceKey = deviceKey,
+            Location = registrationRequest.NetworkName ?? string.Empty, // Use network name as location
+            IpAddress = registrationRequest.IpAddress,
+            DeviceGroupId = request.DeviceGroupId,
             IsActive = true,
-            Status = "Online",
-            RegisteredAt = DateTimeOffset.UtcNow,
-            LastHeartbeatAt = DateTimeOffset.UtcNow,
+            Status = DeviceStatus.Online,
+            LastHeartbeat = DateTime.UtcNow,
             AssignedUserId = assignedUserId // Feature 019: Assign user to device
         };
         
@@ -218,10 +217,10 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         {
             DeviceRegistrationRequestId = registrationRequest.Id,
             ApprovedByUserId = request.AdminUserId,
-            ApprovedAt = DateTimeOffset.UtcNow,
-            AssignedDeviceGroupId = request.DeviceGroupId,
-            AdminNotes = request.AdminNotes,
-            DeviceName = device.DeviceName
+            DeviceName = device.Name,
+            Location = device.Location,
+            DeviceGroupId = request.DeviceGroupId,
+            Notes = request.AdminNotes ?? string.Empty
         };
         
         _context.Set<DeviceApproval>().Add(approval);
@@ -230,7 +229,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         var adminUser = await _context.Set<User>().FindAsync(request.AdminUserId);
         
         _logger.LogInformation("Device approved: DeviceId={DeviceId}, MAC={MacAddress}, AssignedUser={AssignedUserId}", 
-            device.Id, device.MacAddress, assignedUserId);
+            device.Id, registrationRequest.MacAddress, assignedUserId);
         
         return new ApproveQrRegistrationResponseDto
         {
@@ -241,7 +240,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             Message = assignedUser != null 
                 ? $"Device approved and assigned to user {assignedUser.Email}" 
                 : "Device approved successfully",
-            ApprovedAt = DateTimeOffset.UtcNow,
+            ApprovedAt = DateTime.UtcNow,
             ApprovedByAdmin = adminUser?.Username ?? "Unknown",
             AssignedUser = assignedUser != null ? new AssignedUserDto
             {
@@ -258,7 +257,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
     private string GenerateDeviceKey(string macAddress)
     {
         // Simplified version - in production, use proper JWT token generation
-        var payload = $"{macAddress}_{DateTimeOffset.UtcNow.ToUnixTimeSeconds()}";
+        var payload = $"{macAddress}_{new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds()}";
         var bytes = System.Text.Encoding.UTF8.GetBytes(payload);
         return Convert.ToBase64String(bytes);
     }
@@ -285,8 +284,8 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             Status = RegistrationStatus.Pending,
             MacAddress = "00:00:00:00:00:00",
             DeviceModel = "Unknown",
-            CreatedAt = DateTimeOffset.UtcNow,
-            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(10),
+            CreatedAt = DateTime.UtcNow,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10),
             Message = "Status check not yet implemented - pending entity/repository alignment"
         };
 
@@ -299,7 +298,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         
         var pendingRequests = await _context.Set<DeviceRegistrationRequest>()
             .Include(r => r.MatchedUser)
-            .Where(r => r.Status == RegistrationStatus.Pending && r.ExpiresAt > DateTimeOffset.UtcNow)
+            .Where(r => r.Status == RegistrationStatus.Pending && r.ExpiresAt > DateTime.UtcNow)
             .OrderBy(r => r.CreatedAt)
             .ToListAsync();
         

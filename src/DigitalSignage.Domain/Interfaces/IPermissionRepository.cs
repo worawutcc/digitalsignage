@@ -30,8 +30,8 @@ public interface IPermissionRepository
         int? deviceGroupId = null,
         int? changedBy = null,
         string? action = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null,
+        DateTime? fromDate = null,
+        DateTime? toDate = null,
         int page = 1,
         int pageSize = 50);
     Task<int> GetAuditLogCountAsync(
@@ -39,8 +39,8 @@ public interface IPermissionRepository
         int? deviceGroupId = null,
         int? changedBy = null,
         string? action = null,
-        DateTimeOffset? fromDate = null,
-        DateTimeOffset? toDate = null);
+        DateTime? fromDate = null,
+        DateTime? toDate = null);
 
     // Bulk Operations
     Task<IEnumerable<UserDeviceGroupPermission>> CreatePermissionsBatchAsync(IEnumerable<UserDeviceGroupPermission> permissions);

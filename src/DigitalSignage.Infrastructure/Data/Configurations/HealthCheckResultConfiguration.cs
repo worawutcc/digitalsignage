@@ -8,10 +8,10 @@ public class HealthCheckResultConfiguration : IEntityTypeConfiguration<HealthChe
 {
     public void Configure(EntityTypeBuilder<HealthCheckResult> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(hc => hc.Id);
-
-        builder.Property(hc => hc.CheckedAt)
-            .IsRequired();
 
         builder.Property(hc => hc.ResponseTimeMs)
             .HasDefaultValue(0);
@@ -29,10 +29,9 @@ public class HealthCheckResultConfiguration : IEntityTypeConfiguration<HealthChe
         builder.Ignore(hc => hc.IsSuccessful);
 
         // Indexes
-        builder.HasIndex(hc => new { hc.ServiceId, hc.CheckedAt });
-        builder.HasIndex(hc => new { hc.ServiceInstanceId, hc.CheckedAt });
+        builder.HasIndex(hc => new { hc.ServiceId, hc.CreatedAt });
+        builder.HasIndex(hc => new { hc.ServiceInstanceId, hc.CreatedAt });
         builder.HasIndex(hc => hc.Status);
-        builder.HasIndex(hc => hc.CheckedAt);
 
         // Relationships
         builder.HasOne(hc => hc.Service)

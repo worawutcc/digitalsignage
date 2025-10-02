@@ -20,11 +20,6 @@ public class UserScheduleConfiguration : IEntityTypeConfiguration<UserSchedule>
         // Primary key
         builder.HasKey(us => us.Id);
         
-        // Properties
-        builder.Property(us => us.AssignedAt)
-               .IsRequired()
-               .HasComment("When this schedule was assigned to the user (UTC)");
-        
         // Foreign key relationships
         builder.HasOne(us => us.User)
                .WithMany()

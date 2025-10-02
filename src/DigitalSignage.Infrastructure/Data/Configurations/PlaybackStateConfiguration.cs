@@ -9,6 +9,9 @@ public class PlaybackStateConfiguration : IEntityTypeConfiguration<PlaybackState
 {
     public void Configure(EntityTypeBuilder<PlaybackState> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(ps => ps.Id);
 
         builder.Property(ps => ps.CurrentItemIndex)
@@ -30,12 +33,6 @@ public class PlaybackStateConfiguration : IEntityTypeConfiguration<PlaybackState
         builder.Property(ps => ps.IsLooping)
             .HasDefaultValue(false);
 
-        builder.Property(ps => ps.StartedAt)
-            .IsRequired();
-
-        builder.Property(ps => ps.LastUpdatedAt)
-            .IsRequired();
-
         builder.Property(ps => ps.ErrorMessage)
             .HasMaxLength(500);
 
@@ -45,12 +42,16 @@ public class PlaybackStateConfiguration : IEntityTypeConfiguration<PlaybackState
         builder.Property(ps => ps.SyncToken)
             .HasMaxLength(100);
 
+        // Configure EstimatedEndAt as timestamp without time zone
+        builder.Property(ps => ps.EstimatedEndAt)
+               .HasColumnName("estimated_end_at")
+               .HasColumnType("timestamp without time zone");
+
         // Indexes
         builder.HasIndex(ps => new { ps.DeviceId, ps.PlaylistId })
             .IsUnique(); // One playback state per device-playlist combination
 
         builder.HasIndex(ps => ps.Status);
-        builder.HasIndex(ps => ps.LastUpdatedAt);
         builder.HasIndex(ps => ps.IsSynced);
 
         // Relationships
