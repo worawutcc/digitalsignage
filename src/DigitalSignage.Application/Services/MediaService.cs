@@ -1,4 +1,5 @@
 using DigitalSignage.Application.DTOs;
+using DigitalSignage.Application.DTOs.RealtimeEvents;
 using DigitalSignage.Application.Interfaces;
 using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Enums;
@@ -13,17 +14,20 @@ public class MediaService : IMediaService
 {
     private readonly DbContext _context;
     private readonly IFileUploadService _fileUploadService;
+    private readonly IRealtimeEventBroadcaster _eventBroadcaster;
     private readonly ILogger<MediaService> _logger;
     private readonly ExpirationSettings _expirationSettings;
     
     public MediaService(
         DbContext context,
         IFileUploadService fileUploadService,
+        IRealtimeEventBroadcaster eventBroadcaster,
         ILogger<MediaService> logger,
         IOptions<ExpirationSettings> expirationSettings)
     {
         _context = context;
         _fileUploadService = fileUploadService;
+        _eventBroadcaster = eventBroadcaster;
         _logger = logger;
         _expirationSettings = expirationSettings.Value;
     }
@@ -214,6 +218,22 @@ public class MediaService : IMediaService
         await _context.SaveChangesAsync();
 
         _logger.LogInformation("Uploaded file and created media {MediaId}", media.Id);
+        
+        // Broadcast media_uploaded event
+        await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
+        {
+            Type = "media_uploaded",
+            Payload = new MediaUploadedPayload
+            {
+                MediaId = media.Id,
+                FileName = media.FileName,
+                MediaType = media.Type.ToString().ToLower(),
+                FileSizeBytes = media.FileSize,
+                ThumbnailUrl = null // Thumbnail URL can be generated later if needed
+            },
+            Timestamp = DateTimeOffset.UtcNow.ToString("o")
+        });
+        
         return MapToDto(media);
     }
 

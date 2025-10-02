@@ -657,6 +657,95 @@ paths:
         '204':
           description: Device group deleted successfully
 
+  # =================================================================
+  # WEBSOCKET REAL-TIME EVENTS
+  # =================================================================
+  /ws:
+    get:
+      tags: [WebSocket]
+      summary: WebSocket connection for real-time events
+      description: |
+        Establishes a SignalR WebSocket connection for real-time bidirectional communication.
+        
+        ## Connection Requirements
+        - **Authentication**: Valid JWT token required via query parameter `?access_token=<token>`
+        - **Protocol**: SignalR over WebSocket
+        - **Heartbeat**: Server sends heartbeat every 15 seconds
+        
+        ## Event Types
+        - `device_status_changed` - Device state changes (all roles)
+        - `schedule_conflict_detected` - Schedule conflicts (all roles)
+        - `schedule_updated` - Schedule CRUD operations (all roles)
+        - `media_uploaded` - Media upload completion (all roles)
+        - `user_action` - Admin user actions (admin-only)
+        - `system_alert` - Critical system alerts (admin-only)
+        - `heartbeat` - Connection keepalive (all roles)
+        
+        ## Event Message Format
+        ```json
+        {
+          "type": "device_status_changed",
+          "payload": {
+            "deviceId": "device-123",
+            "status": "offline",
+            "lastSeen": "2025-10-01T10:00:00Z"
+          },
+          "timestamp": "2025-10-01T10:00:01Z"
+        }
+        ```
+        
+        ## Client Hub Methods
+        - `SendHeartbeat()` - Send heartbeat ping to server
+        - `SubscribeToEvents(string[] eventTypes)` - Subscribe to specific event types
+        - `UnsubscribeFromEvents(string[] eventTypes)` - Unsubscribe from event types
+        - `AcknowledgeEvent(string eventId)` - Acknowledge event receipt
+        
+        ## Server Events
+        - `ReceiveEvent(object event)` - Receive real-time event from server
+        
+        ## Connection Lifecycle
+        1. Client connects with JWT token
+        2. Server validates authentication
+        3. Server sends welcome message
+        4. Bidirectional event communication begins
+        5. Server sends heartbeat every 15 seconds
+        6. Client can disconnect gracefully or connection times out after 30 seconds of inactivity
+        
+        ## Example Usage (JavaScript)
+        ```javascript
+        import * as signalR from '@microsoft/signalr';
+        
+        const connection = new signalR.HubConnectionBuilder()
+          .withUrl('http://localhost:5100/ws', {
+            accessTokenFactory: () => localStorage.getItem('jwt_token')
+          })
+          .withAutomaticReconnect()
+          .build();
+        
+        connection.on('ReceiveEvent', (event) => {
+          console.log('Event:', event.type, event.payload);
+        });
+        
+        await connection.start();
+        ```
+        
+        **Note**: OpenAPI 3.0 does not fully support WebSocket specifications. 
+        Refer to [WebSocket Connection Flow](../../specs/018-api-implement-websocket/contracts/connection-flow.md) for complete documentation.
+      parameters:
+        - name: access_token
+          in: query
+          required: true
+          schema:
+            type: string
+          description: JWT authentication token
+      responses:
+        '101':
+          description: Switching Protocols - WebSocket connection established
+        '401':
+          description: Unauthorized - Invalid or expired JWT token
+        '429':
+          description: Too Many Requests - Rate limit exceeded
+
 # =================================================================
 # COMPONENTS
 # =================================================================

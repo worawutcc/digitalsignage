@@ -34,6 +34,11 @@ public class RegistrationStatusResponseDto
     /// Device configuration (only present when approved)
     /// </summary>
     public DeviceConfigurationDto? Configuration { get; set; }
+    
+    /// <summary>
+    /// Assigned user information (only present when approved and user assigned) (Feature 019)
+    /// </summary>
+    public AssignedUserDto? AssignedUser { get; set; }
 }
 
 /// <summary>
@@ -60,4 +65,14 @@ public class DeviceConfigurationDto
     /// Heartbeat interval in seconds
     /// </summary>
     public int HeartbeatInterval { get; set; }
+}
+
+/// <summary>
+/// Assigned user DTO for registration status
+/// </summary>
+public class AssignedUserDto
+{
+    public int UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
 }

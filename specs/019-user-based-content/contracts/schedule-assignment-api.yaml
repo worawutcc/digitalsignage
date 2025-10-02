@@ -1,0 +1,634 @@
+openapi: 3.0.3
+info:
+  title: Schedule Assignment API
+  description: |
+    Admin endpoints for assigning schedules to users for personalized content delivery.
+    Supports bulk assignment with replace (not append) semantics.
+  version: 1.0.0
+  contact:
+    name: Digital Signage Team
+
+servers:
+  - url: https://api.digitalsignage.example.com
+    description: Production server
+  - url: http://localhost:5000
+    description: Development server
+
+tags:
+  - name: User Schedules
+    description: Assign schedules to users
+  - name: Schedule Management
+    description: Mark schedules as default fallback
+
+paths:
+  /api/admin/users/{userId}/schedules:
+    get:
+      tags:
+        - User Schedules
+      summary: Get schedules assigned to a user
+      description: Retrieve all active schedules currently assigned to a specific user
+      operationId: getUserSchedules
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      
+      responses:
+        '200':
+          description: List of assigned schedules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: integer
+                  userName:
+                    type: string
+                  userEmail:
+                    type: string
+                  schedules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssignedSchedule'
+              examples:
+                multipleSchedules:
+                  value:
+                    userId: 42
+                    userName: "johndoe"
+                    userEmail: "john.doe@company.com"
+                    schedules:
+                      - scheduleId: 10
+                        scheduleName: "Marketing Campaign Q4"
+                        priority: 10
+                        startDate: "2025-10-01T00:00:00Z"
+                        endDate: "2025-12-31T23:59:59Z"
+                        isActive: true
+                        assignedAt: "2025-10-02T09:00:00Z"
+                        assignedBy:
+                          userId: 1
+                          username: "admin"
+                      
+                      - scheduleId: 15
+                        scheduleName: "Company Announcements"
+                        priority: 5
+                        startDate: "2025-09-01T00:00:00Z"
+                        endDate: "2025-12-31T23:59:59Z"
+                        isActive: true
+                        assignedAt: "2025-10-02T09:00:00Z"
+                        assignedBy:
+                          userId: 1
+                          username: "admin"
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    post:
+      tags:
+        - User Schedules
+      summary: Assign schedules to a user (replace existing)
+      description: |
+        Assign one or more schedules to a user for personalized content.
+        **IMPORTANT**: This operation REPLACES all existing schedule assignments for this user.
+        To remove all assignments, send an empty array.
+      operationId: assignUserSchedules
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignSchedulesRequest'
+            examples:
+              assignMultiple:
+                summary: Assign multiple schedules
+                value:
+                  scheduleIds: [10, 15, 20]
+              
+              replaceWithSingle:
+                summary: Replace all with single schedule
+                value:
+                  scheduleIds: [10]
+              
+              removeAll:
+                summary: Remove all assignments
+                value:
+                  scheduleIds: []
+      
+      responses:
+        '200':
+          description: Schedules assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignSchedulesResponse'
+              examples:
+                success:
+                  value:
+                    userId: 42
+                    assignedSchedules:
+                      - scheduleId: 10
+                        scheduleName: "Marketing Campaign Q4"
+                      - scheduleId: 15
+                        scheduleName: "Company Announcements"
+                    totalAssigned: 2
+                    replacedPrevious: true
+                    assignedBy:
+                      userId: 1
+                      username: "admin"
+                    assignedAt: "2025-10-02T10:00:00Z"
+        
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalidScheduleId:
+                  value:
+                    error: "ValidationError"
+                    message: "One or more schedule IDs are invalid"
+                    details:
+                      invalidScheduleIds: [999]
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: User not found
+    
+    delete:
+      tags:
+        - User Schedules
+      summary: Remove all schedule assignments from a user
+      description: Clear all schedule assignments for a user (equivalent to POST with empty array)
+      operationId: removeUserSchedules
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      
+      responses:
+        '204':
+          description: All assignments removed successfully
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: User not found
+
+  /api/admin/schedules/{scheduleId}/users:
+    get:
+      tags:
+        - User Schedules
+      summary: Get users assigned to a schedule
+      description: Retrieve all users who have been assigned a specific schedule
+      operationId: getScheduleUsers
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      
+      responses:
+        '200':
+          description: List of assigned users
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduleId:
+                    type: integer
+                  scheduleName:
+                    type: string
+                  users:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/UserAssignment'
+              examples:
+                multipleUsers:
+                  value:
+                    scheduleId: 10
+                    scheduleName: "Marketing Campaign Q4"
+                    users:
+                      - userId: 42
+                        userName: "johndoe"
+                        userEmail: "john.doe@company.com"
+                        assignedAt: "2025-10-02T09:00:00Z"
+                        assignedBy:
+                          userId: 1
+                          username: "admin"
+                      
+                      - userId: 55
+                        userName: "janedoe"
+                        userEmail: "jane.doe@company.com"
+                        assignedAt: "2025-10-02T09:30:00Z"
+                        assignedBy:
+                          userId: 1
+                          username: "admin"
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: Schedule not found
+
+  /api/admin/schedules/{scheduleId}/default:
+    put:
+      tags:
+        - Schedule Management
+      summary: Mark schedule as default fallback
+      description: |
+        Set a schedule as the default fallback content.
+        Default schedules are shown when device has no user assignment and no device group assignment.
+        Only one schedule should be marked as default at a time (not enforced, but recommended).
+      operationId: setScheduleAsDefault
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: scheduleId
+          in: path
+          required: true
+          schema:
+            type: integer
+      
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isDefault:
+                  type: boolean
+                  description: True to mark as default, false to unmark
+              required:
+                - isDefault
+            examples:
+              setDefault:
+                summary: Mark as default
+                value:
+                  isDefault: true
+              
+              unsetDefault:
+                summary: Remove default flag
+                value:
+                  isDefault: false
+      
+      responses:
+        '200':
+          description: Default status updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  scheduleId:
+                    type: integer
+                  scheduleName:
+                    type: string
+                  isDefault:
+                    type: boolean
+                  updatedAt:
+                    type: string
+                    format: date-time
+                  updatedBy:
+                    type: object
+                    properties:
+                      userId:
+                        type: integer
+                      username:
+                        type: string
+              examples:
+                success:
+                  value:
+                    scheduleId: 5
+                    scheduleName: "Generic Corporate Content"
+                    isDefault: true
+                    updatedAt: "2025-10-02T10:00:00Z"
+                    updatedBy:
+                      userId: 1
+                      username: "admin"
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: Schedule not found
+
+  /api/admin/schedules/default:
+    get:
+      tags:
+        - Schedule Management
+      summary: Get current default schedules
+      description: Retrieve all schedules marked as default fallback content
+      operationId: getDefaultSchedules
+      security:
+        - BearerAuth: []
+      
+      responses:
+        '200':
+          description: List of default schedules
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  schedules:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScheduleInfo'
+              examples:
+                singleDefault:
+                  value:
+                    schedules:
+                      - scheduleId: 5
+                        scheduleName: "Generic Corporate Content"
+                        priority: 0
+                        isActive: true
+                        isDefault: true
+                        startDate: "2025-01-01T00:00:00Z"
+                        endDate: "2025-12-31T23:59:59Z"
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+
+  /api/admin/users/{userId}/devices:
+    get:
+      tags:
+        - User Schedules
+      summary: Get devices assigned to a user
+      description: Retrieve all devices currently assigned to a specific user
+      operationId: getUserDevices
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: integer
+      
+      responses:
+        '200':
+          description: List of assigned devices
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  userId:
+                    type: integer
+                  userEmail:
+                    type: string
+                  devices:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DeviceInfo'
+              examples:
+                multipleDevices:
+                  value:
+                    userId: 42
+                    userEmail: "john.doe@company.com"
+                    devices:
+                      - deviceId: 123
+                        deviceName: "Conference Room A - TV"
+                        macAddress: "00:11:22:33:44:55"
+                        status: "Online"
+                        lastHeartbeatAt: "2025-10-02T09:55:00Z"
+                        registeredAt: "2025-10-01T14:30:00Z"
+                      
+                      - deviceId: 456
+                        deviceName: "Marketing Display"
+                        macAddress: "AA:BB:CC:DD:EE:FF"
+                        status: "Online"
+                        lastHeartbeatAt: "2025-10-02T09:54:00Z"
+                        registeredAt: "2025-10-01T15:00:00Z"
+        
+        '401':
+          $ref: '#/components/responses/UnauthorizedError'
+        
+        '403':
+          $ref: '#/components/responses/ForbiddenError'
+        
+        '404':
+          description: User not found
+
+components:
+  schemas:
+    AssignedSchedule:
+      type: object
+      properties:
+        scheduleId:
+          type: integer
+        scheduleName:
+          type: string
+        priority:
+          type: integer
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        assignedAt:
+          type: string
+          format: date-time
+        assignedBy:
+          type: object
+          properties:
+            userId:
+              type: integer
+            username:
+              type: string
+    
+    AssignSchedulesRequest:
+      type: object
+      required:
+        - scheduleIds
+      properties:
+        scheduleIds:
+          type: array
+          items:
+            type: integer
+          description: Array of schedule IDs to assign (replaces existing assignments)
+          example: [10, 15, 20]
+    
+    AssignSchedulesResponse:
+      type: object
+      properties:
+        userId:
+          type: integer
+        assignedSchedules:
+          type: array
+          items:
+            type: object
+            properties:
+              scheduleId:
+                type: integer
+              scheduleName:
+                type: string
+        totalAssigned:
+          type: integer
+        replacedPrevious:
+          type: boolean
+          description: Whether previous assignments were replaced
+        assignedBy:
+          type: object
+          properties:
+            userId:
+              type: integer
+            username:
+              type: string
+        assignedAt:
+          type: string
+          format: date-time
+    
+    UserAssignment:
+      type: object
+      properties:
+        userId:
+          type: integer
+        userName:
+          type: string
+        userEmail:
+          type: string
+        assignedAt:
+          type: string
+          format: date-time
+        assignedBy:
+          type: object
+          properties:
+            userId:
+              type: integer
+            username:
+              type: string
+    
+    ScheduleInfo:
+      type: object
+      properties:
+        scheduleId:
+          type: integer
+        scheduleName:
+          type: string
+        priority:
+          type: integer
+        isActive:
+          type: boolean
+        isDefault:
+          type: boolean
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+    
+    DeviceInfo:
+      type: object
+      properties:
+        deviceId:
+          type: integer
+        deviceName:
+          type: string
+        macAddress:
+          type: string
+        status:
+          type: string
+          enum: [Online, Offline, Unknown]
+        lastHeartbeatAt:
+          type: string
+          format: date-time
+          nullable: true
+        registeredAt:
+          type: string
+          format: date-time
+    
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from admin login
+  
+  responses:
+    UnauthorizedError:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "UnauthorizedError"
+            message: "Valid authentication token required"
+    
+    ForbiddenError:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          example:
+            error: "ForbiddenError"
+            message: "Admin or ContentManager role required"

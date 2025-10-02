@@ -60,4 +60,31 @@ public class PendingRegistrationDto
     /// PIN code for admin verification
     /// </summary>
     public string Pin { get; set; } = string.Empty;
+    
+    /// <summary>
+    /// Requested username (email) from device (Feature 019)
+    /// </summary>
+    public string? RequestedUsername { get; set; }
+    
+    /// <summary>
+    /// Requested user display name from device (Feature 019)
+    /// </summary>
+    public string? RequestedUserDisplayName { get; set; }
+    
+    /// <summary>
+    /// Matched user information if auto-match found (Feature 019)
+    /// </summary>
+    public MatchedUserDto? MatchedUser { get; set; }
+}
+
+/// <summary>
+/// DTO for matched user information in pending registrations
+/// </summary>
+public class MatchedUserDto
+{
+    public int UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public string Role { get; set; } = string.Empty;
+    public bool MatchedAutomatically { get; set; }
 }
