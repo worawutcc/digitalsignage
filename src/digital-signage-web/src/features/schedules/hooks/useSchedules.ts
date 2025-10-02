@@ -237,3 +237,120 @@ export function useBulkDeactivateSchedules() {
     },
   })
 }
+
+// ==========================================
+// Schedule Assignment & User Management Hooks (Phase 1)
+// ==========================================
+
+/**
+ * Hook: Set default schedule flag (T031: useSetDefaultSchedule)
+ * Business Rule: Only ONE schedule can be default at a time
+ */
+export function useSetDefaultSchedule() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ scheduleId, isDefault }: { scheduleId: number; isDefault: boolean }) => {
+      return scheduleService.setDefaultSchedule(scheduleId, isDefault)
+    },
+
+    // Optimistic update
+    onMutate: async ({ scheduleId, isDefault }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: scheduleKeys.lists() })
+
+      // Snapshot the previous value
+      const previousLists = queryClient.getQueriesData({ queryKey: scheduleKeys.lists() })
+
+      // Optimistically update all schedule lists
+      queryClient.setQueriesData({ queryKey: scheduleKeys.lists() }, (old: any) => {
+        if (!old) return old
+
+        return {
+          ...old,
+          data: old.data?.map((schedule: any) => {
+            // If setting this schedule as default, unset all others
+            if (isDefault) {
+              return {
+                ...schedule,
+                isDefault: schedule.id === scheduleId || schedule.scheduleId === scheduleId,
+              }
+            }
+            // If unsetting default, only update the specific schedule
+            if (schedule.id === scheduleId || schedule.scheduleId === scheduleId) {
+              return { ...schedule, isDefault: false }
+            }
+            return schedule
+          }),
+        }
+      })
+
+      return { previousLists }
+    },
+
+    onSuccess: (data) => {
+      // Invalidate all schedule queries to refetch with accurate data
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: scheduleKeys.stats() })
+
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        const message = data.isDefault
+          ? 'Schedule set as default successfully'
+          : 'Default flag removed successfully'
+        console.log(message)
+        // toast.success(message);
+      }
+    },
+
+    onError: (error: any, _variables, context) => {
+      // Rollback optimistic updates
+      if (context?.previousLists) {
+        context.previousLists.forEach(([queryKey, data]) => {
+          queryClient.setQueryData(queryKey, data)
+        })
+      }
+
+      // Show error notification
+      if (typeof window !== 'undefined') {
+        console.error('Failed to update default schedule:', error.message)
+        // toast.error(error.message || 'Failed to update default schedule');
+      }
+    },
+  })
+}
+
+/**
+ * Hook: Get users assigned to a specific schedule (T032: useScheduleUsers)
+ */
+export function useScheduleUsers(scheduleId: number) {
+  return useQuery({
+    queryKey: ['scheduleUsers', scheduleId],
+    queryFn: async () => {
+      return scheduleService.getScheduleUsers(scheduleId)
+    },
+    enabled: !!scheduleId && scheduleId > 0,
+    staleTime: 60000, // 1 minute
+    refetchOnWindowFocus: false,
+  })
+}
+
+/**
+ * Hook: Get schedules formatted for selector component
+ * Used in schedule assignment modals
+ */
+export function useSchedulesForSelector(query?: {
+  search?: string
+  activeOnly?: boolean
+  page?: number
+  limit?: number
+}) {
+  return useQuery({
+    queryKey: ['schedulesSelector', query],
+    queryFn: async () => {
+      return scheduleService.getSchedulesForSelector(query)
+    },
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: false,
+  })
+}

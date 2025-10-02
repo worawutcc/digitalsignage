@@ -254,5 +254,125 @@ export function useUserFilters(initialFilters?: UserFilters) {
   };
 }
 
+// ==========================================
+// User Schedule Assignment Hooks (Phase 1)
+// ==========================================
+
+/**
+ * Hook to fetch user's assigned schedules
+ * T028: useUserSchedules
+ */
+export function useUserSchedules(userId: number) {
+  return useQuery({
+    queryKey: ['userSchedules', userId],
+    queryFn: async () => {
+      const { userScheduleService } = await import('../services/userScheduleService');
+      return userScheduleService.getUserSchedules(userId);
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    refetchOnWindowFocus: true,
+    retry: 2,
+    enabled: !!userId && userId > 0,
+  });
+}
+
+/**
+ * Hook to assign schedules to a user (REPLACE semantics)
+ * T029: useAssignSchedules
+ */
+export function useAssignSchedules() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, scheduleIds }: { userId: number; scheduleIds: number[] }) => {
+      const { userScheduleService } = await import('../services/userScheduleService');
+      return userScheduleService.assignSchedules(userId, scheduleIds);
+    },
+
+    // Optimistic update
+    onMutate: async ({ userId, scheduleIds }) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['userSchedules', userId] });
+
+      // Snapshot the previous value
+      const previousData = queryClient.getQueryData(['userSchedules', userId]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['userSchedules', userId], (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          schedules: scheduleIds.map((id) => ({
+            scheduleId: id,
+            userId,
+            assignedAt: new Date().toISOString(),
+            assignedBy: 'current-admin', // TODO: Get from auth context
+          })),
+        };
+      });
+
+      return { previousData };
+    },
+
+    onSuccess: (data, { userId }) => {
+      // Invalidate cache to refetch with accurate data
+      queryClient.invalidateQueries({ queryKey: ['userSchedules', userId] });
+      
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        // toast.success(`Successfully assigned ${data.assignedScheduleIds.length} schedules`);
+        console.log(`Successfully assigned ${data.assignedScheduleIds.length} schedules`);
+      }
+    },
+
+    onError: (error: any, { userId }, context) => {
+      // Rollback to previous data on error
+      if (context?.previousData) {
+        queryClient.setQueryData(['userSchedules', userId], context.previousData);
+      }
+      
+      // Show error notification
+      if (typeof window !== 'undefined') {
+        // toast.error(error.message || 'Failed to assign schedules');
+        console.error('Failed to assign schedules:', error.message);
+      }
+    },
+  });
+}
+
+/**
+ * Hook to remove all schedules from a user
+ * T030: useRemoveUserSchedules
+ */
+export function useRemoveUserSchedules() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: number) => {
+      const { userScheduleService } = await import('../services/userScheduleService');
+      return userScheduleService.removeAllSchedules(userId);
+    },
+
+    onSuccess: (_, userId) => {
+      // Invalidate cache to refetch
+      queryClient.invalidateQueries({ queryKey: ['userSchedules', userId] });
+      
+      // Show success notification
+      if (typeof window !== 'undefined') {
+        // toast.success('Successfully removed all schedules');
+        console.log('Successfully removed all schedules');
+      }
+    },
+
+    onError: (error: any) => {
+      // Show error notification
+      if (typeof window !== 'undefined') {
+        // toast.error(error.message || 'Failed to remove schedules');
+        console.error('Failed to remove schedules:', error.message);
+      }
+    },
+  });
+}
+
 // Add React import for hooks
 import React from 'react';
