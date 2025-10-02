@@ -122,7 +122,23 @@ public class DeviceRegistrationRequest : BaseEntity
     [StringLength(2000)]
     public string? QrCodeData { get; set; }
 
+    /// <summary>
+    /// Email or username provided by device during registration for user identification (Feature 019)
+    /// </summary>
+    [Required]
+    [StringLength(200)]
+    public string RequestedUsername { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Optional friendly name provided by device to help admin identify user (Feature 019)
+    /// </summary>
+    [StringLength(200)]
+    public string? RequestedUserDisplayName { get; set; }
+
+    /// <summary>
+    /// User ID auto-matched by email during registration (Feature 019)
+    /// </summary>
+    public int? MatchedUserId { get; set; }
 
     /// <summary>
     /// PIN expiration timestamp
@@ -140,6 +156,11 @@ public class DeviceRegistrationRequest : BaseEntity
     /// Admin approval/rejection decision
     /// </summary>
     public DeviceApproval? DeviceApproval { get; set; }
+    
+    /// <summary>
+    /// User matched by email during registration (Feature 019)
+    /// </summary>
+    public User? MatchedUser { get; set; }
 
     /// <summary>
     /// Audit log entries for this registration

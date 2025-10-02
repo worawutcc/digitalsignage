@@ -46,4 +46,30 @@ public class InitiateQrRegistrationResponseDto
     /// Optional PIN for hybrid QR+PIN method
     /// </summary>
     public string? Pin { get; set; }
+    
+    /// <summary>
+    /// Matched user information (Feature 019)
+    /// </summary>
+    public MatchedUserDto? MatchedUser { get; set; }
+    
+    /// <summary>
+    /// Requested username from registration request (Feature 019)
+    /// </summary>
+    public string? RequestedUsername { get; set; }
+    
+    /// <summary>
+    /// Requested user display name from registration request (Feature 019)
+    /// </summary>
+    public string? RequestedUserDisplayName { get; set; }
+}
+
+/// <summary>
+/// DTO for matched user information
+/// </summary>
+public class MatchedUserDto
+{
+    public int UserId { get; set; }
+    public string Email { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
+    public bool MatchedAutomatically { get; set; }
 }

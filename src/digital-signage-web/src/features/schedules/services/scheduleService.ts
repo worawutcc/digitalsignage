@@ -9,6 +9,13 @@ import type {
   CalendarData,
   ScheduleStats,
 } from '../types'
+import type {
+  ScheduleUsersResponse,
+  SetDefaultScheduleRequest,
+  SetDefaultScheduleResponse,
+  ScheduleSelectorQuery,
+  ScheduleSelectorResponse,
+} from '../types/schedule'
 
 /**
  * Schedule Service
@@ -193,6 +200,146 @@ export class ScheduleService {
       `/api/schedules/device/${deviceId}`
     )
     return response.data.data
+  }
+
+  /**
+   * Get users assigned to a specific schedule
+   * 
+   * @param scheduleId - Schedule ID to fetch assigned users for
+   * @returns Promise with list of assigned users
+   */
+  async getScheduleUsers(scheduleId: number): Promise<ScheduleUsersResponse> {
+    try {
+      const response = await apiClient.get<ScheduleUsersResponse>(
+        `/api/admin/schedules/${scheduleId}/users`
+      )
+      return response.data
+    } catch (error: any) {
+      if (error.response) {
+        const { status, data } = error.response
+        
+        switch (status) {
+          case 401:
+            throw new Error('Authentication required. Please log in.')
+          case 403:
+            throw new Error('You do not have permission to view schedule users.')
+          case 404:
+            throw new Error(`Schedule with ID ${scheduleId} not found.`)
+          case 500:
+            throw new Error('Server error while fetching schedule users.')
+          default:
+            throw new Error(data?.message || 'Failed to fetch schedule users.')
+        }
+      }
+      throw new Error('Network error. Please check your connection.')
+    }
+  }
+
+  /**
+   * Set a schedule as default (or remove default status)
+   * 
+   * Note: Only one schedule can be default at a time.
+   * Setting a new default will automatically unset the previous default.
+   * 
+   * @param scheduleId - Schedule ID to update
+   * @param isDefault - Whether to set as default
+   * @returns Promise with updated schedule information
+   */
+  async setDefaultSchedule(
+    scheduleId: number,
+    isDefault: boolean
+  ): Promise<SetDefaultScheduleResponse> {
+    try {
+      const payload: SetDefaultScheduleRequest = {
+        scheduleId,
+        isDefault,
+      }
+      
+      const response = await apiClient.put<SetDefaultScheduleResponse>(
+        `/api/admin/schedules/${scheduleId}/default`,
+        payload
+      )
+      
+      return response.data
+    } catch (error: any) {
+      if (error.response) {
+        const { status, data } = error.response
+        
+        switch (status) {
+          case 401:
+            throw new Error('Authentication required. Please log in.')
+          case 403:
+            throw new Error('You do not have permission to set default schedules.')
+          case 404:
+            throw new Error(`Schedule with ID ${scheduleId} not found.`)
+          case 422:
+            throw new Error(data?.message || 'Cannot set inactive schedule as default.')
+          case 500:
+            throw new Error('Server error while updating default schedule.')
+          default:
+            throw new Error(data?.message || 'Failed to update default schedule.')
+        }
+      }
+      throw new Error('Network error. Please check your connection.')
+    }
+  }
+
+  /**
+   * Get schedules for selector component
+   * 
+   * Optimized endpoint for schedule selection UI with search and pagination.
+   * Returns lightweight schedule items suitable for dropdowns and multi-select.
+   * 
+   * @param query - Search and filter parameters
+   * @returns Promise with paginated schedule list
+   */
+  async getSchedulesForSelector(
+    query?: ScheduleSelectorQuery
+  ): Promise<ScheduleSelectorResponse> {
+    try {
+      const params = new URLSearchParams()
+      
+      if (query?.search) {
+        params.append('search', query.search)
+      }
+      if (query?.activeOnly !== undefined) {
+        params.append('activeOnly', query.activeOnly.toString())
+      }
+      if (query?.page !== undefined) {
+        params.append('page', query.page.toString())
+      }
+      if (query?.pageSize !== undefined) {
+        params.append('pageSize', query.pageSize.toString())
+      }
+      if (query?.sortBy) {
+        params.append('sortBy', query.sortBy)
+      }
+      if (query?.sortOrder) {
+        params.append('sortOrder', query.sortOrder)
+      }
+      
+      const response = await apiClient.get<ScheduleSelectorResponse>(
+        `/api/admin/schedules?${params.toString()}`
+      )
+      
+      return response.data
+    } catch (error: any) {
+      if (error.response) {
+        const { status, data } = error.response
+        
+        switch (status) {
+          case 401:
+            throw new Error('Authentication required. Please log in.')
+          case 403:
+            throw new Error('You do not have permission to view schedules.')
+          case 500:
+            throw new Error('Server error while fetching schedules.')
+          default:
+            throw new Error(data?.message || 'Failed to fetch schedules.')
+        }
+      }
+      throw new Error('Network error. Please check your connection.')
+    }
   }
 }
 

@@ -31,7 +31,8 @@ builder.Services
     .AddJwtAuthentication(builder.Configuration)
     .AddHealthCheckServices()
     .AddApiDocumentation()
-    .AddCorsServices();
+    .AddCorsServices()
+    .AddSignalRServices();
 
 var app = builder.Build();
 
@@ -53,6 +54,9 @@ app.UseAuthorization();
 
 // Map controllers
 app.MapControllers();
+
+// Map SignalR hubs
+app.MapSignalRHubs();
 
 // Map health checks
 app.MapHealthChecks("/health", new Microsoft.AspNetCore.Diagnostics.HealthChecks.HealthCheckOptions

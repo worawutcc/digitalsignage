@@ -1,0 +1,72 @@
+using DigitalSignage.Application.DTOs;
+using DigitalSignage.Application.Interfaces;
+
+namespace DigitalSignage.Api.Services;
+
+/// <summary>
+/// Background service that sends periodic heartbeat messages to all connected WebSocket clients
+/// </summary>
+public class WebSocketHeartbeatService : BackgroundService
+{
+    private readonly IServiceProvider _serviceProvider;
+    private readonly ILogger<WebSocketHeartbeatService> _logger;
+    private const int HeartbeatIntervalSeconds = 15;
+    
+    public WebSocketHeartbeatService(
+        IServiceProvider serviceProvider,
+        ILogger<WebSocketHeartbeatService> logger)
+    {
+        _serviceProvider = serviceProvider;
+        _logger = logger;
+    }
+    
+    /// <summary>
+    /// Execute the background heartbeat loop
+    /// </summary>
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("WebSocket heartbeat service started. Interval: {Interval} seconds", HeartbeatIntervalSeconds);
+        
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await Task.Delay(TimeSpan.FromSeconds(HeartbeatIntervalSeconds), stoppingToken);
+                
+                // Create a new scope for scoped services
+                using var scope = _serviceProvider.CreateScope();
+                var broadcaster = scope.ServiceProvider.GetRequiredService<IRealtimeEventBroadcaster>();
+                
+                var activeConnections = await broadcaster.GetActiveConnectionCountAsync();
+                
+                var heartbeatEvent = new RealtimeEventDto
+                {
+                    Type = "heartbeat",
+                    Payload = new 
+                    { 
+                        ServerTime = DateTimeOffset.UtcNow.ToString("o"),
+                        ActiveConnections = activeConnections
+                    },
+                    Timestamp = DateTimeOffset.UtcNow.ToString("o")
+                };
+                
+                await broadcaster.BroadcastAsync(heartbeatEvent);
+                
+                _logger.LogDebug("Heartbeat sent to {ConnectionCount} active connections", activeConnections);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when service is stopping
+                _logger.LogInformation("WebSocket heartbeat service stopping");
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error sending heartbeat");
+                // Continue running even if one heartbeat fails
+            }
+        }
+        
+        _logger.LogInformation("WebSocket heartbeat service stopped");
+    }
+}

@@ -17,10 +17,21 @@ public class Device : BaseEntity
     // Foreign keys
     public int? ManagedByUserId { get; set; }
     public int? DeviceGroupId { get; set; }
+    
+    /// <summary>
+    /// User assigned to this device for personalized content delivery
+    /// </summary>
+    public int? AssignedUserId { get; set; }
 
     // Navigation properties
     public User? ManagedByUser { get; set; }
     public DeviceGroup? DeviceGroup { get; set; }
+    
+    /// <summary>
+    /// User assigned for content personalization (Feature 019)
+    /// </summary>
+    public User? AssignedUser { get; set; }
+    
     public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
     public ICollection<UserDeviceAssociation> UserAssociations { get; set; } = new List<UserDeviceAssociation>();
 }

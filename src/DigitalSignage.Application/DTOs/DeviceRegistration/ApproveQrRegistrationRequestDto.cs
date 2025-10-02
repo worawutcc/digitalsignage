@@ -41,4 +41,10 @@ public class ApproveQrRegistrationRequestDto
     /// </summary>
     [StringLength(500)]
     public string? AdminNotes { get; set; }
+    
+    /// <summary>
+    /// User ID to assign to the device (Feature 019)
+    /// If not provided, uses auto-matched user from registration
+    /// </summary>
+    public int? AssignedUserId { get; set; }
 }
