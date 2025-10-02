@@ -1,8 +1,11 @@
 'use client'
 
-import React from 'react'
-import { QueryClient, QueryClientProvider, DefaultOptions } from '@tanstack/react-query'
+import React, { useState, useEffect } from 'react'
+import { QueryClient, QueryClientProvider, DefaultOptions, useQueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+
+// Re-export useQueryClient for convenience
+export { useQueryClient }
 import { Provider as ReduxProvider } from 'react-redux'
 import { store } from '@/store'
 import { ApiError } from '@/lib/api'
@@ -17,7 +20,7 @@ const queryClientOptions: DefaultOptions = {
     // Cache data for 5 minutes by default
     staleTime: 5 * 60 * 1000,
     // Keep unused data in cache for 10 minutes
-    gcTime: 10 * 60 * 1000,
+    cacheTime: 10 * 60 * 1000,
     // Retry failed requests up to 3 times
     retry: (failureCount, error) => {
       // Don't retry on authentication errors
@@ -72,33 +75,39 @@ interface ProvidersProps {
  */
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
   // Create Query Client instance (stable across re-renders)
-  const [queryClient] = React.useState(() => createQueryClient())
+  const [queryClient] = useState(() => createQueryClient())
+  const [isClient, setIsClient] = useState(false)
+
+  // Only render QueryClientProvider on client-side to avoid SSR issues
+  useEffect(() => {
+    setIsClient(true)
+  }, [])
 
   return (
     <ReduxProvider store={store}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        <RealTimeEventsClient />
-        <NotificationCenter />
-        {/* Show React Query DevTools in development */}
-        {process.env.NODE_ENV === 'development' && (
-          <ReactQueryDevtools 
-            initialIsOpen={false}
-            position="bottom"
-          />
-        )}
-      </QueryClientProvider>
+      {isClient ? (
+        <QueryClientProvider client={queryClient}>
+          {children}
+          {/* Temporarily disable problematic components */}
+          {/* <RealTimeEventsClient /> */}
+          <NotificationCenter />
+          {/* Show React Query DevTools in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <ReactQueryDevtools 
+              initialIsOpen={false}
+              position="bottom-right"
+            />
+          )}
+        </QueryClientProvider>
+      ) : (
+        // Server-side fallback without React Query
+        <>{children}</>
+      )}
     </ReduxProvider>
   )
 }
 
-/**
- * Hook to access query client outside of components
- */
-export const useQueryClient = () => {
-  const { QueryClient } = require('@tanstack/react-query')
-  return React.useContext(QueryClient)
-}
+
 
 /**
  * Query key factory for consistent query key management

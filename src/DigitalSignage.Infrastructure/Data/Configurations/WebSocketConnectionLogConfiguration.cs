@@ -8,6 +8,9 @@ public class WebSocketConnectionLogConfiguration : IEntityTypeConfiguration<WebS
 {
     public void Configure(EntityTypeBuilder<WebSocketConnectionLog> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.ToTable("WebSocketConnectionLogs");
         
         builder.HasKey(w => w.Id);
@@ -27,8 +30,10 @@ public class WebSocketConnectionLogConfiguration : IEntityTypeConfiguration<WebS
         builder.Property(w => w.DisconnectionReason)
             .HasMaxLength(256);
         
-        builder.Property(w => w.ConnectedAt)
-            .IsRequired();
+        // Configure DisconnectedAt as timestamp without time zone
+        builder.Property(w => w.DisconnectedAt)
+               .HasColumnName("disconnected_at")
+               .HasColumnType("timestamp without time zone");
         
         // Index for active connection queries
         builder.HasIndex(w => new { w.UserId, w.DisconnectedAt })
@@ -37,10 +42,6 @@ public class WebSocketConnectionLogConfiguration : IEntityTypeConfiguration<WebS
         // Index for connection ID lookups
         builder.HasIndex(w => w.ConnectionId)
             .HasDatabaseName("IX_WebSocketConnectionLog_ConnectionId");
-        
-        // Index for time-based queries
-        builder.HasIndex(w => w.ConnectedAt)
-            .HasDatabaseName("IX_WebSocketConnectionLog_ConnectedAt");
         
         // Foreign key relationship
         builder.HasOne(w => w.User)

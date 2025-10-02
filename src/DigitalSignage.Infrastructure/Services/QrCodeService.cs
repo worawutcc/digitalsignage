@@ -61,7 +61,7 @@ public class QrCodeService : IQrCodeService
         {
             RegistrationId = registrationId,
             DeviceInfo = deviceInfo,
-            ExpiresAt = DateTimeOffset.UtcNow.AddMinutes(_defaultExpirationMinutes),
+            ExpiresAt = DateTime.UtcNow.AddMinutes(_defaultExpirationMinutes),
             ApiEndpoint = _apiBaseUrl,
             ValidationToken = GenerateValidationToken()
         };
@@ -176,7 +176,7 @@ public class QrCodeService : IQrCodeService
             _logger.LogDebug("Validating QR code data for registration {RegistrationId}", qrCodeData.RegistrationId);
 
             // Check expiration
-            if (qrCodeData.ExpiresAt <= DateTimeOffset.UtcNow)
+            if (qrCodeData.ExpiresAt <= DateTime.UtcNow)
             {
                 _logger.LogWarning("QR code data expired for registration {RegistrationId}, expired at {ExpiresAt}", 
                     qrCodeData.RegistrationId, qrCodeData.ExpiresAt);

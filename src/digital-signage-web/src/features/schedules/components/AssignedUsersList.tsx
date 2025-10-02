@@ -15,6 +15,7 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils'
 import { useScheduleUsers } from '../hooks/useScheduleUsers'
+import type { ScheduleAssignedUser } from '../types/schedule'
 
 export function AssignedUsersList({
   scheduleId,
@@ -29,8 +30,8 @@ export function AssignedUsersList({
     limit: pageSize,
   })
   
-  const users = data?.users || []
-  const totalCount = data?.totalCount || 0
+  const users = (data as any)?.users || []
+  const totalCount = users.length // Use actual users length since API doesn't provide totalCount
   const totalPages = Math.ceil(totalCount / pageSize)
 
   // Loading state with skeleton
@@ -60,7 +61,7 @@ export function AssignedUsersList({
     return (
       <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-950/20">
         <p className="text-sm text-red-700 dark:text-red-300">
-          Failed to load users: {error.message}
+          Failed to load users: {error instanceof Error ? error.message : 'Unknown error'}
         </p>
       </div>
     )
@@ -99,7 +100,7 @@ export function AssignedUsersList({
 
       {/* Users Grid */}
       <div data-testid="users-grid" className="grid gap-3">
-        {users.map((user) => (
+        {users.map((user: ScheduleAssignedUser) => (
           <div
             key={user.id}
             data-testid={`user-card-${user.id}`}

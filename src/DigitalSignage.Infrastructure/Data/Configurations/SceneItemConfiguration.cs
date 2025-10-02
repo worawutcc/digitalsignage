@@ -8,6 +8,9 @@ public class SceneItemConfiguration : IEntityTypeConfiguration<SceneItem>
 {
     public void Configure(EntityTypeBuilder<SceneItem> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(si => si.Id);
 
         builder.Property(si => si.X)
@@ -44,9 +47,6 @@ public class SceneItemConfiguration : IEntityTypeConfiguration<SceneItem>
 
         builder.Property(si => si.UseCustomDuration)
             .HasDefaultValue(false);
-
-        builder.Property(si => si.CreatedAt)
-            .IsRequired();
 
         // Indexes
         builder.HasIndex(si => new { si.SceneId, si.ZIndex });

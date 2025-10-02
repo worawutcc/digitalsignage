@@ -53,7 +53,7 @@ public class UserScheduleService : IUserScheduleService
             StartDate = us.Schedule.StartDate,
             EndDate = us.Schedule.EndDate,
             IsActive = us.Schedule.Status == Domain.Enums.ScheduleStatus.Active,
-            AssignedAt = us.AssignedAt,
+            AssignedAt = us.CreatedAt,
             AssignedBy = us.AssignedByUser != null ? new AssignedByUserDto
             {
                 UserId = us.AssignedByUser.Id,
@@ -133,7 +133,7 @@ public class UserScheduleService : IUserScheduleService
             
             // Create new assignments
             var newAssignments = new List<UserSchedule>();
-            var assignedAt = DateTimeOffset.UtcNow;
+            var assignedAt = DateTime.UtcNow;
             
             foreach (var scheduleId in scheduleIds)
             {
@@ -141,7 +141,7 @@ public class UserScheduleService : IUserScheduleService
                 {
                     UserId = userId,
                     ScheduleId = scheduleId,
-                    AssignedAt = assignedAt,
+                    CreatedAt = assignedAt,
                     AssignedByUserId = assignedByUserId
                 };
                 
@@ -244,7 +244,7 @@ public class UserScheduleService : IUserScheduleService
             UserId = us.User.Id,
             UserName = us.User.Username,
             UserEmail = us.User.Email,
-            AssignedAt = us.AssignedAt,
+            AssignedAt = us.CreatedAt,
             AssignedBy = us.AssignedByUser != null ? new AssignedByUserDto
             {
                 UserId = us.AssignedByUser.Id,
@@ -309,7 +309,7 @@ public class UserScheduleService : IUserScheduleService
             ScheduleId = schedule.Id,
             ScheduleName = schedule.Name,
             IsDefault = schedule.IsDefault,
-            UpdatedAt = DateTimeOffset.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
             UpdatedBy = new UpdatedByDto
             {
                 UserId = adminUser.Id,

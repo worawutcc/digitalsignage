@@ -23,7 +23,7 @@ public class QrCodeRegistrationData
     /// QR code expiration timestamp
     /// </summary>
     [JsonPropertyName("expires")]
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// API endpoint for approval workflow

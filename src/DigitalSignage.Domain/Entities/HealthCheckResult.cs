@@ -3,7 +3,7 @@ using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class HealthCheckResult
+public class HealthCheckResult : BaseEntity
 {
     public int Id { get; set; }
     
@@ -12,8 +12,6 @@ public class HealthCheckResult
     public int? ServiceInstanceId { get; set; }
     
     public ServiceStatus Status { get; set; }
-    
-    public DateTime CheckedAt { get; set; }
     
     public int ResponseTimeMs { get; set; }
     

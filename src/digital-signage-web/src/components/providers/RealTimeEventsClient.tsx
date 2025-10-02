@@ -92,7 +92,7 @@ export const RealTimeEventsClient = () => {
       }) as EventHandler,
     },
     {
-      autoConnect: true,
+      autoConnect: false, // Disable autoConnect to prevent SSR issues
       autoReconnect: true,
     }
   )

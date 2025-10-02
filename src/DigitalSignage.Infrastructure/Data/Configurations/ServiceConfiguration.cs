@@ -8,6 +8,9 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
 {
     public void Configure(EntityTypeBuilder<Service> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(s => s.Id);
 
         builder.Property(s => s.Name)
@@ -41,11 +44,17 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.IsActive)
             .HasDefaultValue(true);
 
-        builder.Property(s => s.RegisteredAt)
-            .IsRequired();
-
         builder.Property(s => s.ConsecutiveHealthCheckFailures)
             .HasDefaultValue(0);
+
+        // Configure DateTime properties as timestamp without time zone
+        builder.Property(s => s.LastHeartbeat)
+               .HasColumnName("last_heartbeat")
+               .HasColumnType("timestamp without time zone");
+
+        builder.Property(s => s.LastHealthCheck)
+               .HasColumnName("last_health_check")
+               .HasColumnType("timestamp without time zone");
 
         // Indexes
         builder.HasIndex(s => s.Name);
@@ -55,7 +64,6 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.HasIndex(s => s.Status);
         builder.HasIndex(s => s.IsActive);
         builder.HasIndex(s => s.LastHeartbeat);
-        builder.HasIndex(s => s.RegisteredAt);
 
         // Relationships
         builder.HasMany(s => s.ServiceInstances)

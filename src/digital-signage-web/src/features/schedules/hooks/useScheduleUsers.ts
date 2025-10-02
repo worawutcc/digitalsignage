@@ -69,14 +69,12 @@ export function useScheduleUsers(
     refetchOnWindowFocus = true,
   } = options
   
-  return useQuery<ScheduleUsersResponse, Error>({
+  return useQuery({
     queryKey: ['scheduleUsers', scheduleId, page, limit],
     queryFn: () => scheduleService.getScheduleUsers(scheduleId),
     enabled: enabled && scheduleId > 0,
     staleTime: 300000, // 5 minutes
     refetchOnWindowFocus,
-    // Keep previous data while refetching to prevent UI flicker
-    placeholderData: (previousData) => previousData,
   })
 }
 

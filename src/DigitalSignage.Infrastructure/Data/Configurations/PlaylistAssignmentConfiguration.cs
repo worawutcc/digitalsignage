@@ -8,13 +8,13 @@ public class PlaylistAssignmentConfiguration : IEntityTypeConfiguration<Playlist
 {
     public void Configure(EntityTypeBuilder<PlaylistAssignment> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(pa => pa.Id);
 
         builder.Property(pa => pa.Priority)
             .HasDefaultValue(0);
-
-        builder.Property(pa => pa.StartDate)
-            .IsRequired();
 
         builder.Property(pa => pa.IsActive)
             .HasDefaultValue(true);
@@ -28,8 +28,15 @@ public class PlaylistAssignmentConfiguration : IEntityTypeConfiguration<Playlist
         builder.Property(pa => pa.DaysOfWeek)
             .HasMaxLength(20); // "1,2,3,4,5,6,7" format
 
-        builder.Property(pa => pa.CreatedAt)
-            .IsRequired();
+        // Configure DateTime properties as timestamp without time zone
+        builder.Property(pa => pa.StartDate)
+               .HasColumnName("start_date")
+               .HasColumnType("timestamp without time zone")
+               .IsRequired();
+
+        builder.Property(pa => pa.EndDate)
+               .HasColumnName("end_date")
+               .HasColumnType("timestamp without time zone");
 
         // Indexes
         builder.HasIndex(pa => new { pa.PlaylistId, pa.DeviceId });

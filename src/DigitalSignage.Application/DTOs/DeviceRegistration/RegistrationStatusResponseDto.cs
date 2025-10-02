@@ -66,13 +66,3 @@ public class DeviceConfigurationDto
     /// </summary>
     public int HeartbeatInterval { get; set; }
 }
-
-/// <summary>
-/// Assigned user DTO for registration status
-/// </summary>
-public class AssignedUserDto
-{
-    public int UserId { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-}

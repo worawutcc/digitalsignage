@@ -21,5 +21,5 @@ public class HeartbeatResponseDto
     public int? CurrentAssignedUserId { get; set; }
     public int? PreviousAssignedUserId { get; set; }
     public bool ShouldRefreshContent { get; set; }
-    public DateTimeOffset ServerTime { get; set; }
+    public DateTime ServerTime { get; set; }
 }

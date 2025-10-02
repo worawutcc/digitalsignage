@@ -44,10 +44,10 @@ public class WebSocketHeartbeatService : BackgroundService
                     Type = "heartbeat",
                     Payload = new 
                     { 
-                        ServerTime = DateTimeOffset.UtcNow.ToString("o"),
+                        ServerTime = DateTime.UtcNow.ToString("o"),
                         ActiveConnections = activeConnections
                     },
-                    Timestamp = DateTimeOffset.UtcNow.ToString("o")
+                    Timestamp = DateTime.UtcNow.ToString("o")
                 };
                 
                 await broadcaster.BroadcastAsync(heartbeatEvent);

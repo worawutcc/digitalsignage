@@ -2,7 +2,7 @@ using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class Playlist
+public class Playlist : BaseEntity
 {
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
@@ -11,8 +11,6 @@ public class Playlist
     public bool IsLooped { get; set; } = false;
     public int? LoopCount { get; set; }
     public int Priority { get; set; } = 0;
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
 
     // Foreign keys
     public int? CreatedByUserId { get; set; }

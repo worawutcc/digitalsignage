@@ -23,7 +23,7 @@ public class SetDefaultScheduleResponseDto
     /// <summary>
     /// Timestamp when updated
     /// </summary>
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 
     /// <summary>
     /// Admin who updated

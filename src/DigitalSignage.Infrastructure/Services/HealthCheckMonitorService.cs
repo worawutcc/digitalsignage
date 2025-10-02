@@ -96,7 +96,7 @@ public class HealthCheckMonitorService : BackgroundService
         {
             ServiceId = service.Id,
             ServiceInstanceId = instance.Id,
-            CheckedAt = startTime
+            CreatedAt = startTime
         };
 
         try

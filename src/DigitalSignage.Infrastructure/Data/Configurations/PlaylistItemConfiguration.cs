@@ -9,6 +9,9 @@ public class PlaylistItemConfiguration : IEntityTypeConfiguration<PlaylistItem>
 {
     public void Configure(EntityTypeBuilder<PlaylistItem> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(pi => pi.Id);
 
         builder.Property(pi => pi.OrderIndex)
@@ -29,9 +32,6 @@ public class PlaylistItemConfiguration : IEntityTypeConfiguration<PlaylistItem>
 
         builder.Property(pi => pi.IsConditional)
             .HasDefaultValue(false);
-
-        builder.Property(pi => pi.CreatedAt)
-            .IsRequired();
 
         // Indexes
         builder.HasIndex(pi => new { pi.PlaylistId, pi.OrderIndex })

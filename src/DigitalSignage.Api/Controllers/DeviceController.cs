@@ -140,8 +140,9 @@ public class DeviceController : ControllerBase
         try
         {
             _logger.LogInformation("Processing heartbeat for device {DeviceKey}", deviceKey);
-            var response = await _deviceService.ProcessHeartbeatWithUserDetectionAsync(deviceKey, request);
-            return Ok(response);
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "Unknown";
+            await _deviceService.ProcessHeartbeatAsync(deviceKey, ipAddress);
+            return Ok(new { message = "Heartbeat processed successfully" });
         }
         catch (Exception ex)
         {

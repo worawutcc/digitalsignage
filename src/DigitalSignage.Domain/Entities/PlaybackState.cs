@@ -2,7 +2,7 @@ using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class PlaybackState
+public class PlaybackState : BaseEntity
 {
     public int Id { get; set; }
     public int DeviceId { get; set; }
@@ -14,8 +14,6 @@ public class PlaybackState
     public int CurrentLoopCount { get; set; } = 0;
     public int? TotalLoops { get; set; }
     public bool IsLooping { get; set; } = false;
-    public DateTime StartedAt { get; set; }
-    public DateTime LastUpdatedAt { get; set; }
     public DateTime? EstimatedEndAt { get; set; }
     public string? ErrorMessage { get; set; }
     public DateTime? ErrorOccurredAt { get; set; }

@@ -19,7 +19,7 @@ public class RealtimeEventDto<TPayload>
     /// <summary>
     /// ISO 8601 timestamp when event occurred
     /// </summary>
-    public string Timestamp { get; set; } = DateTimeOffset.UtcNow.ToString("o");
+    public string Timestamp { get; set; } = DateTime.UtcNow.ToString("o");
 }
 
 /// <summary>
@@ -40,5 +40,5 @@ public class RealtimeEventDto
     /// <summary>
     /// ISO 8601 timestamp when event occurred
     /// </summary>
-    public string Timestamp { get; set; } = DateTimeOffset.UtcNow.ToString("o");
+    public string Timestamp { get; set; } = DateTime.UtcNow.ToString("o");
 }

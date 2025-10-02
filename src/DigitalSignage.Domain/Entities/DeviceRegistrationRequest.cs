@@ -143,12 +143,12 @@ public class DeviceRegistrationRequest : BaseEntity
     /// <summary>
     /// PIN expiration timestamp
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// Last status poll from device
     /// </summary>
-    public DateTimeOffset? LastPolledAt { get; set; }
+    public DateTime? LastPolledAt { get; set; }
 
     // Navigation properties
 
@@ -182,7 +182,7 @@ public class DeviceRegistrationRequest : BaseEntity
     /// <summary>
     /// Checks if the registration has expired based on ExpiresAt timestamp
     /// </summary>
-    public bool IsExpired => DateTimeOffset.UtcNow > ExpiresAt;
+    public bool IsExpired => DateTime.UtcNow > ExpiresAt;
 
     /// <summary>
     /// Checks if the registration is in a terminal state (cannot be changed)
@@ -197,7 +197,7 @@ public class DeviceRegistrationRequest : BaseEntity
     /// </summary>
     public void UpdateLastPolled()
     {
-        LastPolledAt = DateTimeOffset.UtcNow;
+        LastPolledAt = DateTime.UtcNow;
     }
 
     /// <summary>

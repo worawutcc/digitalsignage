@@ -15,7 +15,7 @@ public class AssignSchedulesResponseDto
     
     public AssignedByUserDto? AssignedBy { get; set; }
     
-    public DateTimeOffset AssignedAt { get; set; }
+    public DateTime AssignedAt { get; set; }
 }
 
 /// <summary>

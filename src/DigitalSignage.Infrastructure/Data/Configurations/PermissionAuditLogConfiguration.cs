@@ -11,6 +11,9 @@ public class PermissionAuditLogConfiguration : IEntityTypeConfiguration<Permissi
 {
     public void Configure(EntityTypeBuilder<PermissionAuditLog> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(x => x.Id);
 
         // Audit query indexes

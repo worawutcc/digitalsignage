@@ -25,7 +25,7 @@ public class VerifyPinResponseDto
     /// <summary>
     /// Timestamp when device was approved
     /// </summary>
-    public DateTimeOffset? ApprovedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
 
     /// <summary>
     /// User-friendly message

@@ -30,12 +30,12 @@ public class CheckStatusResponseDto
     /// <summary>
     /// Registration creation timestamp
     /// </summary>
-    public DateTimeOffset CreatedAt { get; set; }
+    public DateTime CreatedAt { get; set; }
 
     /// <summary>
     /// PIN expiration timestamp
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// Device key if approved
@@ -45,7 +45,7 @@ public class CheckStatusResponseDto
     /// <summary>
     /// Timestamp when device was approved
     /// </summary>
-    public DateTimeOffset? ApprovedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
 
     /// <summary>
     /// Admin who approved the device
@@ -60,7 +60,7 @@ public class CheckStatusResponseDto
     /// <summary>
     /// Timestamp when device was rejected
     /// </summary>
-    public DateTimeOffset? RejectedAt { get; set; }
+    public DateTime? RejectedAt { get; set; }
 
     /// <summary>
     /// Admin who rejected the device

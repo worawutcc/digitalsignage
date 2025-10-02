@@ -18,6 +18,6 @@ public class PermissionAuditDto
     public string Action { get; set; } = string.Empty; // GRANTED, MODIFIED, REVOKED
     public string? Reason { get; set; }
     public string ChangedBy { get; set; } = string.Empty;
-    public DateTimeOffset ChangedAt { get; set; }
+    public DateTime ChangedAt { get; set; }
     public string? Context { get; set; }
 }

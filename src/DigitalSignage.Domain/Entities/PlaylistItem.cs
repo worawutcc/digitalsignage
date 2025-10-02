@@ -2,7 +2,7 @@ using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Domain.Entities;
 
-public class PlaylistItem
+public class PlaylistItem : BaseEntity
 {
     public int Id { get; set; }
     public int PlaylistId { get; set; }
@@ -15,8 +15,6 @@ public class PlaylistItem
     public bool IsConditional { get; set; } = false;
     public TimeOnly? StartTime { get; set; }
     public TimeOnly? EndTime { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
 
     // Navigation properties
     public Playlist Playlist { get; set; } = null!;

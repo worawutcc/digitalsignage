@@ -49,12 +49,12 @@ public class PendingRegistrationDto
     /// <summary>
     /// Registration request timestamp
     /// </summary>
-    public DateTimeOffset RequestedAt { get; set; }
+    public DateTime RequestedAt { get; set; }
 
     /// <summary>
     /// PIN expiration timestamp
     /// </summary>
-    public DateTimeOffset ExpiresAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
 
     /// <summary>
     /// PIN code for admin verification
@@ -75,16 +75,4 @@ public class PendingRegistrationDto
     /// Matched user information if auto-match found (Feature 019)
     /// </summary>
     public MatchedUserDto? MatchedUser { get; set; }
-}
-
-/// <summary>
-/// DTO for matched user information in pending registrations
-/// </summary>
-public class MatchedUserDto
-{
-    public int UserId { get; set; }
-    public string Email { get; set; } = string.Empty;
-    public string DisplayName { get; set; } = string.Empty;
-    public string Role { get; set; } = string.Empty;
-    public bool MatchedAutomatically { get; set; }
 }

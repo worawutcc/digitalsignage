@@ -40,7 +40,7 @@ public class JwtTokenService : IJwtTokenService
             new(ClaimTypes.Role, user.Role.ToString()),
             new(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+            new(JwtRegisteredClaimNames.Iat, new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
         };
 
         return GenerateToken(claims, _jwtSettings.AccessTokenExpiryMinutes);
@@ -60,7 +60,7 @@ public class JwtTokenService : IJwtTokenService
             new("deviceId", device.Id.ToString()),
             new(JwtRegisteredClaimNames.Sub, $"device:{device.Id}"),
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
+            new(JwtRegisteredClaimNames.Iat, new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64),
             new(JwtRegisteredClaimNames.Aud, "DigitalSignage.Device")  // Different audience for devices
         };
 
