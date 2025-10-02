@@ -4,10 +4,14 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { Plus, Calendar, List, Filter } from 'lucide-react'
+import { Plus, Calendar, List, Filter, Users } from 'lucide-react'
 import { ScheduleCalendar } from '@/features/schedules/components/ScheduleCalendar'
 import { ScheduleBuilder } from '@/features/schedules/components/ScheduleBuilder'
 import { ConflictDetection } from '@/features/schedules/components/ConflictDetection'
+import { DefaultScheduleToggle } from '@/features/users/components/DefaultScheduleToggle'
+import { ContentSourceBadge } from '@/features/schedules/components/ContentSourceBadge'
+import { AssignedUsersList } from '@/features/schedules/components/AssignedUsersList'
+import { Modal } from '@/components/ui/Modal'
 import {
   useSchedules,
   useScheduleCalendar,
@@ -27,6 +31,8 @@ export default function SchedulesPage() {
   const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
+  const [showUsersModal, setShowUsersModal] = useState(false)
+  const [selectedScheduleForUsers, setSelectedScheduleForUsers] = useState<string | null>(null)
 
   // Get current date range for calendar
   const now = new Date()
@@ -72,6 +78,11 @@ export default function SchedulesPage() {
         console.error('Failed to delete schedule:', error)
       }
     }
+  }
+
+  const handleViewUsers = (scheduleId: string) => {
+    setSelectedScheduleForUsers(scheduleId)
+    setShowUsersModal(true)
   }
 
   return (
@@ -248,13 +259,22 @@ export default function SchedulesPage() {
                       Status
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Source
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Priority
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Devices
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Assigned Users
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date Range
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Default
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
@@ -264,13 +284,13 @@ export default function SchedulesPage() {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {schedulesLoading ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                         Loading schedules...
                       </td>
                     </tr>
                   ) : schedules.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
+                      <td colSpan={9} className="px-6 py-4 text-center text-gray-500">
                         No schedules found. Create your first schedule to get started.
                       </td>
                     </tr>
@@ -300,15 +320,34 @@ export default function SchedulesPage() {
                             {schedule.status}
                           </span>
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <ContentSourceBadge contentSource="Default" />
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           {schedule.priority}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {schedule.targetDevices.length}
                         </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <button
+                            onClick={() => handleViewUsers(schedule.id)}
+                            className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-900"
+                          >
+                            <Users className="h-4 w-4" />
+                            <span>View Users</span>
+                          </button>
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {new Date(schedule.startDate).toLocaleDateString()} -{' '}
                           {new Date(schedule.endDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <DefaultScheduleToggle
+                            scheduleId={parseInt(schedule.id)}
+                            isDefault={false}
+                            onToggle={() => {}}
+                          />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
@@ -349,6 +388,23 @@ export default function SchedulesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Assigned Users Modal */}
+      {showUsersModal && selectedScheduleForUsers && (
+        <Modal
+          isOpen={showUsersModal}
+          onClose={() => {
+            setShowUsersModal(false)
+            setSelectedScheduleForUsers(null)
+          }}
+          title="Assigned Users"
+          size="lg"
+        >
+          <div className="p-6">
+            <AssignedUsersList scheduleId={parseInt(selectedScheduleForUsers)} />
+          </div>
+        </Modal>
       )}
     </div>
   )

@@ -6,7 +6,8 @@
 'use client';
 
 import React from 'react';
-import { Search, UserPlus, MoreVertical, Edit, Trash2, Key, UserCheck, UserX } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, UserPlus, MoreVertical, Edit, Trash2, Key, UserCheck, UserX, Calendar } from 'lucide-react';
 import { DataTable, DataTableColumn } from '@/components/tables/DataTable';
 import { useUsers, useDeleteUser, useActivateUser, useDeactivateUser, useResetUserPassword } from '../hooks/useUsers';
 import { useUserFilters } from '../hooks/useUsers';
@@ -30,6 +31,7 @@ export function UserList({
   onEditUser,
   className = '',
 }: UserListProps) {
+  const router = useRouter();
   const { filters, updateFilters, resetFilters } = useUserFilters();
   const { data: usersResponse, isLoading, error } = useUsers(filters);
   const deleteUserMutation = useDeleteUser();
@@ -207,6 +209,18 @@ export function UserList({
                 >
                   <Edit className="w-4 h-4 mr-2" />
                   Edit User
+                </button>
+                
+                <button
+                  onClick={() => {
+                    router.push(`/users/${user.id}/schedules`);
+                    setActionMenuUserId(null);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  role="menuitem"
+                >
+                  <Calendar className="w-4 h-4 mr-2" />
+                  Manage Schedules
                 </button>
                 
                 <button
