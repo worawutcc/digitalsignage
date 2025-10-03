@@ -1,5 +1,6 @@
 import { apiClient } from '@/lib/api'
-import type { User, Tokens } from '@/store/slices/authSlice'
+import type { User } from '@/types/api'
+import type { Tokens } from '@/store/slices/authSlice'
 import type {
   LoginCredentials,
   LoginResponse,

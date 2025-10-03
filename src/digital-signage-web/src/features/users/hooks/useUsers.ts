@@ -22,7 +22,7 @@ export const userKeys = {
   lists: () => [...userKeys.all, 'list'] as const,
   list: (filters?: UserFilters) => [...userKeys.lists(), filters] as const,
   details: () => [...userKeys.all, 'detail'] as const,
-  detail: (id: string) => [...userKeys.details(), id] as const,
+  detail: (id: number) => [...userKeys.details(), id] as const,
   roles: {
     all: ['roles'] as const,
     lists: () => [...userKeys.roles.all, 'list'] as const,
@@ -46,7 +46,7 @@ export function useUsers(filters?: UserFilters) {
 /**
  * Hook to fetch single user by ID
  */
-export function useUser(id: string) {
+export function useUser(id: number) {
   return useQuery({
     queryKey: userKeys.detail(id),
     queryFn: () => userService.getUserById(id),
@@ -101,7 +101,7 @@ export function useUpdateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, data }: { id: string; data: UpdateUserRequest }) =>
+    mutationFn: ({ id, data }: { id: number; data: UpdateUserRequest }) =>
       userService.updateUser(id, data),
     onSuccess: (updatedUser) => {
       // Update the user detail cache
@@ -119,7 +119,7 @@ export function useDeleteUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => userService.deleteUser(id),
+    mutationFn: (id: number) => userService.deleteUser(id),
     onSuccess: (_, deletedId) => {
       // Remove from cache
       queryClient.removeQueries({ queryKey: userKeys.detail(deletedId) });
@@ -136,7 +136,7 @@ export function useActivateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => userService.activateUser(id),
+    mutationFn: (id: number) => userService.activateUser(id),
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(userKeys.detail(updatedUser.id), updatedUser);
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
@@ -151,7 +151,7 @@ export function useDeactivateUser() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => userService.deactivateUser(id),
+    mutationFn: (id: number) => userService.deactivateUser(id),
     onSuccess: (updatedUser) => {
       queryClient.setQueryData(userKeys.detail(updatedUser.id), updatedUser);
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
@@ -164,7 +164,7 @@ export function useDeactivateUser() {
  */
 export function useResetUserPassword() {
   return useMutation({
-    mutationFn: (id: string) => userService.resetUserPassword(id),
+    mutationFn: (id: number) => userService.resetUserPassword(id),
   });
 }
 

@@ -85,7 +85,7 @@ export function useDevices(options: UseDevicesOptions = {}) {
         if (!oldData) return []
         return oldData.map(device => 
           device.id === deviceId 
-            ? { ...device, status: 'maintenance' as const }
+            ? { ...device, status: 'Maintenance' as const }
             : device
         )
       })

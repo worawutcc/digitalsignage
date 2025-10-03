@@ -119,7 +119,7 @@ const REFRESH_TOKEN_STORAGE_KEY = 'digital-signage-refresh-token'
 const TOKEN_EXPIRY_KEY = 'digital-signage-token-expiry'
 
 /**
- * Save access token to storage
+ * Save access token to storage and cookies
  * @param token - JWT access token to store
  * @param rememberMe - If true, uses localStorage; otherwise sessionStorage
  */
@@ -133,6 +133,14 @@ export function saveAccessToken(token: string, rememberMe: boolean = false): voi
   const payload = decodeToken(token)
   if (payload) {
     storage.setItem(TOKEN_EXPIRY_KEY, payload.exp.toString())
+    
+    // Set cookie for middleware access
+    const expirationDate = new Date(payload.exp * 1000)
+    const maxAge = rememberMe ? 30 * 24 * 60 * 60 : undefined // 30 days or session
+    const isProduction = process.env.NODE_ENV === 'production'
+    
+    // Don't use secure flag in development (localhost)
+    document.cookie = `accessToken=${token}; path=/; ${maxAge ? `max-age=${maxAge}; ` : ''}${isProduction ? 'secure; ' : ''}samesite=strict`
   }
 }
 
@@ -181,13 +189,13 @@ export function getRefreshToken(): string | null {
 }
 
 /**
- * Clear all auth tokens from storage
- * Removes tokens from both localStorage and sessionStorage
+ * Clear all auth tokens from storage and cookies
+ * Removes tokens from both localStorage, sessionStorage, and cookies
  */
 export function clearTokens(): void {
   if (typeof window === 'undefined') return
 
-  // Clear from both storages
+  // Clear specific auth tokens
   localStorage.removeItem(TOKEN_STORAGE_KEY)
   localStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
   localStorage.removeItem(TOKEN_EXPIRY_KEY)
@@ -195,6 +203,36 @@ export function clearTokens(): void {
   sessionStorage.removeItem(TOKEN_STORAGE_KEY)
   sessionStorage.removeItem(REFRESH_TOKEN_STORAGE_KEY)
   sessionStorage.removeItem(TOKEN_EXPIRY_KEY)
+  
+  // Clear common auth-related keys
+  const authKeys = [
+    'auth_token',
+    'ds_auth_token',
+    'ds_refresh_token',
+    'ds_user',
+    'digital-signage-user',
+    'remember_me'
+  ]
+  
+  authKeys.forEach(key => {
+    localStorage.removeItem(key)
+    sessionStorage.removeItem(key)
+  })
+  
+  // Clear all cookies
+  const cookiesToClear = ['accessToken', 'refreshToken', 'ds_auth_token', 'ds_refresh_token']
+  const isProduction = process.env.NODE_ENV === 'production'
+  
+  cookiesToClear.forEach(cookieName => {
+    // Clear with secure flag (for production)
+    if (isProduction) {
+      document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; secure; samesite=strict`
+    }
+    // Clear without secure flag (for development)
+    document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; samesite=strict`
+    // Fallback clear (basic)
+    document.cookie = `${cookieName}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT`
+  })
 }
 
 /**

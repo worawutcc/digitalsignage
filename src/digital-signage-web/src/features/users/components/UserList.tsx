@@ -42,7 +42,7 @@ export function UserList({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedRole, setSelectedRole] = React.useState<string>('all');
   const [selectedStatus, setSelectedStatus] = React.useState<string>('all');
-  const [actionMenuUserId, setActionMenuUserId] = React.useState<string | null>(null);
+  const [actionMenuUserId, setActionMenuUserId] = React.useState<number | null>(null);
 
   const users = usersResponse?.data || [];
   const pagination = usersResponse?.pagination;
@@ -77,7 +77,7 @@ export function UserList({
   };
 
   // Action handlers
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userId: number) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
@@ -99,7 +99,7 @@ export function UserList({
     }
   };
 
-  const handleResetPassword = async (userId: string) => {
+  const handleResetPassword = async (userId: number) => {
     if (!confirm('Generate a temporary password for this user?')) return;
     
     try {
@@ -150,7 +150,7 @@ export function UserList({
       sortable: true,
       render: (_, user) => (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-          {user.role.name}
+          {user.role}
         </span>
       ),
     },

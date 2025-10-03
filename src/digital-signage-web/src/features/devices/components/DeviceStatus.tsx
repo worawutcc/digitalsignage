@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils'
 import { Wifi, WifiOff, AlertTriangle, Wrench } from 'lucide-react'
 
 export interface DeviceStatusProps {
-  status: 'online' | 'offline' | 'error' | 'maintenance'
+  status: 'Online' | 'Offline' | 'Error' | 'Maintenance'
   showText?: boolean
   showIcon?: boolean
   size?: 'sm' | 'md' | 'lg'
@@ -12,28 +12,28 @@ export interface DeviceStatusProps {
 }
 
 const statusConfig = {
-  online: {
+  Online: {
     label: 'Online',
     color: 'bg-green-500',
     textColor: 'text-green-700',
     bgColor: 'bg-green-50',
     icon: Wifi,
   },
-  offline: {
+  Offline: {
     label: 'Offline',
     color: 'bg-red-500',
     textColor: 'text-red-700',
     bgColor: 'bg-red-50',
     icon: WifiOff,
   },
-  error: {
+  Error: {
     label: 'Error',
     color: 'bg-yellow-500',
     textColor: 'text-yellow-700',
     bgColor: 'bg-yellow-50',
     icon: AlertTriangle,
   },
-  maintenance: {
+  Maintenance: {
     label: 'Maintenance',
     color: 'bg-blue-500',
     textColor: 'text-blue-700',

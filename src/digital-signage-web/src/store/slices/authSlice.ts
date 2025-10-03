@@ -1,19 +1,5 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit'
-
-/**
- * User interface matching API response
- */
-export interface User {
-  id: string
-  email: string
-  firstName: string
-  lastName: string
-  role: 'admin' | 'user' | 'manager'
-  permissions: string[]
-  createdAt: string
-  updatedAt?: string
-  lastLoginAt?: string
-}
+import { User, LoginResponse } from '@/types/api'
 
 /**
  * Token information
@@ -77,6 +63,12 @@ export const authSlice = createSlice({
       state.isAuthenticated = false
       state.isLoading = false
       state.error = null
+      
+      // Clear tokens from storage
+      if (typeof window !== 'undefined') {
+        const { clearTokens } = require('@/lib/auth')
+        clearTokens()
+      }
     },
 
     // Token refresh actions

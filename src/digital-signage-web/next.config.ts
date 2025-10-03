@@ -184,9 +184,8 @@ const nextConfig: NextConfig = {
       }
     }
 
-    // Enhanced tree shaking
-    config.optimization.usedExports = true;
-    config.optimization.sideEffects = false;
+    // Let Next.js handle optimizations to avoid conflicts
+    // Removed custom optimization settings that conflict with cacheUnaffected
 
     // Add polyfill for 'self' in server-side rendering
     if (isServer) {

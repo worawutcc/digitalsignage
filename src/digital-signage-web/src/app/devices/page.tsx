@@ -12,7 +12,7 @@ import { DeviceFilters } from '@/features/devices/components/DeviceFilters'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
-import type { Device } from '@/features/devices/components/DeviceList'
+import type { Device } from '@/types/api'
 
 interface FilterType {
   search: string
@@ -22,45 +22,57 @@ interface FilterType {
   resolution: string[]
 }
 
-// Mock data for development - using DeviceList component type structure
+// Mock data for development - matching API schema
 const mockDevices: Device[] = [
   {
-    id: '1',
+    id: 1,
     name: 'Lobby Display 1',
+    deviceKey: 'lobby-display-001',
     location: 'Main Lobby',
-    status: 'online',
-    resolution: '1920x1080',
-    lastSeen: new Date().toISOString(),
-    version: '2.1.0',
+    deviceType: 'Android TV',
+    macAddress: 'AA:BB:CC:DD:EE:01',
     ipAddress: '192.168.1.100',
-    deviceGroup: 'Lobby Displays',
-    uptime: 48,
-    currentContent: 'Welcome Presentation'
+    status: 'Online',
+    groupId: 1,
+    isActive: true,
+    createdAt: new Date().toISOString(),
+    lastHeartbeat: new Date().toISOString(),
+    currentContent: 'Welcome Presentation',
+    softwareVersion: '2.1.0',
+    hardwareInfo: 'Samsung Smart TV Q70A'
   },
   {
-    id: '2',
+    id: 2,
     name: 'Conference Room A',
+    deviceKey: 'conference-room-a-001',
     location: 'Meeting Room A',
-    status: 'offline',
-    resolution: '3840x2160',
-    lastSeen: new Date(Date.now() - 300000).toISOString(),
-    version: '2.0.5',
+    deviceType: 'Android TV',
+    macAddress: 'AA:BB:CC:DD:EE:02',
     ipAddress: '192.168.1.101',
-    deviceGroup: 'Conference Rooms',
-    uptime: 0,
+    status: 'Offline',
+    groupId: 2,
+    isActive: true,
+    createdAt: new Date(Date.now() - 86400000).toISOString(),
+    lastHeartbeat: new Date(Date.now() - 300000).toISOString(),
+    softwareVersion: '2.0.5',
+    hardwareInfo: 'LG Commercial Display 55UN640S'
   },
   {
-    id: '3',
+    id: 3,
     name: 'Cafeteria Display',
+    deviceKey: 'cafeteria-display-001',
     location: 'Employee Cafeteria',
-    status: 'maintenance',
-    resolution: '1920x1080',
-    lastSeen: new Date(Date.now() - 1800000).toISOString(),
-    version: '2.1.0',
+    deviceType: 'Android TV',
+    macAddress: 'AA:BB:CC:DD:EE:03',
     ipAddress: '192.168.1.102',
-    deviceGroup: 'Cafeteria',
-    uptime: 12,
-    currentContent: 'Menu Board'
+    status: 'Maintenance',
+    groupId: 3,
+    isActive: true,
+    createdAt: new Date(Date.now() - 172800000).toISOString(),
+    lastHeartbeat: new Date(Date.now() - 1800000).toISOString(),
+    currentContent: 'Menu Board',
+    softwareVersion: '2.1.0',
+    hardwareInfo: 'Sony Professional Display FW-55BZ35F'
   }
 ]
 
@@ -346,16 +358,28 @@ function DeviceForm({ device, onSave, onCancel, loading }: DeviceFormProps) {
     name: device?.name || '',
     location: device?.location || '',
     ipAddress: device?.ipAddress || '',
-    macAddress: '',
-    resolution: device?.resolution || '1920x1080',
-    deviceGroup: device?.deviceGroup || 'Lobby Displays',
-    version: device?.version || '1.0.0',
-    description: '',
+    macAddress: device?.macAddress || '',
+    deviceType: device?.deviceType || 'Android TV',
+    groupId: device?.groupId,
+    softwareVersion: device?.softwareVersion || '1.0.0',
+    hardwareInfo: device?.hardwareInfo || '',
   })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    onSave(formData)
+    const submissionData: Partial<Device> = {
+      name: formData.name,
+      location: formData.location,
+      ipAddress: formData.ipAddress,
+      macAddress: formData.macAddress,
+      deviceType: formData.deviceType,
+      softwareVersion: formData.softwareVersion,
+      hardwareInfo: formData.hardwareInfo,
+    }
+    if (formData.groupId) {
+      submissionData.groupId = formData.groupId
+    }
+    onSave(submissionData)
   }
 
   return (
@@ -417,64 +441,60 @@ function DeviceForm({ device, onSave, onCancel, loading }: DeviceFormProps) {
         </div>
 
         <div>
-          <label htmlFor="resolution" className="block text-sm font-medium text-gray-700 mb-1">
-            Resolution
+          <label htmlFor="deviceType" className="block text-sm font-medium text-gray-700 mb-1">
+            Device Type
           </label>
           <select
-            id="resolution"
-            value={formData.resolution}
-            onChange={(e) => setFormData({ ...formData, resolution: e.target.value })}
+            id="deviceType"
+            value={formData.deviceType}
+            onChange={(e) => setFormData({ ...formData, deviceType: e.target.value })}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
-            <option value="1920x1080">1920x1080 (Full HD)</option>
-            <option value="3840x2160">3840x2160 (4K UHD)</option>
-            <option value="1366x768">1366x768 (HD)</option>
-            <option value="1280x720">1280x720 (HD Ready)</option>
+            <option value="Android TV">Android TV</option>
+            <option value="Smart Display">Smart Display</option>
+            <option value="Web Player">Web Player</option>
+            <option value="Tablet">Tablet</option>
           </select>
         </div>
 
         <div>
-          <label htmlFor="deviceGroup" className="block text-sm font-medium text-gray-700 mb-1">
-            Device Group
-          </label>
-          <select
-            id="deviceGroup"
-            value={formData.deviceGroup}
-            onChange={(e) => setFormData({ ...formData, deviceGroup: e.target.value })}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="Lobby Displays">Lobby Displays</option>
-            <option value="Conference Room Displays">Conference Room Displays</option>
-            <option value="Cafeteria Displays">Cafeteria Displays</option>
-            <option value="Hallway Displays">Hallway Displays</option>
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="version" className="block text-sm font-medium text-gray-700 mb-1">
-            Firmware Version
+          <label htmlFor="groupId" className="block text-sm font-medium text-gray-700 mb-1">
+            Device Group ID
           </label>
           <Input
-            id="version"
+            id="groupId"
+            type="number"
+            value={formData.groupId || ''}
+            onChange={(e) => setFormData({ ...formData, groupId: e.target.value ? parseInt(e.target.value) : undefined })}
+            placeholder="Optional group ID"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="softwareVersion" className="block text-sm font-medium text-gray-700 mb-1">
+            Software Version
+          </label>
+          <Input
+            id="softwareVersion"
             type="text"
-            value={formData.version}
-            onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+            value={formData.softwareVersion}
+            onChange={(e) => setFormData({ ...formData, softwareVersion: e.target.value })}
             placeholder="1.0.0"
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
-          Description
+        <label htmlFor="hardwareInfo" className="block text-sm font-medium text-gray-700 mb-1">
+          Hardware Information
         </label>
         <textarea
-          id="description"
+          id="hardwareInfo"
           rows={3}
-          value={formData.description}
-          onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+          value={formData.hardwareInfo}
+          onChange={(e) => setFormData({ ...formData, hardwareInfo: e.target.value })}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          placeholder="Optional device description..."
+          placeholder="Hardware specifications and details..."
         />
       </div>
 
