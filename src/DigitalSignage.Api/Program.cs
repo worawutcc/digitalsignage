@@ -48,6 +48,9 @@ app.UseHttpsRedirection();
 // Configure CORS
 app.UseCors();
 
+// Add device error handling middleware
+app.UseMiddleware<DigitalSignage.Api.Middleware.DeviceErrorHandlingMiddleware>();
+
 // Enable WebSocket support for SignalR
 app.UseWebSockets();
 
@@ -85,12 +88,22 @@ if (app.Environment.IsDevelopment())
     Console.WriteLine();
 }
 
-// Seed admin user on startup
+// Seed admin user and sample data on startup
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<DigitalSignage.Infrastructure.Data.AppDbContext>();
     var passwordHashService = scope.ServiceProvider.GetRequiredService<DigitalSignage.Application.Interfaces.IPasswordHashService>();
-    await DigitalSignage.Infrastructure.Data.DbSeeder.SeedAdminUserAsync(db, passwordHashService);
+    
+    // Seed all development data including devices
+    if (app.Environment.IsDevelopment())
+    {
+        await DigitalSignage.Infrastructure.Data.DbSeeder.SeedAllAsync(db, passwordHashService);
+    }
+    else
+    {
+        // Only seed admin user in production
+        await DigitalSignage.Infrastructure.Data.DbSeeder.SeedAdminUserAsync(db, passwordHashService);
+    }
 }
 
 app.Run();

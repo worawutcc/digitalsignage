@@ -23,7 +23,7 @@ public class RealtimeEventDto<TPayload>
 }
 
 /// <summary>
-/// Non-generic version for cases where payload type is unknown
+/// Non-generic version for cases where payload is JSON string
 /// </summary>
 public class RealtimeEventDto
 {
@@ -33,9 +33,9 @@ public class RealtimeEventDto
     public string Type { get; set; } = string.Empty;
     
     /// <summary>
-    /// Event payload (dynamic object)
+    /// Event payload as JSON string
     /// </summary>
-    public object? Payload { get; set; }
+    public string Payload { get; set; } = string.Empty;
     
     /// <summary>
     /// ISO 8601 timestamp when event occurred

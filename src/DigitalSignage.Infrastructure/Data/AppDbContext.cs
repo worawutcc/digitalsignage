@@ -49,6 +49,11 @@ public class AppDbContext : DbContext
     // User-based content entities (Feature 019)
     public DbSet<UserSchedule> UserSchedules { get; set; }
     
+    // Android TV Device Management entities (Feature 022)
+    public DbSet<Domain.Entities.DeviceConfiguration> DeviceConfigurations { get; set; }
+    public DbSet<DeviceStatusLog> DeviceStatusLogs { get; set; }
+    public DbSet<RegistrationRecord> RegistrationRecords { get; set; }
+    
     // WebSocket entities
     public DbSet<WebSocketConnectionLog> WebSocketConnectionLogs { get; set; }
 
@@ -58,7 +63,7 @@ public class AppDbContext : DbContext
 
         // Apply all entity configurations
         modelBuilder.ApplyConfiguration(new UserConfiguration());
-        modelBuilder.ApplyConfiguration(new DeviceConfiguration());
+        modelBuilder.ApplyConfiguration(new Configurations.DeviceConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceGroupConfiguration());
         modelBuilder.ApplyConfiguration(new MediaConfiguration());
         modelBuilder.ApplyConfiguration(new ScheduleConfiguration());
@@ -88,6 +93,11 @@ public class AppDbContext : DbContext
         
         // User-based content configurations (Feature 019)
         modelBuilder.ApplyConfiguration(new UserScheduleConfiguration());
+        
+        // Android TV Device Management configurations
+        modelBuilder.ApplyConfiguration(new AndroidTVDeviceConfigurationConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceStatusLogConfiguration());
+        modelBuilder.ApplyConfiguration(new RegistrationRecordConfiguration());
         
         // WebSocket configurations
         modelBuilder.ApplyConfiguration(new WebSocketConnectionLogConfiguration());

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DigitalSignage.Application.DTOs;
 using DigitalSignage.Application.DTOs.RealtimeEvents;
 using DigitalSignage.Application.Interfaces;
@@ -30,6 +31,17 @@ public class MediaService : IMediaService
         _eventBroadcaster = eventBroadcaster;
         _logger = logger;
         _expirationSettings = expirationSettings.Value;
+    }
+
+    /// <summary>
+    /// Helper method to serialize object to JSON string for event payload
+    /// </summary>
+    private static string SerializePayload(object payload)
+    {
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
     }
 
     // Basic CRUD operations
@@ -223,14 +235,14 @@ public class MediaService : IMediaService
         await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
         {
             Type = "media_uploaded",
-            Payload = new MediaUploadedPayload
+            Payload = SerializePayload(new MediaUploadedPayload
             {
                 MediaId = media.Id,
                 FileName = media.FileName,
                 MediaType = media.Type.ToString().ToLower(),
                 FileSizeBytes = media.FileSize,
                 ThumbnailUrl = null // Thumbnail URL can be generated later if needed
-            },
+            }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
         
