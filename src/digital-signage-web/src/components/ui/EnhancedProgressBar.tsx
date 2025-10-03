@@ -413,31 +413,36 @@ export function BulkOperationProgress({
     return actionList
   }, [isComplete, failedItems, onRetryFailed])
 
-  return (
-    <EnhancedProgressBar
-      value={completedItems}
-      max={items.length}
-      variant={variant}
-      size="md"
-      showValue={true}
-      showPercentage={true}
-      label={operationType}
-      description={isComplete 
-        ? `Complete: ${successfulItems} successful${failedItems > 0 ? `, ${failedItems} failed` : ''}`
-        : undefined
-      }
-      allowCancel={!isComplete && !!onCancel}
-      onCancel={onCancel}
-      allowPause={!isComplete && !!onPause && !!onResume}
-      onPause={onPause}
-      onResume={onResume}
-      isPaused={isPaused}
-      showEstimatedTime={!isComplete}
-      startTime={startTime}
-      currentOperation={!isComplete && currentItem ? `Processing ${currentItem.name}...` : undefined}
-      actions={actions}
-    />
-  )
+  // Prepare props conditionally to avoid undefined values
+  const progressBarProps: any = {
+    value: completedItems,
+    max: items.length,
+    variant,
+    size: "md" as const,
+    showValue: true,
+    showPercentage: true,
+    label: operationType,
+    allowCancel: !isComplete && !!onCancel,
+    onCancel,
+    allowPause: !isComplete && !!onPause && !!onResume,
+    onPause,
+    onResume,
+    isPaused,
+    showEstimatedTime: !isComplete,
+    startTime,
+    actions,
+  }
+
+  // Only add optional props if they have values
+  if (isComplete) {
+    progressBarProps.description = `Complete: ${successfulItems} successful${failedItems > 0 ? `, ${failedItems} failed` : ''}`
+  }
+
+  if (!isComplete && currentItem) {
+    progressBarProps.currentOperation = `Processing ${currentItem.name}...`
+  }
+
+  return <EnhancedProgressBar {...progressBarProps} />
 }
 
 /**
