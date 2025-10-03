@@ -1,6 +1,11 @@
-# Digital Signage Development Guidelines
+---
+applyTo: 'src/DigitalSignage.Api/**,src/DigitalSignage.Application/**,src/DigitalSignage.Domain/**,src/DigitalSignage.Infrastructure/**,tests/DigitalSignage.*.Tests/**'
+---
+# Digital Signage API Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2025-09-29
+Auto-generated from all feature plans. Last updated: 2025-10-03
+
+**Scope:** This guide applies exclusively to the Digital Signage API backend development (C# .NET 8 WebAPI, Entity Framework Core, PostgreSQL). For frontend/web development, refer to `copilot-instructions-ui.instructions.md`.
 
 ## Active Technologies
 - C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 8, log4net, AWS SDK S3, Npgsql, SQL Server provider (002-setup-project-structure)
@@ -25,19 +30,24 @@ Auto-generated from all feature plans. Last updated: 2025-09-29
 - TypeScript 5.x with Next.js 15 (React 18), C# .NET 8 (backend) + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, React Hook Form + Zod, Axios, Lucide Reac (021-user-schedule-assignment)
 - PostgreSQL (backend data), LocalStorage/SessionStorage (client state), existing API endpoints (021-user-schedule-assignment)
 
-## Project Structure
+## API Project Structure (Backend Only)
 ```
-src/
-├── DigitalSignage.Api/           # Web API + Controllers
-├── DigitalSignage.Application/   # Business Logic + Services  
-├── DigitalSignage.Domain/        # Core Entities + Interfaces
-└── DigitalSignage.Infrastructure/ # Data Access + EF Core
-tests/
-├── DigitalSignage.Api.Tests/
-├── DigitalSignage.Application.Tests/
-├── DigitalSignage.Domain.Tests/
-└── DigitalSignage.Infrastructure.Tests/
+digital_signage/
+├── src/
+│   ├── DigitalSignage.Api/           # Web API + Controllers
+│   ├── DigitalSignage.Application/   # Business Logic + Services  
+│   ├── DigitalSignage.Domain/        # Core Entities + Interfaces
+│   ├── DigitalSignage.Infrastructure/ # Data Access + EF Core
+│   └── digital-signage-web/         # Frontend (see UI instructions)
+├── tests/
+│   ├── DigitalSignage.Api.Tests/
+│   ├── DigitalSignage.Application.Tests/
+│   ├── DigitalSignage.Domain.Tests/
+│   └── DigitalSignage.Infrastructure.Tests/
+└── DigitalSignage.sln               # Solution file
 ```
+
+**Note:** This guide covers only the API backend projects. Frontend development is handled separately in `src/digital-signage-web/` with its own instruction file.
 
 ## Digital Signage Domain Context
 **Core Features:**
