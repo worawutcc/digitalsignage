@@ -1,6 +1,7 @@
 using DigitalSignage.Application.Services;
 using DigitalSignage.Domain.Interfaces;
 using DigitalSignage.Infrastructure.Data.Repositories;
+using DigitalSignage.Api.Authorization;
 
 namespace DigitalSignage.Api.Extensions;
 
@@ -19,6 +20,16 @@ public static class PermissionServiceExtensions
         // Register permission repository and service
         services.AddScoped<IPermissionRepository, PermissionRepository>();
         services.AddScoped<IPermissionService, PermissionService>();
+
+        // Configure authorization policies
+        services.AddAuthorization(options =>
+        {
+            // Add device management policies
+            DeviceManagementPolicies.AddPolicies(options);
+            
+            // Add user device association policies
+            UserDeviceAssociationPolicies.AddPolicies(options);
+        });
 
         return services;
     }

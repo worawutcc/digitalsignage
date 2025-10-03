@@ -140,13 +140,64 @@ public class MediaService : IMediaService
 }
 ```
 
+**Entity Configuration DateTime Pattern:**
+```csharp
+// CORRECT: PostgreSQL DateTime configuration
+builder.Property(e => e.CreatedAt)
+    .IsRequired()
+    .HasColumnType("timestamp without time zone")
+    .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+
+// INCORRECT: Avoid these patterns
+// .HasColumnType("timestamp with time zone")  // Wrong timezone type
+// .HasDefaultValueSql("GETUTCDATE()")         // Wrong SQL Server syntax
+```
+
 ### Entity Framework Core
 - `AppDbContext` in `Infrastructure/Data/`
 - Multi-provider support: PostgreSQL (primary), SQL Server (alternate)
 - Connection via `appsettings.{Environment}.json` + Environment Variables
 - Migrations: `dotnet ef migrations add <Name> -p src/DigitalSignage.Infrastructure -s src/DigitalSignage.Api`
 - Provider switching via `DatabaseProvider` configuration key
-- **DateTime Configuration**: All datetime properties use `DateTime` type with `timestamp without time zone` PostgreSQL column type. Store all times in UTC.
+
+#### DateTime Management for PostgreSQL
+**CRITICAL: All DateTime handling must use `timestamp without time zone` to avoid timezone conversion issues.**
+
+**Database Configuration:**
+- Always use `timestamp without time zone` for all DateTime columns
+- Use `NOW() AT TIME ZONE 'UTC'` for default values (not `GETUTCDATE()`)
+- Configure explicitly in Entity Configuration: `.HasColumnType("timestamp without time zone")`
+
+**Application Code Rules:**
+- When using `DateTime.UtcNow` for database operations, convert to `DateTimeKind.Unspecified`:
+  ```csharp
+  // CORRECT: Convert UTC DateTime for database storage
+  entity.CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+  
+  // CORRECT: For query parameters
+  var cutoffTime = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-7), DateTimeKind.Unspecified);
+  
+  // INCORRECT: Will cause "Cannot write DateTime with Kind=UTC" error
+  entity.CreatedAt = DateTime.UtcNow; // ❌ Don't do this
+  ```
+
+**Entity Configuration Pattern:**
+```csharp
+// CORRECT: PostgreSQL DateTime configuration
+builder.Property(e => e.CreatedAt)
+    .IsRequired()
+    .HasColumnType("timestamp without time zone")
+    .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+
+builder.Property(e => e.UpdatedAt)
+    .IsRequired()
+    .HasColumnType("timestamp without time zone");
+```
+
+**Background Services & DateTime:**
+- All DateTime values used in database queries must be converted to `DateTimeKind.Unspecified`
+- Use `DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)` pattern consistently
+- For SignalR/API responses, `DateTime.UtcNow.ToString()` is acceptable (not database-bound)
 
 ### AWS S3 Integration
 - `S3FileUploadService` for media file storage
@@ -199,7 +250,15 @@ Schedule Management:
 - **PascalCase**: Public members, classes, methods
 - **camelCase**: Local variables, method parameters
 - **_camelCase**: Private fields
-- **DateTime (UTC)**: Use `DateTime` without timezone for all datetime properties and database storage. Store all times in UTC. Use `timestamp without time zone` for PostgreSQL columns.
+- **DateTime Management**: 
+  - Use `DateTime` (not `DateTimeOffset`) for all datetime properties
+  - Store all times in UTC using `timestamp without time zone` PostgreSQL column type
+  - Convert `DateTime.UtcNow` to `DateTimeKind.Unspecified` for database operations
+  - Pattern: `DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)`
+- **PostgreSQL DateTime Standards**: 
+  - Always configure DateTime properties with `.HasColumnType("timestamp without time zone")`
+  - Use `NOW() AT TIME ZONE 'UTC'` for default values (never `GETUTCDATE()`)
+  - Avoid mixing DateTime kinds in database queries to prevent timezone conversion errors
 
 ### Testing Strategy
 - **xUnit**: Test framework

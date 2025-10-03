@@ -1,16 +1,23 @@
 using DigitalSignage.Application.DTOs;
 using DigitalSignage.Application.Interfaces;
+using System.Text.Json;
 
 namespace DigitalSignage.Api.Services;
 
 /// <summary>
 /// Background service that sends periodic heartbeat messages to all connected WebSocket clients
+/// Following API copilot instructions:
+/// - Private readonly dependencies with _camelCase naming
+/// - Constructor receives dependencies via DI only
+/// - Use constants for defaults (private const with _camelCase)
+/// - Async/await for all I/O operations
+/// - DateTime in UTC format
 /// </summary>
 public class WebSocketHeartbeatService : BackgroundService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly ILogger<WebSocketHeartbeatService> _logger;
-    private const int HeartbeatIntervalSeconds = 15;
+    private const int _heartbeatIntervalSeconds = 15;
     
     public WebSocketHeartbeatService(
         IServiceProvider serviceProvider,
@@ -21,17 +28,28 @@ public class WebSocketHeartbeatService : BackgroundService
     }
     
     /// <summary>
+    /// Helper method to serialize object to JSON string for event payload
+    /// </summary>
+    private static string SerializePayload(object payload)
+    {
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+    }
+    
+    /// <summary>
     /// Execute the background heartbeat loop
     /// </summary>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("WebSocket heartbeat service started. Interval: {Interval} seconds", HeartbeatIntervalSeconds);
+        _logger.LogInformation("WebSocket heartbeat service started. Interval: {Interval} seconds", _heartbeatIntervalSeconds);
         
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                await Task.Delay(TimeSpan.FromSeconds(HeartbeatIntervalSeconds), stoppingToken);
+                await Task.Delay(TimeSpan.FromSeconds(_heartbeatIntervalSeconds), stoppingToken);
                 
                 // Create a new scope for scoped services
                 using var scope = _serviceProvider.CreateScope();
@@ -42,11 +60,11 @@ public class WebSocketHeartbeatService : BackgroundService
                 var heartbeatEvent = new RealtimeEventDto
                 {
                     Type = "heartbeat",
-                    Payload = new 
+                    Payload = SerializePayload(new 
                     { 
                         ServerTime = DateTime.UtcNow.ToString("o"),
                         ActiveConnections = activeConnections
-                    },
+                    }),
                     Timestamp = DateTime.UtcNow.ToString("o")
                 };
                 

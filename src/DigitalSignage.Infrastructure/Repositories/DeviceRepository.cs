@@ -1,5 +1,6 @@
 using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Interfaces;
+using DigitalSignage.Domain.Enums;
 using DigitalSignage.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -82,5 +83,95 @@ public class DeviceRepository : IDeviceRepository
     {
         return await _context.Devices
             .AnyAsync(d => d.DeviceKey == deviceKey);
+    }
+
+    public async Task<IEnumerable<Device>> GetByStatusAsync(DeviceStatus status)
+    {
+        return await _context.Devices
+            .Include(d => d.ManagedByUser)
+            .Include(d => d.DeviceGroup)
+            .Where(d => d.Status == status)
+            .OrderBy(d => d.Name)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Device>> GetWithHeartbeatOlderThanAsync(DateTime olderThan)
+    {
+        return await _context.Devices
+            .Include(d => d.ManagedByUser)
+            .Include(d => d.DeviceGroup)
+            .Where(d => d.Status == DeviceStatus.Online && 
+                       d.LastHeartbeat.HasValue && 
+                       d.LastHeartbeat.Value < olderThan)
+            .OrderBy(d => d.LastHeartbeat)
+            .ToListAsync();
+    }
+
+    public async Task<bool> UpdateHeartbeatAsync(int deviceId, DateTime heartbeatTime)
+    {
+        var device = await _context.Devices.FindAsync(deviceId);
+        if (device == null)
+            return false;
+
+        device.LastHeartbeat = DateTime.SpecifyKind(heartbeatTime, DateTimeKind.Unspecified);
+        device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<bool> UpdateStatusAsync(int deviceId, DeviceStatus status)
+    {
+        var device = await _context.Devices.FindAsync(deviceId);
+        if (device == null)
+            return false;
+
+        device.Status = status;
+        device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
+    public async Task<IEnumerable<DeviceStatusLog>> GetStatusHistoryAsync(int deviceId, DateTime? fromDate = null, DateTime? toDate = null)
+    {
+        var query = _context.DeviceStatusLogs
+            .Where(log => log.DeviceId == deviceId);
+
+        if (fromDate.HasValue)
+        {
+            query = query.Where(log => log.CreatedAt >= fromDate.Value);
+        }
+
+        if (toDate.HasValue)
+        {
+            query = query.Where(log => log.CreatedAt <= toDate.Value);
+        }
+
+        return await query
+            .OrderByDescending(log => log.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<IEnumerable<Device>> GetByUserAsync(int userId)
+    {
+        return await _context.Devices
+            .Include(d => d.ManagedByUser)
+            .Include(d => d.DeviceGroup)
+            .Where(d => d.ManagedByUserId == userId)
+            .OrderBy(d => d.Name)
+            .ToListAsync();
+    }
+
+    public async Task<int> GetOnlineCountAsync()
+    {
+        return await _context.Devices
+            .CountAsync(d => d.Status == DeviceStatus.Online);
+    }
+
+    public async Task<int> GetOfflineCountAsync()
+    {
+        return await _context.Devices
+            .CountAsync(d => d.Status == DeviceStatus.Offline);
     }
 }

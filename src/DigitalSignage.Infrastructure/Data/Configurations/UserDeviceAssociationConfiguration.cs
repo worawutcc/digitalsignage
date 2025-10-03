@@ -8,6 +8,9 @@ public class UserDeviceAssociationConfiguration : IEntityTypeConfiguration<UserD
 {
     public void Configure(EntityTypeBuilder<UserDeviceAssociation> builder)
     {
+        // Apply BaseEntity configuration
+        BaseEntityConfiguration.ConfigureBaseEntity(builder);
+        
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.AssociationType)

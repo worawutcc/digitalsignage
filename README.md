@@ -1,6 +1,12 @@
 # Digital Signage System
 
-A comprehensive digital signage management system built with **Clean Architecture**, featuring a .NET 8 backend API and Next.js 15 admin interface for device management, content scheduling, and real-time monitoring.
+A comprehensive digital signage management system built with **Clean Architecture**, featuring a .NET 8 backend API with SignalR WebSocket support and Next.js 15 admin interface for device management, content scheduling, and real-time monitoring.
+
+![Build Status](https://github.com/worawutcc/digitalsignage/workflows/CI/badge.svg)
+![.NET Version](https://img.shields.io/badge/.NET-8.0-blue.svg)
+![Next.js Version](https://img.shields.io/badge/Next.js-15-black.svg)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)
+![License](https://img.shields.io/badge/license-MIT-green.svg)
 
 ## 🏗️ Architecture
 
@@ -63,11 +69,19 @@ src/digital-signage-web/
 - **Permission Auditing**: Complete audit trail of permission changes
 - **User-Device Associations**: Fine-grained access control per device/group
 
-### 📊 Audit Trail System
-- **Automatic Audit Logging**: All entity changes tracked automatically
-- **BaseEntity Pattern**: Consistent audit fields across all domain entities
+### � Real-time Communication (SignalR WebSockets)
+- **Live Dashboard Updates**: Real-time device status monitoring
+- **Background Services**: DeviceHeartbeatService and WebSocketHeartbeatService for continuous monitoring
+- **Notification System**: Real-time alerts for device status changes, registration requests, and system events
+- **Connection Management**: Authenticated WebSocket connections with automatic reconnection
+- **Event Broadcasting**: Admin notifications, device alerts, and system status updates
+
+### �📊 Audit Trail System
+- **Automatic Audit Logging**: All entity changes tracked automatically with PostgreSQL `timestamp without time zone`
+- **BaseEntity Pattern**: Consistent audit fields across all domain entities with proper DateTime handling
 - **User Context Integration**: Links all changes to authenticated users
 - **Performance Optimized**: < 10% overhead for bulk operations
+- **DateTime Compliance**: All database DateTime operations use `DateTimeKind.Unspecified` for PostgreSQL compatibility
 
 ### 📱 Android TV Support
 - **Self-Registration**: PIN-based device registration workflow with QR code support
@@ -135,13 +149,14 @@ dotnet ef database update -p src/DigitalSignage.Infrastructure -s src/DigitalSig
 
 5. **Start the backend API**
 ```bash
-dotnet run --project src/DigitalSignage.Api
+dotnet run --project src/DigitalSignage.Api --environment Development
 ```
 
 6. **Access the API**
-- API: `https://localhost:7001`
-- Swagger UI: `https://localhost:7001/swagger`
-- Health Checks: `https://localhost:7001/health`
+- API: `http://localhost:5100`
+- Swagger UI: `http://localhost:5100/swagger`
+- Health Checks: `http://localhost:5100/health`
+- SignalR WebSocket: `ws://localhost:5100/ws` (requires authentication)
 
 ### Frontend Setup
 
@@ -160,6 +175,7 @@ npm install
 # Create .env.local file
 NEXT_PUBLIC_API_URL=http://localhost:5100
 NEXT_PUBLIC_WS_URL=ws://localhost:5100/ws
+NEXT_PUBLIC_ENABLE_WEBSOCKET=true
 ```
 
 4. **Start development server**
@@ -187,12 +203,17 @@ npm run start
 - **Schedules**: Content scheduling configurations
 - **Playlists**: Content sequence management
 
-### Audit Trail
+### Audit Trail & Database Configuration
 All business entities inherit from `BaseEntity` and include:
-- `created_at` - Entity creation timestamp (must use DateTimeKind.Unspecified for PostgreSQL)
-- `updated_at` - Last modification timestamp (must use DateTimeKind.Unspecified for PostgreSQL)
+- `created_at` - Entity creation timestamp (PostgreSQL `timestamp without time zone`)
+- `updated_at` - Last modification timestamp (PostgreSQL `timestamp without time zone`)
 - `created_by` - User who created the entity
 - `updated_by` - User who last modified the entity
+
+**Critical Database Configuration:**
+- All DateTime properties must use `DateTimeKind.Unspecified` for PostgreSQL compatibility
+- Entity configurations use `.HasColumnType("timestamp without time zone")`
+- BaseEntity pattern ensures consistent audit field handling across all entities
 
 ## 🔧 Development
 
@@ -256,23 +277,44 @@ npm run start
 npm run format
 ```
 
-### ⚠️ PostgreSQL DateTimeKind Troubleshooting
+### ⚠️ PostgreSQL DateTime Configuration (CRITICAL)
 
-**Important:** When using PostgreSQL with `timestamp without time zone`, all `DateTime` values must have `DateTimeKind.Unspecified`. Assigning `DateTime.UtcNow` or `DateTime.Now` with `DateTimeKind.Utc` will cause runtime errors:
+**PostgreSQL `timestamp without time zone` Requirement:**
+All DateTime fields in the database use `timestamp without time zone` to avoid timezone conversion issues. All application code must comply with this pattern.
 
+**Common Error:**
 ```
 System.ArgumentException: Cannot write DateTime with Kind=UTC to PostgreSQL type 'timestamp without time zone'
 ```
 
-**Solution:**
-- Always assign audit fields (CreatedAt, UpdatedAt, etc.) using:
-  ```csharp
-  DateTime.SpecifyKind(DateTime.Now, DateTimeKind.Unspecified)
-  ```
-- Ensure all automatic audit field population (e.g. in `AppDbContext.UpdateAuditFields`) uses this pattern.
-- Never use DateTimeKind.Utc for fields mapped to `timestamp without time zone`.
+**Correct Implementation:**
+```csharp
+// ✅ CORRECT: For database operations
+entity.CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+entity.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
-See `src/DigitalSignage.Infrastructure/Data/AppDbContext.cs` and `src/DigitalSignage.Infrastructure/Data/DbSeeder.cs` for correct usage examples.
+// ✅ CORRECT: For query parameters
+var cutoffTime = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-7), DateTimeKind.Unspecified);
+
+// ❌ INCORRECT: Will cause runtime errors
+entity.CreatedAt = DateTime.UtcNow; // Has DateTimeKind.Utc
+```
+
+**Entity Configuration Pattern:**
+```csharp
+// BaseEntityConfiguration.cs - Applied to all entities
+builder.Property(e => e.CreatedAt)
+    .IsRequired()
+    .HasColumnType("timestamp without time zone")
+    .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+```
+
+**Fixed Services:**
+- ✅ DeviceService, BulkOperationsService, UserDeviceAssociationService
+- ✅ DeviceRegistrationService, DeviceMonitoringService 
+- ✅ DeviceHeartbeatService (background service)
+
+All services now properly handle DateTime conversion for PostgreSQL compatibility.
 
 ## 📋 API Endpoints
 
@@ -354,15 +396,23 @@ DELETE /api/schedules/{id}               # Delete schedule
 GET    /api/schedules/device/{deviceId}  # Get device schedules
 ```
 
-### WebSocket Real-Time Events
+### WebSocket Real-Time Events (SignalR)
 
 **Endpoint**: `ws://localhost:5100/ws?access_token=<JWT_TOKEN>`  
-**Protocol**: SignalR over WebSocket
+**Protocol**: SignalR over WebSocket with automatic reconnection
 
-Provides real-time bidirectional communication for admin dashboard updates. Authenticated connections receive live event notifications for system state changes.
+Provides real-time bidirectional communication for admin dashboard updates and device monitoring. Authenticated connections receive live event notifications for system state changes.
+
+#### Background Services
+- **DeviceHeartbeatService**: Monitors device connectivity and automatically updates device status (Online/Offline)
+- **WebSocketHeartbeatService**: Maintains WebSocket connections with 15-second heartbeat intervals
+- **DeviceNotificationService**: Broadcasts device-related events to connected clients
+- **RealtimeEventBroadcaster**: Manages event distribution to appropriate user groups
 
 #### Event Types
 - **`device_status_changed`** - Device online/offline/error state changes
+- **`device_registered`** - New device registration requests
+- **`device_approved`** - Device registration approvals
 - **`schedule_conflict_detected`** - Schedule overlap conflicts during creation/update
 - **`schedule_updated`** - Schedule CRUD operations (created/updated/deleted)
 - **`media_uploaded`** - Media file upload completion
@@ -371,9 +421,10 @@ Provides real-time bidirectional communication for admin dashboard updates. Auth
 - **`heartbeat`** - Connection keepalive (sent every 15 seconds)
 
 #### Connection Requirements
-- **Authentication**: Valid JWT token required (query parameter or header)
-- **Authorization**: Role-based event filtering (admin sees all events, viewers see limited events)
-- **Heartbeat**: Server sends heartbeat every 15 seconds to maintain connection
+- **Authentication**: Valid JWT token required (query parameter or Authorization header)
+- **Authorization**: Role-based event filtering (admins see all events, users see limited events)
+- **Automatic Reconnection**: Built-in retry logic with exponential backoff
+- **Connection Logging**: All connections tracked in WebSocketConnectionLogs table
 
 #### Event Message Format
 ```json
@@ -381,31 +432,79 @@ Provides real-time bidirectional communication for admin dashboard updates. Auth
   "type": "device_status_changed",
   "payload": {
     "deviceId": "device-123",
+    "deviceKey": "ABC123DEF456",
     "status": "offline",
-    "lastSeen": "2025-10-01T10:00:00Z"
+    "lastSeen": "2025-10-03T10:00:00Z",
+    "location": "Conference Room A"
   },
-  "timestamp": "2025-10-01T10:00:01Z"
+  "timestamp": "2025-10-03T10:00:01.123Z"
 }
 ```
 
-#### Example Usage (JavaScript)
+#### Client Implementation (TypeScript + React)
 ```javascript
 import * as signalR from '@microsoft/signalr';
 
+// Connection setup with authentication
 const connection = new signalR.HubConnectionBuilder()
   .withUrl('http://localhost:5100/ws', {
-    accessTokenFactory: () => localStorage.getItem('jwt_token')
+    accessTokenFactory: () => localStorage.getItem('jwt_token'),
+    skipNegotiation: true,
+    transport: signalR.HttpTransportType.WebSockets
   })
-  .withAutomaticReconnect()
+  .withAutomaticReconnect([0, 2000, 10000, 30000])
+  .configureLogging(signalR.LogLevel.Information)
   .build();
 
+// Event handlers
 connection.on('ReceiveEvent', (event) => {
   console.log('Event received:', event.type, event.payload);
+  
+  switch (event.type) {
+    case 'device_status_changed':
+      updateDeviceStatus(event.payload);
+      break;
+    case 'device_registered':
+      showRegistrationNotification(event.payload);
+      break;
+    case 'heartbeat':
+      updateConnectionStatus('connected');
+      break;
+  }
 });
 
-await connection.start();
-console.log('Connected to WebSocket');
+// Connection lifecycle
+connection.onreconnecting(() => {
+  console.log('Reconnecting to SignalR...');
+  updateConnectionStatus('reconnecting');
+});
+
+connection.onreconnected(() => {
+  console.log('Reconnected to SignalR');
+  updateConnectionStatus('connected');
+});
+
+connection.onclose(() => {
+  console.log('SignalR connection closed');
+  updateConnectionStatus('disconnected');
+});
+
+// Start connection
+try {
+  await connection.start();
+  console.log('Connected to SignalR hub');
+  updateConnectionStatus('connected');
+} catch (error) {
+  console.error('SignalR connection failed:', error);
+  updateConnectionStatus('error');
+}
 ```
+
+#### Production Configuration
+- **Load Balancing**: Sticky sessions required for SignalR
+- **Scaling**: Redis backplane for multi-instance deployments
+- **SSL**: WSS (WebSocket Secure) for production environments
+- **Rate Limiting**: Connection and message rate limiting implemented
 
 See [WebSocket Connection Flow](specs/018-api-implement-websocket/contracts/connection-flow.md) for detailed documentation.
 
@@ -543,8 +642,13 @@ Full API documentation available at `/swagger` when running the application.
 #### Development (`.env.local`)
 ```bash
 # API Configuration
-NEXT_PUBLIC_API_URL=http://localhost:5000
+NEXT_PUBLIC_API_URL=http://localhost:5100
 NEXT_PUBLIC_API_TIMEOUT=30000
+
+# WebSocket Configuration
+NEXT_PUBLIC_WS_URL=ws://localhost:5100/ws
+NEXT_PUBLIC_ENABLE_WEBSOCKET=true
+NEXT_PUBLIC_WS_RECONNECT_INTERVAL=5000
 
 # Authentication
 NEXT_PUBLIC_AUTH_TOKEN_KEY=ds_auth_token
@@ -553,14 +657,15 @@ NEXT_PUBLIC_REFRESH_TOKEN_KEY=ds_refresh_token
 # Feature Flags
 NEXT_PUBLIC_ENABLE_ANALYTICS=false
 NEXT_PUBLIC_ENABLE_DEBUG=true
+NEXT_PUBLIC_ENABLE_REALTIME_NOTIFICATIONS=true
 
 # Upload Configuration
 NEXT_PUBLIC_MAX_FILE_SIZE=52428800
 NEXT_PUBLIC_ALLOWED_FILE_TYPES=image/jpeg,image/png,video/mp4
 
-# Optional: Application metadata
+# Application metadata
 NEXT_PUBLIC_APP_NAME=Digital Signage Admin
-NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_APP_VERSION=1.2.0
 ```
 
 #### Production (`.env.production`)
@@ -569,6 +674,11 @@ NEXT_PUBLIC_APP_VERSION=1.0.0
 NEXT_PUBLIC_API_URL=https://api.digitalsignage.com
 NEXT_PUBLIC_API_TIMEOUT=30000
 
+# WebSocket Configuration
+NEXT_PUBLIC_WS_URL=wss://api.digitalsignage.com/ws
+NEXT_PUBLIC_ENABLE_WEBSOCKET=true
+NEXT_PUBLIC_WS_RECONNECT_INTERVAL=10000
+
 # Authentication
 NEXT_PUBLIC_AUTH_TOKEN_KEY=ds_auth_token
 NEXT_PUBLIC_REFRESH_TOKEN_KEY=ds_refresh_token
@@ -576,6 +686,7 @@ NEXT_PUBLIC_REFRESH_TOKEN_KEY=ds_refresh_token
 # Feature Flags
 NEXT_PUBLIC_ENABLE_ANALYTICS=true
 NEXT_PUBLIC_ENABLE_DEBUG=false
+NEXT_PUBLIC_ENABLE_REALTIME_NOTIFICATIONS=true
 
 # Upload Configuration
 NEXT_PUBLIC_MAX_FILE_SIZE=52428800
@@ -583,7 +694,7 @@ NEXT_PUBLIC_ALLOWED_FILE_TYPES=image/jpeg,image/png,video/mp4,application/pdf
 
 # Application metadata
 NEXT_PUBLIC_APP_NAME=Digital Signage Admin
-NEXT_PUBLIC_APP_VERSION=1.0.0
+NEXT_PUBLIC_APP_VERSION=1.2.0
 ```
 
 **Important:** Never commit `.env.local` or `.env.production` files. Use `.env.example` as template.
@@ -617,8 +728,9 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - AWS__Region=us-east-1
       - AWS__S3__BucketName=digital-signage-prod
+      - ASPNETCORE_URLS=http://+:8080
     ports:
-      - "5000:8080"
+      - "5100:8080"
     depends_on:
       - database
 
@@ -628,6 +740,8 @@ services:
       dockerfile: Dockerfile
     environment:
       - NEXT_PUBLIC_API_URL=http://api:8080
+      - NEXT_PUBLIC_WS_URL=ws://api:8080/ws
+      - NEXT_PUBLIC_ENABLE_WEBSOCKET=true
     ports:
       - "3000:3000"
     depends_on:
@@ -661,9 +775,10 @@ docker-compose up -d --build
 docker build -t digital-signage-api -f src/DigitalSignage.Api/Dockerfile .
 
 # Run container
-docker run -p 5000:8080 \
+docker run -p 5100:8080 \
   -e ConnectionStrings__DefaultConnection="Host=host.docker.internal;Database=digital_signage;Username=postgres;Password=your_password" \
   -e ASPNETCORE_ENVIRONMENT=Production \
+  -e ASPNETCORE_URLS=http://+:8080 \
   -e AWS__Region=us-east-1 \
   -e AWS__S3__BucketName=digital-signage-prod \
   digital-signage-api
@@ -800,6 +915,63 @@ Each spec includes:
 ### API Documentation
 - OpenAPI/Swagger specification available at `/swagger`
 - Postman collection available in `/docs/api/`
+
+## 🧪 Testing
+
+Run the test suite to verify functionality:
+
+```bash
+# Run all tests
+dotnet test
+
+# Run specific test project
+dotnet test tests/DigitalSignage.Api.Tests
+dotnet test tests/DigitalSignage.Application.Tests
+dotnet test tests/DigitalSignage.Domain.Tests
+dotnet test tests/DigitalSignage.Infrastructure.Tests
+```
+
+### WebSocket Testing
+
+Test real-time features using browser developer tools or SignalR clients:
+
+```javascript
+// Browser console test
+const connection = new signalR.HubConnectionBuilder()
+    .withUrl("http://localhost:5100/ws")
+    .withAutomaticReconnect()
+    .build();
+
+connection.start().then(() => {
+    console.log("Connected to SignalR hub");
+    
+    // Listen for device status updates
+    connection.on("DeviceStatusChanged", (deviceId, status) => {
+        console.log(`Device ${deviceId} status: ${status}`);
+    });
+    
+    // Listen for schedule conflicts
+    connection.on("ScheduleConflictDetected", (data) => {
+        console.log("Schedule conflict:", data);
+    });
+});
+```
+
+### Integration Testing
+
+Verify the complete system with Docker Compose:
+
+```bash
+# Start all services
+docker-compose up -d
+
+# Run health checks
+curl http://localhost:5100/health
+curl http://localhost:3000/api/health
+
+# Check WebSocket connection
+wscat -c ws://localhost:5100/ws
+```
 
 ## 🔒 Security Considerations
 

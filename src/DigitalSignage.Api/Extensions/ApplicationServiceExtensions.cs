@@ -7,6 +7,7 @@ using DigitalSignage.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using DigitalSignage.Infrastructure.Data.Repositories;
 using AutoMapper;
+using DigitalSignage.Api.Services;
 
 namespace DigitalSignage.Api.Extensions;
 
@@ -32,6 +33,11 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IPinGenerationService, PinGenerationService>();
         services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService>();
         
+        // Android TV Management Application Services - temporarily disabled for compilation
+        // services.AddScoped<IAndroidTVDeviceManagementService, AndroidTVDeviceManagementService>();
+        // services.AddScoped<IAndroidTVConfigurationManagementService, AndroidTVConfigurationManagementService>();
+        // services.AddScoped<IAndroidTVStatusManagementService, AndroidTVStatusManagementService>();
+        
         // QR Code Services
         services.AddScoped<IQrCodeService, QrCodeService>();
         
@@ -52,6 +58,14 @@ public static class ApplicationServiceExtensions
 
         // DbContext mapping for services that need generic DbContext
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
+
+        // Device Notification Services (Api layer implementations)
+        services.AddScoped<IDeviceNotificationService, DeviceNotificationService>();
+        services.AddScoped<IRealtimeEventBroadcaster, RealtimeEventBroadcaster>();
+        
+        // Background Services
+        services.AddHostedService<DeviceHeartbeatService>();
+        services.AddHostedService<WebSocketHeartbeatService>();
 
         return services;
     }

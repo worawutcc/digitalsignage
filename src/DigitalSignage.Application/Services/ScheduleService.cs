@@ -1,3 +1,4 @@
+using System.Text.Json;
 using DigitalSignage.Application.DTOs;
 using DigitalSignage.Application.DTOs.RealtimeEvents;
 using DigitalSignage.Application.Interfaces;
@@ -25,6 +26,17 @@ public class ScheduleService : IScheduleService
         _context = context;
         _eventBroadcaster = eventBroadcaster;
         _logger = logger;
+    }
+    
+    /// <summary>
+    /// Helper method to serialize object to JSON string for event payload
+    /// </summary>
+    private static string SerializePayload(object payload)
+    {
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
     }
     
     /// <summary>
@@ -73,13 +85,13 @@ public class ScheduleService : IScheduleService
         await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
         {
             Type = "schedule_updated",
-            Payload = new ScheduleUpdatedPayload
+            Payload = SerializePayload(new ScheduleUpdatedPayload
             {
                 ScheduleId = schedule.Id,
                 Action = "created",
                 ScheduleName = schedule.Name,
                 AffectedDeviceIds = new[] { deviceId }
-            },
+            }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
         
@@ -93,13 +105,13 @@ public class ScheduleService : IScheduleService
             await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
             {
                 Type = "schedule_conflict_detected",
-                Payload = new ScheduleConflictPayload
+                Payload = SerializePayload(new ScheduleConflictPayload
                 {
                     ScheduleId = schedule.Id,
                     ConflictType = "overlap",
                     ConflictingScheduleIds = conflictingSchedules.ToArray(),
                     Message = $"Schedule '{schedule.Name}' overlaps with {conflictingSchedules.Length} existing schedule(s)"
-                },
+                }),
                 Timestamp = DateTime.UtcNow.ToString("o")
             });
             
@@ -142,13 +154,13 @@ public class ScheduleService : IScheduleService
         await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
         {
             Type = "schedule_updated",
-            Payload = new ScheduleUpdatedPayload
+            Payload = SerializePayload(new ScheduleUpdatedPayload
             {
                 ScheduleId = schedule.Id,
                 Action = "updated",
                 ScheduleName = schedule.Name,
                 AffectedDeviceIds = new[] { schedule.DeviceId }
-            },
+            }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
         
@@ -179,13 +191,13 @@ public class ScheduleService : IScheduleService
         await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
         {
             Type = "schedule_updated",
-            Payload = new ScheduleUpdatedPayload
+            Payload = SerializePayload(new ScheduleUpdatedPayload
             {
                 ScheduleId = scheduleId,
                 Action = "deleted",
                 ScheduleName = scheduleName,
                 AffectedDeviceIds = new[] { deviceId }
-            },
+            }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
         
