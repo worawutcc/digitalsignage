@@ -11,9 +11,10 @@ export function DeviceCard({
   onClick 
 }: DeviceCardProps) {
   const statusColors = {
-    online: 'bg-green-100 text-green-800',
-    offline: 'bg-red-100 text-red-800',
-    maintenance: 'bg-yellow-100 text-yellow-800',
+    Online: 'bg-green-100 text-green-800',
+    Offline: 'bg-red-100 text-red-800',
+    Maintenance: 'bg-yellow-100 text-yellow-800',
+    Error: 'bg-red-100 text-red-800',
   }
 
   return (
@@ -32,10 +33,10 @@ export function DeviceCard({
       
       <p className="text-muted-foreground mb-2">{device.location}</p>
       <p className="text-sm text-muted-foreground mb-4">
-        Resolution: {device.resolution}
+        Type: {device.deviceType}
       </p>
       <p className="text-xs text-muted-foreground mb-4">
-        Last seen: {new Date(device.lastSeen).toLocaleString()}
+        Last heartbeat: {device.lastHeartbeat ? new Date(device.lastHeartbeat).toLocaleString() : 'Never'}
       </p>
       
       <div className="flex gap-2 mt-4">

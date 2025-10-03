@@ -1,15 +1,8 @@
 /**
- * Types for device-related components
+ * Types for device-related components - re-export from API types
  */
-export interface Device {
-  id: number
-  name: string
-  location: string
-  status: 'online' | 'offline' | 'maintenance'
-  lastSeen: string
-  resolution: string
-  deviceGroupId?: number
-}
+import { Device } from '@/types/api'
+export type { Device }
 
 export interface DeviceCardProps {
   device: Device

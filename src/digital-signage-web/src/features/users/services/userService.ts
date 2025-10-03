@@ -56,7 +56,7 @@ class UserService {
   /**
    * Get single user by ID
    */
-  async getUserById(id: string): Promise<User> {
+  async getUserById(id: number): Promise<User> {
     const response = await apiClient.get<{ success: boolean; data: User }>(
       `${this.basePath}/${id}`
     );
@@ -77,7 +77,7 @@ class UserService {
   /**
    * Update existing user
    */
-  async updateUser(id: string, data: UpdateUserRequest): Promise<User> {
+  async updateUser(id: number, data: UpdateUserRequest): Promise<User> {
     const response = await apiClient.put<{ success: boolean; data: User }>(
       `${this.basePath}/${id}`,
       data
@@ -88,14 +88,14 @@ class UserService {
   /**
    * Delete user
    */
-  async deleteUser(id: string): Promise<void> {
+  async deleteUser(id: number): Promise<void> {
     await apiClient.delete(`${this.basePath}/${id}`);
   }
 
   /**
    * Activate user account
    */
-  async activateUser(id: string): Promise<User> {
+  async activateUser(id: number): Promise<User> {
     const response = await apiClient.post<{ success: boolean; data: User }>(
       `${this.basePath}/${id}/activate`
     );
@@ -105,7 +105,7 @@ class UserService {
   /**
    * Deactivate user account
    */
-  async deactivateUser(id: string): Promise<User> {
+  async deactivateUser(id: number): Promise<User> {
     const response = await apiClient.post<{ success: boolean; data: User }>(
       `${this.basePath}/${id}/deactivate`
     );
@@ -115,7 +115,7 @@ class UserService {
   /**
    * Reset user password (admin action)
    */
-  async resetUserPassword(id: string): Promise<{ temporaryPassword: string }> {
+  async resetUserPassword(id: number): Promise<{ temporaryPassword: string }> {
     const response = await apiClient.post<{
       success: boolean;
       data: { temporaryPassword: string };
@@ -180,15 +180,26 @@ class UserService {
   ): boolean {
     if (!user || !user.role) return false;
 
-    // Super admin has all permissions
-    if (user.role.level === 1) return true;
+    // Admin has all permissions
+    if (user.role === 'Admin') return true;
 
-    // Check specific permissions
-    return user.role.permissions.some(
-      (p) =>
-        (p.resource === resource || p.resource === '*') &&
-        (p.action === action || p.action === '*')
-    );
+    // User has limited permissions
+    if (user.role === 'User') {
+      const userPermissions = [
+        { resource: 'devices', action: 'read' },
+        { resource: 'content', action: 'read' },
+        { resource: 'playlists', action: 'read' },
+        { resource: 'schedules', action: 'read' }
+      ];
+      
+      return userPermissions.some(
+        (p) =>
+          (p.resource === resource || p.resource === '*') &&
+          (p.action === action || p.action === '*')
+      );
+    }
+
+    return false;
   }
 
   /**
@@ -200,31 +211,32 @@ class UserService {
     // Can't manage yourself for certain operations
     if (currentUser.id === targetUser.id) return false;
 
-    // Super admin can manage everyone
-    if (currentUser.role.level === 1) return true;
+    // Admin can manage everyone
+    if (currentUser.role === 'Admin') return true;
 
-    // Can only manage users with lower level roles
-    return currentUser.role.level < targetUser.role.level;
+    // Regular users cannot manage other users
+    return false;
   }
 
   /**
    * Check if user can assign a specific role
    */
-  canAssignRole(currentUser: User | null, role: UserRole): boolean {
+  canAssignRole(currentUser: User | null, role: 'Admin' | 'User'): boolean {
     if (!currentUser) return false;
 
-    // Super admin can assign any role
-    if (currentUser.role.level === 1) return true;
+    // Admin can assign any role
+    if (currentUser.role === 'Admin') return true;
 
-    // Can only assign roles with equal or lower level
-    return currentUser.role.level <= role.level;
+    // Regular users cannot assign roles
+    return false;
   }
 
   /**
    * Get user's full name
    */
   getUserFullName(user: User): string {
-    return `${user.firstName} ${user.lastName}`.trim() || user.username;
+    // Use fullName from API, fallback to legacy firstName/lastName if available, then email
+    return user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
   }
 
   /**

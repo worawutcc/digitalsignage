@@ -20,25 +20,36 @@ export function usePermission(permission: string): PermissionCheck {
   const { user, isLoading } = useSelector((state: RootState) => state.auth)
 
   const hasPermission = useMemo(() => {
-    if (!user || !user.permissions) {
+    if (!user) {
       return false
     }
 
-    // Check for exact permission match
-    if (user.permissions.includes(permission)) {
-      return true
-    }
-
-    // Check for wildcard permissions (e.g., "devices:*" matches "devices:read")
-    const [resource, action] = permission.split(':')
-    const wildcardPermission = `${resource}:*`
-    if (user.permissions.includes(wildcardPermission)) {
-      return true
-    }
-
     // Admin role has all permissions
-    if (user.role === 'admin') {
+    if (user.role === 'Admin') {
       return true
+    }
+
+    // User role has limited permissions (customize as needed)
+    if (user.role === 'User') {
+      // Define which permissions regular users have
+      const userPermissions = [
+        'devices:read',
+        'content:read',
+        'playlists:read',
+        'schedules:read'
+      ]
+      
+      // Check for exact permission match
+      if (userPermissions.includes(permission)) {
+        return true
+      }
+
+      // Check for wildcard permissions (e.g., "devices:*" matches "devices:read")
+      const [resource] = permission.split(':')
+      const wildcardPermission = `${resource}:*`
+      if (userPermissions.includes(wildcardPermission)) {
+        return true
+      }
     }
 
     return false
@@ -58,27 +69,39 @@ export function usePermissions(permissions: string[]): PermissionCheck {
   const { user, isLoading } = useSelector((state: RootState) => state.auth)
 
   const hasPermission = useMemo(() => {
-    if (!user || !user.permissions) {
+    if (!user) {
       return false
     }
 
     // Admin role has all permissions
-    if (user.role === 'admin') {
+    if (user.role === 'Admin') {
       return true
     }
 
-    // Check if user has any of the required permissions
-    return permissions.some((permission) => {
-      // Check for exact permission match
-      if (user.permissions.includes(permission)) {
-        return true
-      }
+    // User role has limited permissions
+    if (user.role === 'User') {
+      const userPermissions = [
+        'devices:read',
+        'content:read',
+        'playlists:read',
+        'schedules:read'
+      ]
+      
+      // Check if user has any of the required permissions
+      return permissions.some((permission) => {
+        // Check for exact permission match
+        if (userPermissions.includes(permission)) {
+          return true
+        }
 
-      // Check for wildcard permissions
-      const [resource, action] = permission.split(':')
-      const wildcardPermission = `${resource}:*`
-      return user.permissions.includes(wildcardPermission)
-    })
+        // Check for wildcard permissions
+        const [resource] = permission.split(':')
+        const wildcardPermission = `${resource}:*`
+        return userPermissions.includes(wildcardPermission)
+      })
+    }
+
+    return false
   }, [user, permissions])
 
   return {
@@ -95,27 +118,39 @@ export function useRequireAllPermissions(permissions: string[]): PermissionCheck
   const { user, isLoading } = useSelector((state: RootState) => state.auth)
 
   const hasPermission = useMemo(() => {
-    if (!user || !user.permissions) {
+    if (!user) {
       return false
     }
 
     // Admin role has all permissions
-    if (user.role === 'admin') {
+    if (user.role === 'Admin') {
       return true
     }
 
-    // Check if user has all required permissions
-    return permissions.every((permission) => {
-      // Check for exact permission match
-      if (user.permissions.includes(permission)) {
-        return true
-      }
+    // User role has limited permissions
+    if (user.role === 'User') {
+      const userPermissions = [
+        'devices:read',
+        'content:read',
+        'playlists:read',
+        'schedules:read'
+      ]
+      
+      // Check if user has all required permissions
+      return permissions.every((permission) => {
+        // Check for exact permission match
+        if (userPermissions.includes(permission)) {
+          return true
+        }
 
-      // Check for wildcard permissions
-      const [resource, action] = permission.split(':')
-      const wildcardPermission = `${resource}:*`
-      return user.permissions.includes(wildcardPermission)
-    })
+        // Check for wildcard permissions
+        const [resource] = permission.split(':')
+        const wildcardPermission = `${resource}:*`
+        return userPermissions.includes(wildcardPermission)
+      })
+    }
+
+    return false
   }, [user, permissions])
 
   return {
@@ -136,7 +171,13 @@ export function useRole(role: 'admin' | 'manager' | 'user'): PermissionCheck {
       return false
     }
 
-    return user.role === role
+    // Map new role enum to old role strings
+    const roleMapping = {
+      'Admin': 'admin',
+      'User': 'user'
+    }
+
+    return roleMapping[user.role] === role
   }, [user, role])
 
   return {
@@ -157,7 +198,13 @@ export function useRoles(roles: Array<'admin' | 'manager' | 'user'>): Permission
       return false
     }
 
-    return roles.includes(user.role)
+    // Map new role enum to old role strings
+    const roleMapping = {
+      'Admin': 'admin',
+      'User': 'user'
+    }
+
+    return roles.includes(roleMapping[user.role] as 'admin' | 'manager' | 'user')
   }, [user, roles])
 
   return {
@@ -191,17 +238,17 @@ export function useAuth(): {
 export function useResourcePermission(
   resource: string,
   action: 'create' | 'read' | 'update' | 'delete',
-  resourceOwnerId?: string
+  resourceOwnerId?: number
 ): PermissionCheck {
   const { user, isLoading } = useSelector((state: RootState) => state.auth)
 
   const hasPermission = useMemo(() => {
-    if (!user || !user.permissions) {
+    if (!user) {
       return false
     }
 
     // Admin role has all permissions
-    if (user.role === 'admin') {
+    if (user.role === 'Admin') {
       return true
     }
 
@@ -210,16 +257,26 @@ export function useResourcePermission(
       return true
     }
 
-    // Check for specific action permission
-    const permission = `${resource}:${action}`
-    if (user.permissions.includes(permission)) {
-      return true
-    }
+    // User role has limited permissions
+    if (user.role === 'User') {
+      const userPermissions = [
+        'devices:read',
+        'content:read',
+        'playlists:read',
+        'schedules:read'
+      ]
+      
+      // Check for specific action permission
+      const permission = `${resource}:${action}`
+      if (userPermissions.includes(permission)) {
+        return true
+      }
 
-    // Check for wildcard permission
-    const wildcardPermission = `${resource}:*`
-    if (user.permissions.includes(wildcardPermission)) {
-      return true
+      // Check for wildcard permission
+      const wildcardPermission = `${resource}:*`
+      if (userPermissions.includes(wildcardPermission)) {
+        return true
+      }
     }
 
     return false

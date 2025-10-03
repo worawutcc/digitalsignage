@@ -6,20 +6,7 @@ import { DataTable } from '@/components/tables/DataTable'
 import { Button } from '@/components/ui/Button'
 import { DeviceStatus } from './DeviceStatus'
 import { cn } from '@/lib/utils'
-
-export interface Device {
-  id: string
-  name: string
-  location: string
-  status: 'online' | 'offline' | 'error' | 'maintenance'
-  resolution: string
-  lastSeen: string
-  version: string
-  ipAddress: string
-  deviceGroup?: string
-  uptime?: number
-  currentContent?: string
-}
+import { Device } from '@/types/api'
 
 export interface DeviceListProps {
   devices: Device[]
@@ -174,7 +161,7 @@ export function DeviceList({
             size="sm"
             onClick={() => onDeviceRestart?.(device)}
             className="p-1"
-            disabled={device.status === 'offline'}
+            disabled={device.status === 'Offline'}
           >
             <Wifi className="h-4 w-4" />
           </Button>
@@ -192,9 +179,9 @@ export function DeviceList({
 
   const getRowClassName = (device: Device) => {
     return cn(
-      selectedDevices.includes(device.id) && 'bg-blue-50 border-blue-200',
-      device.status === 'error' && 'bg-red-50',
-      device.status === 'maintenance' && 'bg-yellow-50'
+      selectedDevices.includes(device.id.toString()) && 'bg-blue-50 border-blue-200',
+      device.status === 'Error' && 'bg-red-50',
+      device.status === 'Maintenance' && 'bg-yellow-50'
     )
   }
 
@@ -246,7 +233,7 @@ export function DeviceList({
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">Online</p>
               <p className="text-2xl font-semibold text-green-600">
-                {devices.filter(d => d.status === 'online').length}
+                {devices.filter(d => d.status === 'Online').length}
               </p>
             </div>
             <div className="h-2 w-2 bg-green-500 rounded-full" />
@@ -258,7 +245,7 @@ export function DeviceList({
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">Offline</p>
               <p className="text-2xl font-semibold text-red-600">
-                {devices.filter(d => d.status === 'offline').length}
+                {devices.filter(d => d.status === 'Offline').length}
               </p>
             </div>
             <div className="h-2 w-2 bg-red-500 rounded-full" />
@@ -270,7 +257,7 @@ export function DeviceList({
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">Errors</p>
               <p className="text-2xl font-semibold text-yellow-600">
-                {devices.filter(d => d.status === 'error').length}
+                {devices.filter(d => d.status === 'Error').length}
               </p>
             </div>
             <div className="h-2 w-2 bg-yellow-500 rounded-full" />
@@ -282,7 +269,7 @@ export function DeviceList({
             <div className="flex-1">
               <p className="text-sm font-medium text-gray-600">Maintenance</p>
               <p className="text-2xl font-semibold text-blue-600">
-                {devices.filter(d => d.status === 'maintenance').length}
+                {devices.filter(d => d.status === 'Maintenance').length}
               </p>
             </div>
             <div className="h-2 w-2 bg-blue-500 rounded-full" />

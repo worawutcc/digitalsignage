@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, FormEvent } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, FormEvent, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useDispatch } from 'react-redux'
 import Link from 'next/link'
 import { authService } from '@/features/auth/services/authService'
@@ -13,13 +13,14 @@ import type { LoginFormData, FormErrors } from './types'
  * Login page component with form validation and error handling
  * Provides user authentication interface with email/password login
  */
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const dispatch = useDispatch()
   const [isLoading, setIsLoading] = useState(false)
   const [formData, setFormData] = useState<LoginFormData>({
-    email: '',
-    password: '',
+    email: 'admin@gmail.com',
+    password: 'P@ssw0rd2025',
     rememberMe: false,
   })
   const [errors, setErrors] = useState<FormErrors>({})
@@ -58,6 +59,7 @@ export default function LoginPage() {
       return
     }
 
+    console.log('Starting login process...')
     setIsLoading(true)
     dispatch(loginStart())
 
@@ -67,20 +69,76 @@ export default function LoginPage() {
         password: formData.password,
         rememberMe: formData.rememberMe,
       })
+      console.log('Login API call successful')
 
-      dispatch(loginSuccess(response))
+      // Save token to storage and cookies for middleware access
+      const { saveAccessToken, saveRefreshToken } = await import('@/lib/auth')
+      
+      // Use the correct API response structure
+      const accessToken = response.accessToken
+      const refreshToken = response.refreshToken
+      
+      if (!accessToken) {
+        throw new Error('No access token received from server')
+      }
+      
+      saveAccessToken(accessToken, formData.rememberMe)
+      if (refreshToken) {
+        saveRefreshToken(refreshToken, formData.rememberMe)
+      }
+
+      // Debug: Check if cookie was set
+      console.log('Login response received:', response)
+      console.log('Access token:', accessToken)
+      console.log('Cookie before setting:', document.cookie)
+      
+      // Check if cookie was actually set after saving
+      setTimeout(() => {
+        console.log('Cookie after setting:', document.cookie)
+        const cookieValue = document.cookie.split('; ').find(row => row.startsWith('accessToken='))
+        console.log('Access token cookie:', cookieValue)
+      }, 50)
+
+      // Prepare tokens for Redux store
+      const tokens = {
+        accessToken,
+        refreshToken: refreshToken || '',
+        expiresAt: new Date(Date.now() + (response.expiresIn || 3600) * 1000).toISOString()
+      }
+      
+      dispatch(loginSuccess({ user: response.user, tokens }))
       
       dispatch(
         addNotification({
           type: 'success',
           title: 'Login Successful',
-          message: `Welcome back, ${response.user.firstName}!`,
+          message: `Welcome back, ${response.user.firstName || 'User'}!`,
           duration: 3000,
         })
       )
 
-      router.push('/dashboard')
+      // Add a small delay to ensure cookie is set before redirect
+      setTimeout(() => {
+        const redirectTo = searchParams.get('redirect') || '/dashboard'
+        console.log('Search params:', Object.fromEntries(searchParams.entries()))
+        console.log('Redirect parameter:', searchParams.get('redirect'))
+        console.log('Redirecting to:', redirectTo)
+        
+        // Try multiple redirect methods
+        try {
+          // Method 1: Router push
+          router.push(redirectTo)
+          console.log('Router push executed')
+        } catch (error) {
+          console.error('Router push failed:', error)
+          
+          // Method 2: Window location (fallback)
+          window.location.href = redirectTo
+          console.log('Window location redirect executed')
+        }
+      }, 200)
     } catch (error: any) {
+      console.error('Login error:', error)
       const errorMessage = error.message || 'Login failed. Please try again.'
       
       dispatch(loginFailure(errorMessage))
@@ -320,5 +378,23 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+/**
+ * Login page wrapper with Suspense boundary for useSearchParams
+ */
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-primary-50 to-secondary-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+          <p className="mt-4 text-secondary-600">Loading...</p>
+        </div>
+      </div>
+    }>
+      <LoginPageContent />
+    </Suspense>
   )
 }

@@ -23,7 +23,7 @@ interface PageProps {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { userId } = await params
   try {
-    const user = await userService.getUserById(userId)
+    const user = await userService.getUserById(parseInt(userId))
     const fullName = userService.getUserFullName(user)
     return {
       title: `Manage Schedules - ${fullName} | Digital Signage`,
@@ -50,7 +50,7 @@ export default async function UserSchedulesPage({ params }: PageProps) {
   // Fetch user data
   let user
   try {
-    user = await userService.getUserById(userIdStr)
+    user = await userService.getUserById(parseInt(userIdStr))
   } catch {
     // If user not found or unauthorized, show 404
     notFound()
@@ -93,7 +93,7 @@ export default async function UserSchedulesPage({ params }: PageProps) {
             id: userId,
             name: fullName,
             email: user.email,
-            role: user.role.name,
+            role: user.role,
           }}
           onSchedulesUpdated={() => {
             // Optional: Trigger any additional refresh logic if needed

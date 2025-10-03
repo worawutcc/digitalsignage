@@ -329,7 +329,7 @@ export const userSlice = createSlice({
     },
     
     selectAllUsers: (state) => {
-      state.selectedUserIds = state.users.map(u => u.id)
+      state.selectedUserIds = state.users.map(u => u.userId)
       state.ui.showBulkActions = true
     },
     
@@ -674,7 +674,7 @@ export const selectFilteredUsers = (state: RootState) => {
   if (state.users.searchQuery.trim()) {
     const query = state.users.searchQuery.toLowerCase()
     filteredUsers = filteredUsers.filter(user => 
-      user.username.toLowerCase().includes(query) ||
+      user.fullName.toLowerCase().includes(query) ||
       user.email.toLowerCase().includes(query) ||
       user.role.toLowerCase().includes(query)
     )
@@ -695,7 +695,7 @@ export const selectFilteredUsers = (state: RootState) => {
   
   if (hasSchedules !== null) {
     filteredUsers = filteredUsers.filter(user => {
-      const userSchedules = state.users.userSchedules[user.id] || []
+      const userSchedules = state.users.userSchedules[user.userId] || []
       return hasSchedules ? userSchedules.length > 0 : userSchedules.length === 0
     })
   }
@@ -712,8 +712,8 @@ export const selectSortedUsers = (state: RootState) => {
 
     switch (sortBy) {
       case 'name':
-        aValue = a.username.toLowerCase()
-        bValue = b.username.toLowerCase()
+        aValue = `${a.firstName} ${a.lastName}`.toLowerCase()
+        bValue = `${b.firstName} ${b.lastName}`.toLowerCase()
         break
       case 'email':
         aValue = a.email.toLowerCase()
@@ -724,8 +724,8 @@ export const selectSortedUsers = (state: RootState) => {
         bValue = b.role.toLowerCase()
         break
       case 'lastAssigned':
-        const aSchedules = state.users.userSchedules[a.id] || []
-        const bSchedules = state.users.userSchedules[b.id] || []
+        const aSchedules = state.users.userSchedules[a.userId] || []
+        const bSchedules = state.users.userSchedules[b.userId] || []
         aValue = aSchedules.length > 0 ? Math.max(...aSchedules.map(s => new Date(s.assignedAt).getTime())) : 0
         bValue = bSchedules.length > 0 ? Math.max(...bSchedules.map(s => new Date(s.assignedAt).getTime())) : 0
         break
@@ -755,7 +755,7 @@ export const selectIsUserSelected = (userId: number) => (state: RootState) =>
   state.users.selectedUserIds.includes(userId)
 
 export const selectSelectedUsers = (state: RootState) =>
-  state.users.users.filter(user => state.users.selectedUserIds.includes(user.id))
+  state.users.users.filter(user => state.users.selectedUserIds.includes(user.userId))
 
 export const selectBulkOperationProgress = (state: RootState) => {
   const { progress, isRunning } = state.users.bulkOperation

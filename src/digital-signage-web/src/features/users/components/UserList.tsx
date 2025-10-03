@@ -42,7 +42,7 @@ export function UserList({
   const [searchQuery, setSearchQuery] = React.useState('');
   const [selectedRole, setSelectedRole] = React.useState<string>('all');
   const [selectedStatus, setSelectedStatus] = React.useState<string>('all');
-  const [actionMenuUserId, setActionMenuUserId] = React.useState<string | null>(null);
+  const [actionMenuUserId, setActionMenuUserId] = React.useState<number | null>(null);
 
   const users = usersResponse?.data || [];
   const pagination = usersResponse?.pagination;
@@ -77,7 +77,7 @@ export function UserList({
   };
 
   // Action handlers
-  const handleDeleteUser = async (userId: string) => {
+  const handleDeleteUser = async (userId: number) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     
     try {
@@ -90,16 +90,16 @@ export function UserList({
   const handleToggleUserStatus = async (user: User) => {
     try {
       if (user.isActive) {
-        await deactivateUserMutation.mutateAsync(user.id);
+        await deactivateUserMutation.mutateAsync(user.userId);
       } else {
-        await activateUserMutation.mutateAsync(user.id);
+        await activateUserMutation.mutateAsync(user.userId);
       }
     } catch (error) {
       console.error('Failed to toggle user status:', error);
     }
   };
 
-  const handleResetPassword = async (userId: string) => {
+  const handleResetPassword = async (userId: number) => {
     if (!confirm('Generate a temporary password for this user?')) return;
     
     try {
@@ -150,7 +150,7 @@ export function UserList({
       sortable: true,
       render: (_, user) => (
         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
-          {user.role.name}
+          {user.role}
         </span>
       ),
     },
@@ -189,14 +189,14 @@ export function UserList({
       render: (_, user) => (
         <div className="relative">
           <button
-            onClick={() => setActionMenuUserId(actionMenuUserId === user.id ? null : user.id)}
+            onClick={() => setActionMenuUserId(actionMenuUserId === user.userId ? null : user.userId)}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             aria-label="User actions"
           >
             <MoreVertical className="w-5 h-5" />
           </button>
 
-          {actionMenuUserId === user.id && (
+          {actionMenuUserId === user.userId && (
             <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-10">
               <div className="py-1" role="menu">
                 <button
@@ -213,7 +213,7 @@ export function UserList({
                 
                 <button
                   onClick={() => {
-                    router.push(`/users/${user.id}/schedules`);
+                    router.push(`/users/${user.userId}/schedules`);
                     setActionMenuUserId(null);
                   }}
                   className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -246,7 +246,7 @@ export function UserList({
 
                 <button
                   onClick={() => {
-                    handleResetPassword(user.id);
+                    handleResetPassword(user.userId);
                     setActionMenuUserId(null);
                   }}
                   className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -258,7 +258,7 @@ export function UserList({
 
                 <button
                   onClick={() => {
-                    handleDeleteUser(user.id);
+                    handleDeleteUser(user.userId);
                     setActionMenuUserId(null);
                   }}
                   className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"

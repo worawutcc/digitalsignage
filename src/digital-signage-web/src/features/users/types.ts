@@ -3,18 +3,8 @@
  * Defines all TypeScript interfaces for user, role, and permission management
  */
 
-export interface User {
-  id: string;
-  username: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  role: UserRole;
-  isActive: boolean;
-  lastLoginAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import { User } from '@/types/api'
+export type { User }
 
 export interface UserRole {
   id: string;

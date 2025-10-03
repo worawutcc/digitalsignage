@@ -1,4 +1,4 @@
-import axios from 'axios'
+import { api } from '@/lib/api'
 import { 
   Device, 
   DeviceConfiguration, 
@@ -12,44 +12,7 @@ import {
   ApiResponse 
 } from '@/types/api'
 
-// Base API URL - can be configured via environment variable
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5100/api'
-
-/**
- * Get authentication token from localStorage or other storage
- */
-const getAuthToken = (): string | null => {
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('auth_token')
-  }
-  return null
-}
-
-/**
- * Create axios instance with default configuration
- */
-const createApiClient = () => {
-  const client = axios.create({
-    baseURL: API_BASE_URL,
-    timeout: 30000,
-    headers: {
-      'Content-Type': 'application/json',
-    },
-  })
-
-  // Add auth token to requests
-  client.interceptors.request.use((config) => {
-    const token = getAuthToken()
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`
-    }
-    return config
-  })
-
-  return client
-}
-
-const apiClient = createApiClient()
+// Using centralized API client with built-in authentication
 
 /**
  * Device Management API Client
@@ -72,48 +35,43 @@ export const deviceApi = {
     if (filters?.page) params.append('page', filters.page.toString())
     if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString())
 
-    const response = await apiClient.get<ApiResponse<Device[]>>(`/device?${params}`)
-    return response.data
+    const response = await api.get<Device[]>(`/api/device?${params}`)
+    return response
   },
 
   /**
    * Get device by ID
    */
   async getDevice(id: number): Promise<ApiResponse<Device>> {
-    const response = await apiClient.get<ApiResponse<Device>>(`/device/${id}`)
-    return response.data
+    return await api.get<Device>(`/api/device/${id}`)
   },
 
   /**
    * Update device information
    */
   async updateDevice(id: number, data: Partial<Device>): Promise<ApiResponse<Device>> {
-    const response = await apiClient.put<ApiResponse<Device>>(`/device/${id}`, data)
-    return response.data
+    return await api.put<Device>(`/api/device/${id}`, data)
   },
 
   /**
    * Delete device
    */
   async deleteDevice(id: number): Promise<ApiResponse<void>> {
-    const response = await apiClient.delete<ApiResponse<void>>(`/device/${id}`)
-    return response.data
+    return await api.delete<void>(`/api/device/${id}`)
   },
 
   /**
    * Deactivate Android TV device
    */
   async deactivateDevice(id: number, reason?: string): Promise<ApiResponse<Device>> {
-    const response = await apiClient.post<ApiResponse<Device>>(`/device/${id}/deactivate`, { reason })
-    return response.data
+    return await api.post<Device>(`/api/device/${id}/deactivate`, { reason })
   },
 
   /**
    * Reactivate Android TV device
    */
   async reactivateDevice(id: number): Promise<ApiResponse<Device>> {
-    const response = await apiClient.post<ApiResponse<Device>>(`/device/${id}/reactivate`)
-    return response.data
+    return await api.post<Device>(`/api/device/${id}/reactivate`)
   },
 
   // ========================
@@ -124,32 +82,28 @@ export const deviceApi = {
    * Register new Android TV device (from device itself)
    */
   async registerDevice(data: DeviceRegistrationRequest): Promise<ApiResponse<DeviceRegistrationResponse>> {
-    const response = await apiClient.post<ApiResponse<DeviceRegistrationResponse>>('/device/register', data)
-    return response.data
+    return await api.post<DeviceRegistrationResponse>('/api/device/register', data)
   },
 
   /**
    * Get pending device registration requests (admin)
    */
   async getPendingRegistrations(): Promise<ApiResponse<Device[]>> {
-    const response = await apiClient.get<ApiResponse<Device[]>>('/device/pending-registrations')
-    return response.data
+    return await api.get<Device[]>('/api/device/pending-registrations')
   },
 
   /**
    * Approve or reject device registration (admin)
    */
   async approveDeviceRegistration(data: DeviceApprovalRequest): Promise<ApiResponse<Device>> {
-    const response = await apiClient.post<ApiResponse<Device>>('/device/approve-registration', data)
-    return response.data
+    return await api.post<Device>('/api/device/approve-registration', data)
   },
 
   /**
    * Get registration records for a device
    */
   async getRegistrationRecords(deviceId: number): Promise<ApiResponse<RegistrationRecord[]>> {
-    const response = await apiClient.get<ApiResponse<RegistrationRecord[]>>(`/device/${deviceId}/registration-records`)
-    return response.data
+    return await api.get<RegistrationRecord[]>(`/api/device/${deviceId}/registration-records`)
   },
 
   // ========================
@@ -160,8 +114,7 @@ export const deviceApi = {
    * Get device configuration
    */
   async getDeviceConfiguration(deviceId: number): Promise<ApiResponse<DeviceConfiguration>> {
-    const response = await apiClient.get<ApiResponse<DeviceConfiguration>>(`/device/${deviceId}/configuration`)
-    return response.data
+    return await api.get<DeviceConfiguration>(`/api/device/${deviceId}/configuration`)
   },
 
   /**
@@ -171,16 +124,14 @@ export const deviceApi = {
     deviceId: number, 
     data: UpdateDeviceConfigurationRequest
   ): Promise<ApiResponse<DeviceConfiguration>> {
-    const response = await apiClient.put<ApiResponse<DeviceConfiguration>>(`/device/${deviceId}/configuration`, data)
-    return response.data
+    return await api.put<DeviceConfiguration>(`/api/device/${deviceId}/configuration`, data)
   },
 
   /**
    * Reset device configuration to defaults
    */
   async resetDeviceConfiguration(deviceId: number): Promise<ApiResponse<DeviceConfiguration>> {
-    const response = await apiClient.post<ApiResponse<DeviceConfiguration>>(`/device/${deviceId}/configuration/reset`)
-    return response.data
+    return await api.post<DeviceConfiguration>(`/api/device/${deviceId}/configuration/reset`)
   },
 
   // ========================
@@ -191,32 +142,28 @@ export const deviceApi = {
    * Get device status logs
    */
   async getDeviceStatusLogs(deviceId: number, limit = 50): Promise<ApiResponse<DeviceStatusLog[]>> {
-    const response = await apiClient.get<ApiResponse<DeviceStatusLog[]>>(`/device/${deviceId}/status-logs?limit=${limit}`)
-    return response.data
+    return await api.get<DeviceStatusLog[]>(`/api/device/${deviceId}/status-logs?limit=${limit}`)
   },
 
   /**
    * Send device heartbeat (from device)
    */
   async sendDeviceHeartbeat(deviceId: number, status: any): Promise<ApiResponse<void>> {
-    const response = await apiClient.post<ApiResponse<void>>(`/device/${deviceId}/heartbeat`, { status })
-    return response.data
+    return await api.post<void>(`/api/device/${deviceId}/heartbeat`, { status })
   },
 
   /**
    * Check device connectivity
    */
   async checkDeviceConnectivity(deviceId: number): Promise<ApiResponse<{ isOnline: boolean; lastSeen?: string }>> {
-    const response = await apiClient.get<ApiResponse<{ isOnline: boolean; lastSeen?: string }>>(`/device/${deviceId}/connectivity`)
-    return response.data
+    return await api.get<{ isOnline: boolean; lastSeen?: string }>(`/api/device/${deviceId}/connectivity`)
   },
 
   /**
    * Force device status refresh
    */
   async refreshDeviceStatus(deviceId: number): Promise<ApiResponse<Device>> {
-    const response = await apiClient.post<ApiResponse<Device>>(`/device/${deviceId}/refresh-status`)
-    return response.data
+    return await api.post<Device>(`/api/device/${deviceId}/refresh-status`)
   },
 
   // ========================
@@ -227,16 +174,14 @@ export const deviceApi = {
    * Update multiple devices
    */
   async bulkUpdateDevices(deviceIds: number[], data: Partial<Device>): Promise<ApiResponse<Device[]>> {
-    const response = await apiClient.post<ApiResponse<Device[]>>('/device/bulk-update', { deviceIds, data })
-    return response.data
+    return await api.post<Device[]>('/api/device/bulk-update', { deviceIds, data })
   },
 
   /**
    * Deactivate multiple devices
    */
   async bulkDeactivateDevices(deviceIds: number[], reason?: string): Promise<ApiResponse<void>> {
-    const response = await apiClient.post<ApiResponse<void>>('/device/bulk-deactivate', { deviceIds, reason })
-    return response.data
+    return await api.post<void>('/api/device/bulk-deactivate', { deviceIds, reason })
   },
 
   /**
@@ -251,8 +196,15 @@ export const deviceApi = {
     byManufacturer: Record<string, number>
     byAndroidVersion: Record<string, number>
   }>> {
-    const response = await apiClient.get<ApiResponse<any>>('/device/statistics')
-    return response.data
+    return await api.get<{
+      total: number
+      online: number
+      offline: number
+      pending: number
+      error: number
+      byManufacturer: Record<string, number>
+      byAndroidVersion: Record<string, number>
+    }>('/api/device/statistics')
   },
 
   // ========================

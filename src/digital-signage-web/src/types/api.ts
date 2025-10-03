@@ -1,12 +1,29 @@
-// API Response Types
+// API Response Types matching OpenAPI schema
+
+/**
+ * Login response from API
+ */
+export interface LoginResponse {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  tokenType: string
+  user: User
+}
+
 export interface User {
-  id: number
-  username: string
+  userId: number
   email: string
-  role: 'Admin' | 'Manager' | 'User'
+  fullName: string
+  phoneNumber?: string
+  role: 'Admin' | 'User'
   isActive: boolean
   createdAt: string
-  updatedAt?: string
+  lastLoginAt?: string
+  // Legacy fields for backward compatibility
+  id?: number
+  firstName?: string
+  lastName?: string
 }
 
 export interface Device {
@@ -14,28 +31,26 @@ export interface Device {
   name: string
   deviceKey: string
   location: string
-  status: 'Pending' | 'Registered' | 'Online' | 'Offline' | 'Error' | 'Maintenance' | 'Inactive'
+  deviceType: string
+  macAddress: string
   ipAddress: string
-  resolution: string
+  status: 'Online' | 'Offline' | 'Error' | 'Maintenance'
+  groupId?: number
+  group?: DeviceGroup
   isActive: boolean
-  lastHeartbeat?: string
-  managedByUserId?: number
-  deviceGroupId?: number
-  assignedUserId?: number
-  
-  // Android TV specific fields
-  macAddress?: string
-  androidVersion?: string
-  apiLevel?: string
-  serialNumber?: string
-  manufacturer?: string
-  model?: string
-  displayResolution?: string
-  deactivatedAt?: string
-  deactivatedBy?: number
-  
   createdAt: string
-  updatedAt?: string
+  lastHeartbeat?: string
+  currentContent?: string
+  softwareVersion: string
+  hardwareInfo: string
+  // Additional device properties
+  model?: string
+  resolution?: string
+  manufacturer?: string
+  serialNumber?: string
+  androidVersion?: string
+  apiLevel?: number
+  deviceGroupId?: number
 }
 
 export interface DeviceGroup {
