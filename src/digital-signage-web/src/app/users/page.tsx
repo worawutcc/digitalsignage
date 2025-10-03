@@ -194,10 +194,10 @@ export default function UsersPage() {
 
               {selectedUser ? (
                 <UserScheduleAssignment
-                  userId={selectedUser.id}
+                  userId={selectedUser.userId}
                   user={{
-                    id: selectedUser.id,
-                    name: `${selectedUser.firstName} ${selectedUser.lastName}`,
+                    id: selectedUser.userId,
+                    name: selectedUser.fullName,
                     email: selectedUser.email,
                     role: selectedUser.role,
                   }}

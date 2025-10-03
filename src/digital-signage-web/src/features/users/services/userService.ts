@@ -235,7 +235,8 @@ class UserService {
    * Get user's full name
    */
   getUserFullName(user: User): string {
-    return `${user.firstName} ${user.lastName}`.trim() || user.email;
+    // Use fullName from API, fallback to legacy firstName/lastName if available, then email
+    return user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email;
   }
 
   /**
