@@ -3,6 +3,7 @@ import authSlice from '@/store/slices/authSlice'
 import uiSlice from '@/store/slices/uiSlice'
 import devicesSlice from '@/store/slices/devicesSlice'
 import scheduleAssignmentSlice from '@/store/slices/scheduleAssignmentSlice'
+import userSlice from '@/store/slices/userSlice'
 
 /**
  * Root reducer combining all feature slices
@@ -12,4 +13,5 @@ export const rootReducer = combineReducers({
   ui: uiSlice,
   devices: devicesSlice,
   scheduleAssignment: scheduleAssignmentSlice,
+  users: userSlice,
 })
