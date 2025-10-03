@@ -1,21 +1,35 @@
 /* eslint-disable no-console */
 'use client'
 
+import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr'
+
 export type ConnectionStatus = 'idle' | 'connecting' | 'open' | 'closing' | 'closed' | 'error'
 
 export type RealTimeEventType =
   | 'device_status_changed'
+  | 'device_heartbeat'
+  | 'device_configuration_update'
   | 'schedule_conflict_detected'
   | 'schedule_updated'
   | 'media_uploaded'
   | 'user_action'
   | 'system_alert'
   | 'heartbeat'
+  | 'connection_established'
   | string
 
 export interface RealTimeEvent<TPayload = unknown> {
   type: RealTimeEventType
   payload: TPayload
+  timestamp: string
+}
+
+/**
+ * SignalR event DTO structure from backend
+ */
+export interface RealtimeEventDto {
+  type: string
+  payload: string
   timestamp: string
 }
 
@@ -39,10 +53,16 @@ const DEFAULT_OPTIONS: Required<WebSocketClientOptions> = {
 }
 
 /**
- * WebSocketClient handles connection lifecycle, reconnection, and event dispatching
+ * WebSocketClient handles SignalR connection lifecycle, reconnection, and event dispatching
+ * Connects to the NotificationHub on the backend
+ * 
+ * Following UI copilot instructions:
+ * - TypeScript strict typing
+ * - Error handling and reconnection logic
+ * - Event-driven architecture
  */
 class WebSocketClient {
-  private socket: WebSocket | null = null
+  private connection: HubConnection | null = null
 
   private status: ConnectionStatus = 'idle'
 
@@ -58,79 +78,166 @@ class WebSocketClient {
 
   private isManuallyDisconnected = false
 
+  private accessToken?: string
+
+  private subscribedDevices: Set<number> = new Set()
+
+  private subscribedEventTypes: Set<string> = new Set()
+
   constructor(options?: WebSocketClientOptions) {
     this.options = { ...DEFAULT_OPTIONS, ...options }
   }
 
   /**
-   * Connect to the configured WebSocket endpoint
+   * Connect to the SignalR NotificationHub
    */
-  connect(url?: string) {
+  async connect(url?: string) {
     if (typeof window === 'undefined') return
 
-    if (this.socket && (this.socket.readyState === WebSocket.OPEN || this.socket.readyState === WebSocket.CONNECTING)) {
+    if (this.connection?.state === 'Connected' || this.connection?.state === 'Connecting') {
       return
     }
 
-    const endpoint = url || process.env.NEXT_PUBLIC_WS_URL
-
-    if (!endpoint) {
-      console.warn('[WebSocketClient] Missing NEXT_PUBLIC_WS_URL environment variable')
-      return
-    }
+    const baseUrl = url || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5100'
+    const hubUrl = `${baseUrl}/ws`
 
     try {
       this.updateStatus('connecting')
       this.isManuallyDisconnected = false
-      this.socket = new WebSocket(endpoint)
-      this.socket.addEventListener('open', this.handleOpen)
-      this.socket.addEventListener('message', this.handleMessage)
-      this.socket.addEventListener('error', this.handleError)
-      this.socket.addEventListener('close', this.handleClose)
+
+      this.connection = new HubConnectionBuilder()
+        .withUrl(hubUrl, {
+          accessTokenFactory: () => this.accessToken || '',
+          withCredentials: false,
+        })
+        .withAutomaticReconnect({
+          nextRetryDelayInMilliseconds: (retryContext) => {
+            const delay = Math.min(
+              this.options.minReconnectDelay * Math.pow(2, retryContext.previousRetryCount),
+              this.options.maxReconnectDelay
+            )
+            return delay + Math.random() * 1000 // Add jitter
+          },
+        })
+        .configureLogging(LogLevel.Information)
+        .build()
+
+      // Set up event handlers
+      this.setupSignalRHandlers()
+
+      await this.connection.start()
+      this.reconnectAttempts = 0
+      this.updateStatus('open')
+
+      // Re-subscribe to devices and events after reconnection
+      await this.resubscribeAfterReconnect()
+
     } catch (error) {
-      console.error('[WebSocketClient] Failed to establish connection', error)
+      console.error('[WebSocketClient] Failed to establish SignalR connection', error)
+      this.updateStatus('error')
       this.scheduleReconnect()
     }
   }
 
   /**
-   * Disconnect from the WebSocket endpoint and stop auto-reconnect
+   * Disconnect from the SignalR hub and stop auto-reconnect
    */
-  disconnect() {
+  async disconnect() {
     this.isManuallyDisconnected = true
     if (this.reconnectTimer) {
       window.clearTimeout(this.reconnectTimer)
       this.reconnectTimer = null
     }
 
-    if (this.socket) {
+    if (this.connection) {
       this.updateStatus('closing')
-      this.socket.removeEventListener('open', this.handleOpen)
-      this.socket.removeEventListener('message', this.handleMessage)
-      this.socket.removeEventListener('error', this.handleError)
-      this.socket.removeEventListener('close', this.handleClose)
-      this.socket.close()
-      this.socket = null
+      await this.connection.stop()
+      this.connection = null
       this.updateStatus('closed')
     }
   }
 
   /**
-   * Send payload to server
+   * Send heartbeat to server
    */
-  send<TPayload = unknown>(type: RealTimeEventType, payload: TPayload) {
-    if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
-      console.warn('[WebSocketClient] Unable to send message, socket not open')
+  async sendHeartbeat() {
+    if (!this.connection || this.connection.state !== 'Connected') {
       return
     }
 
-    const event: RealTimeEvent<TPayload> = {
-      type,
-      payload,
-      timestamp: new Date().toISOString(),
+    try {
+      await this.connection.invoke('SendHeartbeat')
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to send heartbeat', error)
+    }
+  }
+
+  /**
+   * Subscribe to device status updates for specific devices
+   */
+  async subscribeToDevices(deviceIds: number[]) {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      console.warn('[WebSocketClient] Unable to subscribe to devices, not connected')
+      return
     }
 
-    this.socket.send(JSON.stringify(event))
+    try {
+      await this.connection.invoke('SubscribeToDevices', deviceIds)
+      deviceIds.forEach(id => this.subscribedDevices.add(id))
+      console.log('[WebSocketClient] Subscribed to devices:', deviceIds)
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to subscribe to devices', error)
+    }
+  }
+
+  /**
+   * Unsubscribe from device status updates
+   */
+  async unsubscribeFromDevices(deviceIds: number[]) {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return
+    }
+
+    try {
+      await this.connection.invoke('UnsubscribeFromDevices', deviceIds)
+      deviceIds.forEach(id => this.subscribedDevices.delete(id))
+      console.log('[WebSocketClient] Unsubscribed from devices:', deviceIds)
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to unsubscribe from devices', error)
+    }
+  }
+
+  /**
+   * Subscribe to all device events (admin only)
+   */
+  async subscribeToAllDevices() {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return
+    }
+
+    try {
+      await this.connection.invoke('SubscribeToAllDevices')
+      console.log('[WebSocketClient] Subscribed to all device events')
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to subscribe to all devices', error)
+    }
+  }
+
+  /**
+   * Subscribe to specific event types
+   */
+  async subscribeToEventTypes(eventTypes: string[]) {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return
+    }
+
+    try {
+      await this.connection.invoke('SubscribeToEvents', eventTypes)
+      eventTypes.forEach(type => this.subscribedEventTypes.add(type))
+      console.log('[WebSocketClient] Subscribed to event types:', eventTypes)
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to subscribe to event types', error)
+    }
   }
 
   /**
@@ -214,45 +321,77 @@ class WebSocketClient {
   }
 
   /**
-   * Internal: handle socket open event
+   * Set access token for authentication
    */
-  private handleOpen = () => {
-    this.reconnectAttempts = 0
-    this.updateStatus('open')
+  setAccessToken(token: string) {
+    this.accessToken = token
   }
 
   /**
-   * Internal: handle incoming message payloads
+   * Setup SignalR event handlers
    */
-  private handleMessage = (event: MessageEvent) => {
-    try {
-      const parsed = JSON.parse(event.data) as RealTimeEvent
-      if (!parsed?.type) {
-        console.warn('[WebSocketClient] Received message without type', parsed)
-        return
+  private setupSignalRHandlers() {
+    if (!this.connection) return
+
+    // Main event handler for all realtime events
+    this.connection.on('ReceiveEvent', (event: RealtimeEventDto) => {
+      try {
+        const payload = JSON.parse(event.payload)
+        
+        const realTimeEvent: RealTimeEvent = {
+          type: event.type as RealTimeEventType,
+          payload,
+          timestamp: event.timestamp
+        }
+
+        this.emit(realTimeEvent)
+        
+      } catch (error) {
+        console.error('[WebSocketClient] Failed to parse SignalR event payload:', error, event)
       }
-      this.emit(parsed)
+    })
+
+    // Connection state handlers
+    this.connection.onreconnecting((error) => {
+      console.log('[WebSocketClient] SignalR reconnecting...', error)
+      this.updateStatus('connecting')
+    })
+
+    this.connection.onreconnected(async (connectionId) => {
+      console.log('[WebSocketClient] SignalR reconnected:', connectionId)
+      this.reconnectAttempts = 0
+      this.updateStatus('open')
+      await this.resubscribeAfterReconnect()
+    })
+
+    this.connection.onclose((error) => {
+      console.log('[WebSocketClient] SignalR connection closed:', error)
+      this.updateStatus('closed')
+      
+      if (!this.isManuallyDisconnected && this.options.autoReconnect) {
+        this.scheduleReconnect()
+      }
+    })
+  }
+
+  /**
+   * Re-subscribe to devices and events after reconnection
+   */
+  private async resubscribeAfterReconnect() {
+    try {
+      // Re-subscribe to devices
+      if (this.subscribedDevices.size > 0) {
+        const deviceIds = Array.from(this.subscribedDevices)
+        await this.subscribeToDevices(deviceIds)
+      }
+
+      // Re-subscribe to event types
+      if (this.subscribedEventTypes.size > 0) {
+        const eventTypes = Array.from(this.subscribedEventTypes)
+        await this.subscribeToEventTypes(eventTypes)
+      }
     } catch (error) {
-      console.error('[WebSocketClient] Failed to parse message', error, event.data)
-    }
-  }
-
-  /**
-   * Internal: handle socket errors
-   */
-  private handleError = (error: Event) => {
-    console.error('[WebSocketClient] Socket error', error)
-    this.updateStatus('error')
-  }
-
-  /**
-   * Internal: handle socket close events and trigger reconnect if appropriate
-   */
-  private handleClose = () => {
-    this.updateStatus('closed')
-    this.cleanupSocket()
-    if (!this.isManuallyDisconnected && this.options.autoReconnect) {
-      this.scheduleReconnect()
+      console.error('[WebSocketClient] Failed to resubscribe after reconnect:', error)
     }
   }
 
@@ -266,19 +405,7 @@ class WebSocketClient {
   }
 
   /**
-   * Cleanup socket listeners
-   */
-  private cleanupSocket() {
-    if (!this.socket) return
-    this.socket.removeEventListener('open', this.handleOpen)
-    this.socket.removeEventListener('message', this.handleMessage)
-    this.socket.removeEventListener('error', this.handleError)
-    this.socket.removeEventListener('close', this.handleClose)
-    this.socket = null
-  }
-
-  /**
-   * Schedule reconnect with exponential backoff
+   * Schedule reconnect with exponential backoff for SignalR
    */
   private scheduleReconnect() {
     if (!this.options.autoReconnect || typeof window === 'undefined') {
@@ -294,9 +421,13 @@ class WebSocketClient {
       window.clearTimeout(this.reconnectTimer)
     }
 
-    this.reconnectTimer = window.setTimeout(() => {
+    this.reconnectTimer = window.setTimeout(async () => {
       this.reconnectAttempts += 1
-      this.connect()
+      try {
+        await this.connect()
+      } catch (error) {
+        console.error('[WebSocketClient] Reconnection failed:', error)
+      }
     }, delay)
 
     this.updateStatus('connecting')

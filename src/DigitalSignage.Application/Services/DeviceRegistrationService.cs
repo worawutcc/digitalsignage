@@ -45,7 +45,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         var pendingRequest = await _context.Set<DeviceRegistrationRequest>()
             .FirstOrDefaultAsync(r => r.MacAddress == request.MacAddress && 
                                      r.Status == RegistrationStatus.Pending &&
-                                     r.ExpiresAt > DateTime.UtcNow);
+                                     r.ExpiresAt > DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified));
                                      
         if (pendingRequest != null)
         {
@@ -58,7 +58,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         
         // Generate QR code
         var registrationId = Guid.NewGuid();
-        var expiresAt = DateTime.UtcNow.AddMinutes(15); // 15 minutes expiry
+        var expiresAt = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(15), DateTimeKind.Unspecified); // 15 minutes expiry
         var pin = GeneratePin(); // Generate 6-character PIN
         
         try
@@ -202,7 +202,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             DeviceGroupId = request.DeviceGroupId,
             IsActive = true,
             Status = DeviceStatus.Online,
-            LastHeartbeat = DateTime.UtcNow,
+            LastHeartbeat = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
             AssignedUserId = assignedUserId // Feature 019: Assign user to device
         };
         
@@ -240,7 +240,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             Message = assignedUser != null 
                 ? $"Device approved and assigned to user {assignedUser.Email}" 
                 : "Device approved successfully",
-            ApprovedAt = DateTime.UtcNow,
+            ApprovedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
             ApprovedByAdmin = adminUser?.Username ?? "Unknown",
             AssignedUser = assignedUser != null ? new AssignedUserDto
             {
@@ -284,8 +284,8 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             Status = RegistrationStatus.Pending,
             MacAddress = "00:00:00:00:00:00",
             DeviceModel = "Unknown",
-            CreatedAt = DateTime.UtcNow,
-            ExpiresAt = DateTime.UtcNow.AddMinutes(10),
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            ExpiresAt = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(10), DateTimeKind.Unspecified),
             Message = "Status check not yet implemented - pending entity/repository alignment"
         };
 
@@ -298,7 +298,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         
         var pendingRequests = await _context.Set<DeviceRegistrationRequest>()
             .Include(r => r.MatchedUser)
-            .Where(r => r.Status == RegistrationStatus.Pending && r.ExpiresAt > DateTime.UtcNow)
+            .Where(r => r.Status == RegistrationStatus.Pending && r.ExpiresAt > DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified))
             .OrderBy(r => r.CreatedAt)
             .ToListAsync();
         

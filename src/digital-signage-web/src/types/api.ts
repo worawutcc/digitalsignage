@@ -14,13 +14,26 @@ export interface Device {
   name: string
   deviceKey: string
   location: string
-  status: 'Online' | 'Offline' | 'Error'
+  status: 'Pending' | 'Registered' | 'Online' | 'Offline' | 'Error' | 'Maintenance' | 'Inactive'
   ipAddress: string
   resolution: string
   isActive: boolean
   lastHeartbeat?: string
   managedByUserId?: number
   deviceGroupId?: number
+  assignedUserId?: number
+  
+  // Android TV specific fields
+  macAddress?: string
+  androidVersion?: string
+  apiLevel?: string
+  serialNumber?: string
+  manufacturer?: string
+  model?: string
+  displayResolution?: string
+  deactivatedAt?: string
+  deactivatedBy?: number
+  
   createdAt: string
   updatedAt?: string
 }
@@ -123,6 +136,80 @@ export interface DeviceFilters extends PaginationParams {
 export interface MediaFilters extends PaginationParams {
   search?: string
   type?: string
+}
+
+// Android TV Device Management Types
+export interface DeviceConfiguration {
+  id: number
+  deviceId: number
+  displayOrientation: 'Portrait' | 'Landscape' | 'Auto'
+  screenTimeout: number
+  powerManagement: 'Standard' | 'Optimized' | 'Maximum'
+  autoRotate: boolean
+  networkConfig?: any
+  appPermissions?: any
+  proxySettings?: any
+  isActive: boolean
+  createdAt: string
+  updatedAt?: string
+}
+
+export interface DeviceStatusLog {
+  id: number
+  deviceId: number
+  status: string
+  previousStatus?: string
+  message?: string
+  timestamp: string
+  createdAt: string
+}
+
+export interface RegistrationRecord {
+  id: number
+  deviceId: number
+  registrationPin: string
+  action: 'Register' | 'Approve' | 'Reject' | 'Deactivate'
+  performedByUserId?: number
+  notes?: string
+  ipAddress?: string
+  userAgent?: string
+  createdAt: string
+}
+
+// Device Registration Request Types
+export interface DeviceRegistrationRequest {
+  deviceName: string
+  macAddress: string
+  androidVersion: string
+  apiLevel: string
+  serialNumber: string
+  manufacturer: string
+  model: string
+  displayResolution: string
+  location?: string
+}
+
+export interface DeviceRegistrationResponse {
+  deviceId: number
+  registrationPin: string
+  status: 'Pending'
+  message: string
+}
+
+export interface DeviceApprovalRequest {
+  deviceId: number
+  approve: boolean
+  notes?: string
+}
+
+export interface UpdateDeviceConfigurationRequest {
+  displayOrientation?: 'Portrait' | 'Landscape' | 'Auto'
+  screenTimeout?: number
+  powerManagement?: 'Standard' | 'Optimized' | 'Maximum'
+  autoRotate?: boolean
+  networkConfig?: any
+  appPermissions?: any
+  proxySettings?: any
 }
 
 // Error Types

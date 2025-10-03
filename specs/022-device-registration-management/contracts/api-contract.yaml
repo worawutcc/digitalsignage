@@ -1,0 +1,558 @@
+openapi: 3.0.3
+info:
+  title: Device Registration Management API
+  description: API for managing digital signage device registration and configuration
+  version: 1.0.0
+  contact:
+    name: Digital Signage Team
+servers:
+  - url: https://api.digitalsignage.local/v1
+    description: Development server
+  - url: https://api.digitalsignage.com/v1
+    description: Production server
+
+paths:
+  /devices:
+    get:
+      summary: List devices
+      description: Retrieve paginated list of devices with filtering and search
+      tags: [Devices]
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeviceStatus'
+        - name: search
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: location
+          in: query
+          schema:
+            type: string
+            maxLength: 100
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Device list retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceListResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden - insufficient permissions
+
+    post:
+      summary: Register new device
+      description: Register a new Android TV device in the system
+      tags: [Devices]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistrationRequest'
+      responses:
+        '201':
+          description: Device registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '400':
+          description: Invalid device data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Device already exists (duplicate MAC address)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /devices/{deviceId}:
+    get:
+      summary: Get device details
+      description: Retrieve detailed information about a specific device
+      tags: [Devices]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Device details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceDetailsResponse'
+        '404':
+          description: Device not found
+
+    put:
+      summary: Update device
+      description: Update device information and configuration
+      tags: [Devices]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUpdateRequest'
+      responses:
+        '200':
+          description: Device updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceResponse'
+        '400':
+          description: Invalid device data
+        '404':
+          description: Device not found
+        '409':
+          description: Conflict (e.g., duplicate name)
+
+    delete:
+      summary: Deactivate device
+      description: Soft delete device by setting it as inactive
+      tags: [Devices]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Device deactivated successfully
+        '404':
+          description: Device not found
+
+  /devices/{deviceId}/configuration:
+    get:
+      summary: Get device configuration
+      description: Retrieve Android TV specific configuration settings
+      tags: [Device Configuration]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Configuration retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfigurationResponse'
+
+    put:
+      summary: Update device configuration
+      description: Update Android TV specific settings
+      tags: [Device Configuration]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceConfigurationRequest'
+      responses:
+        '200':
+          description: Configuration updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceConfigurationResponse'
+
+  /devices/{deviceId}/status:
+    get:
+      summary: Get device status history
+      description: Retrieve historical status logs for monitoring
+      tags: [Device Monitoring]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: Status history retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceStatusHistoryResponse'
+
+  /devices/bulk:
+    post:
+      summary: Bulk device operations
+      description: Perform bulk operations on multiple devices
+      tags: [Bulk Operations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkOperationRequest'
+      responses:
+        '202':
+          description: Bulk operation accepted and processing
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+
+components:
+  schemas:
+    DeviceStatus:
+      type: string
+      enum: [Pending, Registered, Online, Offline, Error, Maintenance, Inactive]
+
+    DisplayOrientation:
+      type: string
+      enum: [Landscape, Portrait, Auto]
+
+    PowerManagement:
+      type: string
+      enum: [AlwaysOn, EcoMode, Scheduled]
+
+    DeviceRegistrationRequest:
+      type: object
+      required: [name, macAddress]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: '^[a-zA-Z0-9\s\-_]+$'
+        macAddress:
+          type: string
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+        ipAddress:
+          type: string
+          format: ipv4
+        androidVersion:
+          type: string
+          pattern: '^\d+\.\d+(\.\d+)?$'
+        apiLevel:
+          type: integer
+          minimum: 1
+        serialNumber:
+          type: string
+          maxLength: 50
+        manufacturer:
+          type: string
+          maxLength: 50
+        model:
+          type: string
+          maxLength: 50
+        displayResolution:
+          type: string
+          pattern: '^\d+x\d+$'
+        location:
+          type: string
+          maxLength: 100
+
+    DeviceUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        location:
+          type: string
+          maxLength: 100
+        displayResolution:
+          type: string
+          pattern: '^\d+x\d+$'
+
+    DeviceConfigurationRequest:
+      type: object
+      properties:
+        displayOrientation:
+          $ref: '#/components/schemas/DisplayOrientation'
+        resolution:
+          type: string
+          pattern: '^\d+x\d+$'
+        refreshRate:
+          type: integer
+          minimum: 30
+          maximum: 120
+        screenTimeout:
+          type: integer
+          minimum: 1
+          maximum: 1440
+        powerManagement:
+          $ref: '#/components/schemas/PowerManagement'
+        networkConfig:
+          type: object
+          additionalProperties: true
+        appPermissions:
+          type: object
+          additionalProperties: true
+        remoteManagementEnabled:
+          type: boolean
+        proxySettings:
+          type: object
+          additionalProperties: true
+
+    DeviceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        macAddress:
+          type: string
+        ipAddress:
+          type: string
+        androidVersion:
+          type: string
+        apiLevel:
+          type: integer
+        serialNumber:
+          type: string
+        manufacturer:
+          type: string
+        model:
+          type: string
+        displayResolution:
+          type: string
+        location:
+          type: string
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        isActive:
+          type: boolean
+        lastHeartbeat:
+          type: string
+          format: date-time
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    DeviceDetailsResponse:
+      allOf:
+        - $ref: '#/components/schemas/DeviceResponse'
+        - type: object
+          properties:
+            configuration:
+              $ref: '#/components/schemas/DeviceConfigurationResponse'
+            recentStatusLogs:
+              type: array
+              items:
+                $ref: '#/components/schemas/DeviceStatusLog'
+
+    DeviceConfigurationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        deviceId:
+          type: string
+          format: uuid
+        displayOrientation:
+          $ref: '#/components/schemas/DisplayOrientation'
+        resolution:
+          type: string
+        refreshRate:
+          type: integer
+        screenTimeout:
+          type: integer
+        powerManagement:
+          $ref: '#/components/schemas/PowerManagement'
+        networkConfig:
+          type: object
+        appPermissions:
+          type: object
+        remoteManagementEnabled:
+          type: boolean
+        proxySettings:
+          type: object
+        updatedAt:
+          type: string
+          format: date-time
+
+    DeviceListResponse:
+      type: object
+      properties:
+        devices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceResponse'
+        pagination:
+          $ref: '#/components/schemas/PaginationResponse'
+
+    PaginationResponse:
+      type: object
+      properties:
+        page:
+          type: integer
+        pageSize:
+          type: integer
+        totalItems:
+          type: integer
+        totalPages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrevious:
+          type: boolean
+
+    DeviceStatusLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/DeviceStatus'
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+        source:
+          type: string
+
+    DeviceStatusHistoryResponse:
+      type: object
+      properties:
+        deviceId:
+          type: string
+          format: uuid
+        statusLogs:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceStatusLog'
+
+    BulkOperationRequest:
+      type: object
+      required: [operation, deviceIds]
+      properties:
+        operation:
+          type: string
+          enum: [activate, deactivate, updateConfiguration, assignLocation]
+        deviceIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          minItems: 1
+          maxItems: 100
+        parameters:
+          type: object
+          additionalProperties: true
+
+    BulkOperationResponse:
+      type: object
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [accepted, processing, completed, failed]
+        totalDevices:
+          type: integer
+        processedDevices:
+          type: integer
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              deviceId:
+                type: string
+                format: uuid
+              error:
+                type: string
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        timestamp:
+          type: string
+          format: date-time
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+security:
+  - BearerAuth: []

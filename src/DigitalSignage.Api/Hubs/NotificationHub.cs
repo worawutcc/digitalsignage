@@ -5,6 +5,7 @@ using DigitalSignage.Application.DTOs;
 using DigitalSignage.Domain.Entities;
 using DigitalSignage.Infrastructure.Data;
 using System.Security.Claims;
+using System.Text.Json;
 
 namespace DigitalSignage.Api.Hubs;
 
@@ -21,6 +22,17 @@ public class NotificationHub : Hub
     {
         _context = context;
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Helper method to serialize object to JSON string for event payload
+    /// </summary>
+    private static string SerializePayload(object payload)
+    {
+        return JsonSerializer.Serialize(payload, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
     }
     
     /// <summary>
@@ -53,7 +65,7 @@ public class NotificationHub : Hub
         await Clients.Caller.SendAsync("ReceiveEvent", new RealtimeEventDto
         {
             Type = "connection_established",
-            Payload = new { ConnectionId = connectionId, Timestamp = DateTime.UtcNow.ToString("O") },
+            Payload = SerializePayload(new { ConnectionId = connectionId, Timestamp = DateTime.UtcNow.ToString("O") }),
             Timestamp = DateTime.UtcNow.ToString("O")
         });
         
@@ -95,11 +107,11 @@ public class NotificationHub : Hub
         await Clients.Caller.SendAsync("ReceiveEvent", new RealtimeEventDto
         {
             Type = "heartbeat",
-            Payload = new 
+            Payload = SerializePayload(new 
             { 
                 ServerTime = DateTime.UtcNow.ToString("O"),
                 ActiveConnections = await GetActiveConnectionCount()
-            },
+            }),
             Timestamp = DateTime.UtcNow.ToString("O")
         });
     }
@@ -141,6 +153,74 @@ public class NotificationHub : Hub
             Context.ConnectionId, eventId);
         
         return Task.CompletedTask;
+    }
+    
+    // ========================
+    // Android TV Device Management Methods
+    // ========================
+    
+    /// <summary>
+    /// Subscribe to device status updates for specific devices
+    /// </summary>
+    public async Task SubscribeToDevices(int[] deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await Groups.AddToGroupAsync(Context.ConnectionId, $"device:{deviceId}");
+        }
+        
+        _logger.LogInformation("Client subscribed to devices: ConnectionId={ConnectionId}, Devices={DeviceIds}", 
+            Context.ConnectionId, string.Join(",", deviceIds));
+    }
+    
+    /// <summary>
+    /// Unsubscribe from device status updates
+    /// </summary>
+    public async Task UnsubscribeFromDevices(int[] deviceIds)
+    {
+        foreach (var deviceId in deviceIds)
+        {
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"device:{deviceId}");
+        }
+        
+        _logger.LogInformation("Client unsubscribed from devices: ConnectionId={ConnectionId}, Devices={DeviceIds}", 
+            Context.ConnectionId, string.Join(",", deviceIds));
+    }
+    
+    /// <summary>
+    /// Subscribe to all device management events (admin only)
+    /// </summary>
+    public async Task SubscribeToAllDevices()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "device:all");
+        
+        _logger.LogInformation("Client subscribed to all device events: ConnectionId={ConnectionId}", 
+            Context.ConnectionId);
+    }
+    
+    /// <summary>
+    /// Device heartbeat from Android TV clients
+    /// </summary>
+    public async Task DeviceHeartbeat(int deviceId, object deviceStatus)
+    {
+        _logger.LogDebug("Device heartbeat received: DeviceId={DeviceId}, ConnectionId={ConnectionId}", 
+            deviceId, Context.ConnectionId);
+        
+        // Broadcast device status to subscribers
+        await Clients.Group($"device:{deviceId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_heartbeat",
+            Payload = SerializePayload(new { DeviceId = deviceId, Status = deviceStatus, Timestamp = DateTime.UtcNow.ToString("O") }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+        
+        // Also notify all device subscribers
+        await Clients.Group("device:all").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_heartbeat",
+            Payload = SerializePayload(new { DeviceId = deviceId, Status = deviceStatus, Timestamp = DateTime.UtcNow.ToString("O") }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
     }
     
     private int? GetUserId()

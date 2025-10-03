@@ -4,6 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Plus, Download, Upload, Filter, Search } from 'lucide-react'
 import AdminLayout from '@/components/layouts/AdminLayout'
 import { DeviceList } from '@/features/devices/components/DeviceList'
@@ -21,7 +22,7 @@ interface FilterType {
   resolution: string[]
 }
 
-// Mock data for development
+// Mock data for development - using DeviceList component type structure
 const mockDevices: Device[] = [
   {
     id: '1',
@@ -66,8 +67,16 @@ const mockDevices: Device[] = [
 /**
  * Device management page for digital signage system
  * Provides comprehensive device CRUD operations, filtering, and monitoring
+ * 
+ * Following UI copilot instructions:
+ * - Uses React Query for server state management
+ * - Router navigation for page transitions
+ * - TypeScript strict typing
+ * - Feature-based organization
  */
 export default function DevicesPage() {
+  const router = useRouter()
+  
   // State for search and filters
   const [searchTerm, setSearchTerm] = useState('')
   const [showFilters, setShowFilters] = useState(false)
@@ -84,13 +93,15 @@ export default function DevicesPage() {
   const [showImportModal, setShowImportModal] = useState(false)
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null)
 
-  // Mock state
+  // TODO: Replace with React Query hook when implementing data layer
+  // const { data: devices, isLoading, error } = useDevices({ filters, search: searchTerm })
   const [devices] = useState<Device[]>(mockDevices)
   const [isLoading] = useState(false)
   const [error] = useState<Error | null>(null)
 
   const handleDeviceSelect = (device: Device) => {
-    setSelectedDevice(device)
+    // Navigate to device details page following App Router pattern
+    router.push(`/devices/${device.id}`)
   }
 
   const handleDeviceEdit = (device: Device) => {
@@ -99,14 +110,14 @@ export default function DevicesPage() {
   }
 
   const handleDeviceRestart = (device: Device) => {
-    // Mock restart functionality
+    // TODO: Implement with device service and React Query mutation
     console.log(`Device ${device.name} restart requested`)
   }
 
   const handleDeviceDelete = (device: Device) => {
     if (!confirm(`Are you sure you want to delete ${device.name}?`)) return
     
-    // Mock delete functionality
+    // TODO: Implement with device service and React Query mutation
     console.log(`Device ${device.name} deletion requested`)
   }
 
@@ -176,7 +187,7 @@ export default function DevicesPage() {
               <span>Export</span>
             </Button>
             <Button
-              onClick={() => setShowAddDevice(true)}
+              onClick={() => router.push('/devices/register')}
               className="flex items-center space-x-2"
             >
               <Plus className="h-4 w-4" />
@@ -338,6 +349,7 @@ function DeviceForm({ device, onSave, onCancel, loading }: DeviceFormProps) {
     macAddress: '',
     resolution: device?.resolution || '1920x1080',
     deviceGroup: device?.deviceGroup || 'Lobby Displays',
+    version: device?.version || '1.0.0',
     description: '',
   })
 
@@ -436,6 +448,19 @@ function DeviceForm({ device, onSave, onCancel, loading }: DeviceFormProps) {
             <option value="Cafeteria Displays">Cafeteria Displays</option>
             <option value="Hallway Displays">Hallway Displays</option>
           </select>
+        </div>
+
+        <div>
+          <label htmlFor="version" className="block text-sm font-medium text-gray-700 mb-1">
+            Firmware Version
+          </label>
+          <Input
+            id="version"
+            type="text"
+            value={formData.version}
+            onChange={(e) => setFormData({ ...formData, version: e.target.value })}
+            placeholder="1.0.0"
+          />
         </div>
       </div>
 

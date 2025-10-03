@@ -25,6 +25,9 @@ public static class SignalRServiceExtensions
         // Register broadcaster service
         services.AddScoped<IRealtimeEventBroadcaster, RealtimeEventBroadcaster>();
         
+        // Register device notification service for Android TV management
+        services.AddScoped<IDeviceNotificationService, DeviceNotificationService>();
+        
         // Register heartbeat background service
         services.AddHostedService<WebSocketHeartbeatService>();
         
