@@ -33,3 +33,6 @@ export interface DisplayDevice {
   lastSeen?: string;
   resolution?: string;
 }
+
+// Enhanced UI Types
+export * from './enhanced-ui'

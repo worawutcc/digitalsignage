@@ -3,6 +3,9 @@
 /**
  * ScheduleSelector Component
  * 
+ * Enhanced component with fuzzy search, advanced filtering, modal/inline modes,
+ * and performance optimizations. Backward compatible with ScheduleSelectorProps.
+ * 
  * CRITICAL: Modal with REPLACE warning when user has existing schedules.
  * Allows multi-select of schedules with search and filtering.
  * Enforces confirmation checkbox before allowing REPLACE operation.
@@ -15,21 +18,67 @@
  * @see specs/020-phase-1/tasks.md - T051 Virtual Scrolling
  */
 
-import { useState, useMemo, useRef, useCallback } from 'react'
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { List as VirtualList } from 'react-window'
-import { Search, Calendar, AlertTriangle, Loader2, CheckCircle2 } from 'lucide-react'
+import { 
+  Search, 
+  Calendar, 
+  AlertTriangle, 
+  Loader2, 
+  CheckCircle2,
+  Filter,
+  SlidersHorizontal,
+  X,
+  Settings
+} from 'lucide-react'
 import { ScheduleSelectorProps } from './ScheduleSelector.types'
+import type { EnhancedScheduleSelectorProps } from '@/types/enhanced-ui'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { SkeletonList } from '@/components/ui/Skeleton'
+import { Input } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
+
+// Fuzzy search utilities
+const fuzzyMatch = (text: string, query: string): { score: number; matches: boolean } => {
+  if (!query) return { score: 1, matches: true }
+  
+  const textLower = text.toLowerCase()
+  const queryLower = query.toLowerCase()
+  
+  // Exact match gets highest score
+  if (textLower.includes(queryLower)) {
+    return { score: 1, matches: true }
+  }
+  
+  // Fuzzy matching - simple implementation
+  let score = 0
+  let textIndex = 0
+  let queryIndex = 0
+  
+  while (textIndex < text.length && queryIndex < query.length) {
+    if (textLower[textIndex] === queryLower[queryIndex]) {
+      score += 1
+      queryIndex++
+    }
+    textIndex++
+  }
+  
+  const matches = queryIndex === query.length
+  const normalizedScore = matches ? score / query.length : 0
+  
+  return { score: normalizedScore, matches }
+}
 
 // Virtual scrolling configuration
 const ITEM_HEIGHT = 80 // Height of each schedule item in pixels
 const MAX_VISIBLE_ITEMS = 8 // Maximum items visible before scrolling
 const LIST_HEIGHT = ITEM_HEIGHT * MAX_VISIBLE_ITEMS // Total height of visible list area
+
+// Enhanced props type that extends the original
+type ScheduleSelectorPropsWithEnhanced = ScheduleSelectorProps & Partial<EnhancedScheduleSelectorProps>
 
 export function ScheduleSelector({
   isOpen,
@@ -42,27 +91,175 @@ export function ScheduleSelector({
   onConfirm,
   onCancel,
   className,
-}: ScheduleSelectorProps) {
+  // Enhanced props (optional)
+  enableFuzzySearch = false,
+  searchDebounceMs = 300,
+  advancedSearch,
+  enableAdvancedFiltering = false,
+  filterCriteria = [],
+  currentFilters = {},
+  onFiltersChange,
+  displayMode = 'modal',
+  inlineConfig = {
+    maxHeight: 400,
+    showBorder: true,
+    compact: false
+  },
+  enableSelectionValidation = false,
+  selectionValidation,
+  showSelectionPreview = false,
+  enablePerformanceMode = false,
+  virtualizationThreshold = 50,
+  performanceMonitoring,
+  onPerformanceMetric,
+}: ScheduleSelectorPropsWithEnhanced) {
   const [searchQuery, setSearchQuery] = useState('')
   const [acknowledgedReplace, setAcknowledgedReplace] = useState(false)
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+  const [activeFilters, setActiveFilters] = useState(currentFilters)
   const listRef = useRef<any>(null)
+  const searchStartTime = useRef<number>(0)
   
-  // Debounce search query to prevent excessive filtering (T052)
-  const debouncedSearchQuery = useDebouncedValue(searchQuery, 300)
+  // Performance monitoring
+  useEffect(() => {
+    if (performanceMonitoring?.enabled && onPerformanceMetric) {
+      const renderTime = Date.now() - searchStartTime.current
+      if (renderTime > 0) {
+        onPerformanceMetric({
+          type: 'render',
+          name: 'ScheduleSelector-search',
+          value: renderTime,
+          unit: 'ms',
+          timestamp: Date.now()
+        })
+      }
+    }
+  }, [searchQuery, performanceMonitoring, onPerformanceMetric])
+  
+  // Debounce search query to prevent excessive filtering
+  const debouncedSearchQuery = useDebouncedValue(searchQuery, searchDebounceMs)
   const isSearching = searchQuery !== debouncedSearchQuery
   
-  // Filter schedules based on debounced search query
+  // Enhanced search and filtering
   const filteredSchedules = useMemo(() => {
-    if (!debouncedSearchQuery.trim()) return availableSchedules
+    searchStartTime.current = Date.now()
     
-    const query = debouncedSearchQuery.toLowerCase()
-    return availableSchedules.filter(
-      (schedule) =>
-        schedule.name.toLowerCase().includes(query) ||
-        schedule.description?.toLowerCase().includes(query)
-    )
-  }, [availableSchedules, debouncedSearchQuery])
+    let filtered = [...availableSchedules]
+    
+    // Apply search
+    if (debouncedSearchQuery.trim()) {
+      const query = debouncedSearchQuery.trim()
+      
+      if (enableFuzzySearch) {
+        // Fuzzy search with scoring
+        const searchResults = filtered.map(schedule => {
+          const searchFields = advancedSearch?.searchFields || ['name', 'description']
+          let bestScore = 0
+          
+          searchFields.forEach(field => {
+            const value = schedule[field as keyof typeof schedule]
+            if (typeof value === 'string') {
+              const { score, matches } = fuzzyMatch(value, query)
+              if (matches && score > bestScore) {
+                bestScore = score
+              }
+            }
+          })
+          
+          return { schedule, score: bestScore }
+        })
+        
+        const minScore = advancedSearch?.minimumMatchScore || 0.3
+        filtered = searchResults
+          .filter(result => result.score >= minScore)
+          .sort((a, b) => b.score - a.score)
+          .map(result => result.schedule)
+      } else {
+        // Standard search
+        const queryLower = query.toLowerCase()
+        filtered = filtered.filter(schedule =>
+          schedule.name.toLowerCase().includes(queryLower) ||
+          schedule.description?.toLowerCase().includes(queryLower)
+        )
+      }
+    }
+    
+    // Apply advanced filters
+    if (enableAdvancedFiltering && Object.keys(activeFilters).length > 0) {
+      filtered = filtered.filter(schedule => {
+        return Object.entries(activeFilters).every(([field, value]) => {
+          if (!value) return true
+          
+          const scheduleValue = schedule[field as keyof typeof schedule]
+          
+          if (typeof value === 'boolean') {
+            return scheduleValue === value
+          }
+          
+          if (Array.isArray(value)) {
+            return value.includes(scheduleValue)
+          }
+          
+          if (typeof value === 'string') {
+            return String(scheduleValue).toLowerCase().includes(value.toLowerCase())
+          }
+          
+          return scheduleValue === value
+        })
+      })
+    }
+    
+    return filtered
+  }, [
+    availableSchedules, 
+    debouncedSearchQuery, 
+    enableFuzzySearch, 
+    advancedSearch,
+    enableAdvancedFiltering,
+    activeFilters
+  ])
   
+  // Selection validation
+  const validationResult = useMemo(() => {
+    if (!enableSelectionValidation || !selectionValidation) {
+      return { valid: true }
+    }
+    
+    const { minItems = 0, maxItems = Infinity, validateConflicts = false, customValidator } = selectionValidation
+    
+    // Check min/max items
+    if (selectedScheduleIds.length < minItems) {
+      return { valid: false, message: `Please select at least ${minItems} schedule(s)` }
+    }
+    
+    if (selectedScheduleIds.length > maxItems) {
+      return { valid: false, message: `Please select no more than ${maxItems} schedule(s)` }
+    }
+    
+    // Check for conflicts (overlapping schedules)
+    if (validateConflicts) {
+      const selectedSchedules = availableSchedules.filter(s => selectedScheduleIds.includes(s.id))
+      // Simple conflict detection - can be enhanced
+      const conflicts = selectedSchedules.some((schedule, index) => {
+        return selectedSchedules.slice(index + 1).some(other => {
+          // Basic date overlap check
+          return schedule.startDate === other.startDate
+        })
+      })
+      
+      if (conflicts) {
+        return { valid: false, message: 'Selected schedules have conflicting time slots' }
+      }
+    }
+    
+    // Custom validation
+    if (customValidator) {
+      return customValidator(selectedScheduleIds)
+    }
+    
+    return { valid: true }
+  }, [enableSelectionValidation, selectionValidation, selectedScheduleIds, availableSchedules])
+
   // Handle checkbox toggle
   const handleToggleSchedule = useCallback((scheduleId: number) => {
     const newSelection = selectedScheduleIds.includes(scheduleId)
@@ -70,6 +267,19 @@ export function ScheduleSelector({
       : [...selectedScheduleIds, scheduleId]
     onSelectionChange(newSelection)
   }, [selectedScheduleIds, onSelectionChange])
+  
+  // Handle filter changes
+  const handleFilterChange = useCallback((field: string, value: any) => {
+    const newFilters = { ...activeFilters, [field]: value }
+    setActiveFilters(newFilters)
+    onFiltersChange?.(newFilters)
+  }, [activeFilters, onFiltersChange])
+  
+  // Clear all filters
+  const handleClearFilters = useCallback(() => {
+    setActiveFilters({})
+    onFiltersChange?.({})
+  }, [onFiltersChange])
   
   // Handle confirm button
   const handleConfirm = () => {
@@ -81,6 +291,7 @@ export function ScheduleSelector({
   const handleCancel = () => {
     setSearchQuery('')
     setAcknowledgedReplace(false)
+    setShowAdvancedFilters(false)
     onCancel()
   }
   
@@ -97,7 +308,8 @@ export function ScheduleSelector({
   const canConfirm = 
     selectedScheduleIds.length > 0 &&
     !isSubmitting &&
-    (!hasExistingSchedules || acknowledgedReplace)
+    (!hasExistingSchedules || acknowledgedReplace) &&
+    validationResult.valid
   
   // Virtual list row renderer
   const ScheduleRow = useCallback(({ index, style, ariaAttributes }: { 
@@ -186,23 +398,26 @@ export function ScheduleSelector({
     )
   }, [filteredSchedules, selectedScheduleIds, isSubmitting, handleToggleSchedule])
   
-  if (!isOpen) {
+  // Inline mode guard
+  if (displayMode === 'inline' && !isOpen) {
     return null
   }
-
-  return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleCancel}
-      title="Select Schedules"
-      size="lg"
-      closeOnOverlayClick={!isSubmitting}
-      className="sm:max-h-[90vh]"
+  
+  // Modal mode guard
+  if (displayMode === 'modal' && !isOpen) {
+    return null
+  }
+  
+  // Render content (shared between modal and inline)
+  const renderContent = () => (
+    <div 
+      data-testid={displayMode === 'modal' ? "schedule-selector-modal" : "schedule-selector-inline"} 
+      className={cn(
+        'flex flex-col space-y-3 sm:space-y-4',
+        displayMode === 'inline' && inlineConfig?.compact && 'space-y-2',
+        className
+      )}
     >
-      <div 
-        data-testid="schedule-selector-modal" 
-        className={cn('flex flex-col space-y-3 sm:space-y-4', className)}
-      >
         {/* CRITICAL: REPLACE WARNING */}
         {hasExistingSchedules && (
           <div
@@ -289,16 +504,141 @@ export function ScheduleSelector({
           )}
         </div>
         
+        {/* Advanced Filters Toggle */}
+        {enableAdvancedFiltering && filterCriteria.length > 0 && (
+          <div className="flex items-center justify-between">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              className="gap-2"
+              data-testid="toggle-filters"
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              Advanced Filters
+              {Object.keys(activeFilters).length > 0 && (
+                <span className="ml-1 bg-blue-100 text-blue-800 rounded-full px-2 py-0.5 text-xs">
+                  {Object.keys(activeFilters).length}
+                </span>
+              )}
+            </Button>
+            
+            {Object.keys(activeFilters).length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearFilters}
+                className="gap-2 text-red-600 hover:text-red-700"
+                data-testid="clear-filters"
+              >
+                <X className="h-4 w-4" />
+                Clear All
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Advanced Filters Panel */}
+        {enableAdvancedFiltering && showAdvancedFilters && filterCriteria.length > 0 && (
+          <div className="border rounded-lg p-4 bg-gray-50 dark:bg-gray-800/50 space-y-3">
+            <div className="flex items-center justify-between">
+              <h4 className="font-medium text-gray-900 dark:text-gray-100">
+                Filter Schedules
+              </h4>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAdvancedFilters(false)}
+                className="p-1"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {filterCriteria.map((criteria) => (
+                <div key={criteria.field} className="space-y-1">
+                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                    {criteria.label}
+                  </label>
+                  
+                  {criteria.type === 'text' && (
+                    <Input
+                      type="text"
+                      value={activeFilters[criteria.field] || ''}
+                      onChange={(e) => handleFilterChange(criteria.field, e.target.value)}
+                      placeholder={`Filter by ${criteria.label.toLowerCase()}...`}
+                      className="w-full"
+                    />
+                  )}
+                  
+                  {criteria.type === 'select' && criteria.options && (
+                    <select
+                      value={activeFilters[criteria.field] || ''}
+                      onChange={(e) => handleFilterChange(criteria.field, e.target.value)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-800"
+                    >
+                      <option value="">All {criteria.label}</option>
+                      {criteria.options.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  
+                  {criteria.type === 'boolean' && (
+                    <div className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={activeFilters[criteria.field] || false}
+                        onChange={(e) => handleFilterChange(criteria.field, e.target.checked)}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="text-sm text-gray-700 dark:text-gray-300">
+                        Show only {criteria.label.toLowerCase()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Selected Count */}
         {selectedScheduleIds.length > 0 && (
           <div 
-            className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400"
+            className="flex items-center justify-between"
             role="status"
             aria-live="polite"
             aria-atomic="true"
           >
-            <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
-            <span>{selectedScheduleIds.length} schedule(s) selected</span>
+            <div className="flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400">
+              <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+              <span>{selectedScheduleIds.length} schedule(s) selected</span>
+            </div>
+            
+            {/* Selection Preview */}
+            {showSelectionPreview && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-2"
+                data-testid="preview-selection"
+              >
+                <Settings className="h-4 w-4" />
+                Preview Selection
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Selection Validation Error */}
+        {!validationResult.valid && validationResult.message && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-800 dark:bg-red-950/20 dark:border-red-800 dark:text-red-200">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0" />
+            <span>{validationResult.message}</span>
           </div>
         )}
         
@@ -404,6 +744,38 @@ export function ScheduleSelector({
           )}
         </div>
       </div>
+    )
+  
+  // Return based on display mode
+  if (displayMode === 'inline') {
+    return (
+      <div 
+        className={cn(
+          'bg-white dark:bg-gray-900 rounded-lg',
+          inlineConfig?.showBorder && 'border border-gray-200 dark:border-gray-700',
+          inlineConfig?.compact ? 'p-3' : 'p-4'
+        )}
+        style={{ 
+          maxHeight: inlineConfig?.maxHeight || 400,
+          overflow: 'auto'
+        }}
+      >
+        {renderContent()}
+      </div>
+    )
+  }
+  
+  // Modal display mode (default)
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={handleCancel}
+      title="Select Schedules"
+      size="lg"
+      closeOnOverlayClick={!isSubmitting}
+      className="sm:max-h-[90vh]"
+    >
+      {renderContent()}
     </Modal>
   )
 }
