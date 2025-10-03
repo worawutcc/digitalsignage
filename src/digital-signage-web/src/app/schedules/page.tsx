@@ -4,13 +4,14 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { Plus, Calendar, List, Filter, Users } from 'lucide-react'
+import { Plus, Calendar, List, Filter, Users, Settings, UserCheck } from 'lucide-react'
 import { ScheduleCalendar } from '@/features/schedules/components/ScheduleCalendar'
 import { ScheduleBuilder } from '@/features/schedules/components/ScheduleBuilder'
 import { ConflictDetection } from '@/features/schedules/components/ConflictDetection'
 import { DefaultScheduleToggle } from '@/features/users/components/DefaultScheduleToggle'
 import { ContentSourceBadge } from '@/features/schedules/components/ContentSourceBadge'
 import { AssignedUsersList } from '@/features/schedules/components/AssignedUsersList'
+import { UserScheduleAssignment } from '@/features/users/components/UserScheduleAssignment'
 import { Modal } from '@/components/ui/Modal'
 import {
   useSchedules,
@@ -21,18 +22,27 @@ import {
   useDeleteSchedule,
 } from '@/features/schedules/hooks/useSchedules'
 import type { CreateScheduleRequest, CalendarEvent } from '@/features/schedules/types'
+import type { BulkOperation, BulkOperationResult, OptimisticUpdate, PerformanceMetric } from '@/types/enhanced-ui'
 
 /**
  * Schedule Management Page
  * Main page for managing schedules with calendar view, schedule builder, and conflict detection
  */
 export default function SchedulesPage() {
-  const [view, setView] = useState<'calendar' | 'list'>('calendar')
+  const [view, setView] = useState<'calendar' | 'list' | 'users'>('calendar')
   const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedScheduleId, setSelectedScheduleId] = useState<string | null>(null)
   const [showUsersModal, setShowUsersModal] = useState(false)
   const [selectedScheduleForUsers, setSelectedScheduleForUsers] = useState<string | null>(null)
+  
+  // Enhanced state for user assignment features
+  const [bulkOperations, setBulkOperations] = useState<BulkOperation[]>([])
+  const [performanceMetrics, setPerformanceMetrics] = useState<PerformanceMetric[]>([])
+  const [enhancedFeaturesEnabled, setEnhancedFeaturesEnabled] = useState(
+    process.env.NEXT_PUBLIC_ENABLE_ENHANCED_UI === 'true'
+  )
+  const [selectedScheduleForAssignment, setSelectedScheduleForAssignment] = useState<any>(null)
 
   // Get current date range for calendar
   const now = new Date()
@@ -87,23 +97,35 @@ export default function SchedulesPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
+      {/* Enhanced Page Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Schedule Management</h1>
               <p className="mt-1 text-sm text-gray-600">
-                Create and manage content schedules for your digital signage devices
+                Create and manage content schedules with enhanced user assignment capabilities
               </p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
-            >
-              <Plus className="h-5 w-5" />
-              Create Schedule
-            </button>
+            <div className="flex items-center space-x-3">
+              {enhancedFeaturesEnabled && (
+                <div className="text-right mr-4">
+                  <div className="text-sm font-medium text-gray-900">
+                    Enhanced UI Active
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    Bulk assignment • Real-time updates
+                  </div>
+                </div>
+              )}
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
+              >
+                <Plus className="h-5 w-5" />
+                Create Schedule
+              </button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -140,7 +162,7 @@ export default function SchedulesPage() {
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* View Toggle */}
+        {/* Enhanced View Toggle with User Assignment */}
         <div className="mb-6 flex items-center justify-between">
           <div className="flex items-center gap-2 bg-white rounded-lg p-1 shadow-sm">
             <button
@@ -164,6 +186,22 @@ export default function SchedulesPage() {
             >
               <List className="h-4 w-4" />
               List View
+            </button>
+            <button
+              onClick={() => setView('users')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                view === 'users'
+                  ? 'bg-blue-600 text-white'
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+            >
+              <UserCheck className="h-4 w-4" />
+              User Assignment
+              {enhancedFeaturesEnabled && (
+                <span className="ml-1 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                  Enhanced
+                </span>
+              )}
             </button>
           </div>
 
@@ -331,11 +369,14 @@ export default function SchedulesPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
-                            onClick={() => handleViewUsers(schedule.id)}
+                            onClick={() => {
+                              setSelectedScheduleForAssignment(schedule);
+                              setView('users');
+                            }}
                             className="flex items-center gap-1 text-sm text-blue-600 hover:text-blue-900"
                           >
                             <Users className="h-4 w-4" />
-                            <span>View Users</span>
+                            <span>Assign Users</span>
                           </button>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -368,6 +409,143 @@ export default function SchedulesPage() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced User Assignment View */}
+        {view === 'users' && (
+          <div className="bg-white rounded-lg shadow">
+            <div className="p-6">
+              <div className="mb-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                  Schedule-to-User Assignment
+                </h2>
+                <p className="text-sm text-gray-600">
+                  Assign schedules to users with enhanced bulk operations and real-time feedback
+                </p>
+              </div>
+
+              {selectedScheduleForAssignment ? (
+                <div className="space-y-6">
+                  {/* Schedule Info Panel */}
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100">
+                          {selectedScheduleForAssignment.name}
+                        </h3>
+                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                          {selectedScheduleForAssignment.description}
+                        </p>
+                        <div className="flex items-center space-x-4 mt-2 text-xs text-blue-600 dark:text-blue-400">
+                          <span>Priority: {selectedScheduleForAssignment.priority}</span>
+                          <span>Status: {selectedScheduleForAssignment.status}</span>
+                          <span>Devices: {selectedScheduleForAssignment.targetDevices.length}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setSelectedScheduleForAssignment(null);
+                          setView('list');
+                        }}
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                      >
+                        ← Back to Schedules
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Performance Metrics Dashboard for Schedules */}
+                  {enhancedFeaturesEnabled && performanceMetrics.length > 0 && (
+                    <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-200 dark:border-green-800">
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="text-sm font-medium text-green-900 dark:text-green-100">
+                          Assignment Performance Metrics
+                        </h3>
+                        <button
+                          onClick={() => setPerformanceMetrics([])}
+                          className="text-xs text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-200"
+                        >
+                          Clear
+                        </button>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                        {performanceMetrics.slice(-4).map((metric, index) => (
+                          <div key={index} className="text-center">
+                            <div className="font-medium text-green-800 dark:text-green-200">
+                              {metric.value.toFixed(1)}{metric.unit}
+                            </div>
+                            <div className="text-green-600 dark:text-green-400">
+                              {metric.name}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Active Bulk Operations for Schedule Assignment */}
+                  {bulkOperations.length > 0 && (
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-800">
+                      <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-2">
+                        Active User Assignment Operations ({bulkOperations.length})
+                      </h3>
+                      <div className="space-y-2">
+                        {bulkOperations.map((operation) => (
+                          <div key={operation.id} className="flex items-center justify-between text-xs">
+                            <span className="text-yellow-800 dark:text-yellow-200">
+                              {operation.type}: {operation.selectedItems.length} users
+                            </span>
+                            <span className="text-yellow-600 dark:text-yellow-400">
+                              In Progress...
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Note: UserScheduleAssignment component will be adapted for schedule-to-users mode
+                      This is a placeholder for the enhanced user assignment interface */}
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border-2 border-dashed border-gray-300 dark:border-gray-600">
+                    <div className="text-center">
+                      <UserCheck className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
+                        Enhanced User Assignment Interface
+                      </h3>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        This will integrate the enhanced UserScheduleAssignment component
+                        configured for schedule-to-users assignment mode
+                      </p>
+                      {enhancedFeaturesEnabled && (
+                        <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
+                          Enhanced features: Bulk operations • Virtual scrolling • Optimistic updates
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-12">
+                  <Calendar className="mx-auto h-12 w-12 text-gray-400" />
+                  <h3 className="mt-2 text-sm font-medium text-gray-900">
+                    No schedule selected
+                  </h3>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Select a schedule from the List View to manage user assignments
+                  </p>
+                  <div className="mt-6">
+                    <button
+                      onClick={() => setView('list')}
+                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                    >
+                      <List className="w-4 h-4 mr-2" />
+                      View Schedules
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
