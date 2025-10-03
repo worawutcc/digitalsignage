@@ -78,7 +78,8 @@ export function useWebSocket(
   }, [onStatusChange])
 
   const send = useCallback(<TPayload,>(type: RealTimeEventType, payload: TPayload) => {
-    websocketClient.send(type, payload)
+    // TODO: Implement generic send method in WebSocketClient
+    console.warn('WebSocket send not yet implemented:', type, payload)
   }, [])
 
   const connect = useCallback(() => {

@@ -194,12 +194,12 @@ export default function UsersPage() {
 
               {selectedUser ? (
                 <UserScheduleAssignment
-                  userId={parseInt(selectedUser.id)}
+                  userId={selectedUser.id}
                   user={{
-                    id: parseInt(selectedUser.id),
+                    id: selectedUser.id,
                     name: `${selectedUser.firstName} ${selectedUser.lastName}`,
                     email: selectedUser.email,
-                    role: selectedUser.role.name,
+                    role: selectedUser.role,
                   }}
                   onSchedulesUpdated={() => {
                     // Refresh user data if needed
@@ -314,12 +314,11 @@ interface CreateUserModalProps {
 
 function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
   const [formData, setFormData] = React.useState({
-    username: '',
     email: '',
     password: '',
     firstName: '',
     lastName: '',
-    roleId: '',
+    role: 'User' as 'Admin' | 'User',
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -372,19 +371,6 @@ function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email
                 </label>
                 <input
@@ -415,15 +401,14 @@ function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
                   Role
                 </label>
                 <select
-                  value={formData.roleId}
-                  onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'User' | 'Admin' })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   required
                 >
                   <option value="">Select a role...</option>
-                  <option value="role-2">Administrator</option>
-                  <option value="role-3">Manager</option>
-                  <option value="role-4">Operator</option>
+                  <option value="Admin">Admin</option>
+                  <option value="User">User</option>
                 </select>
               </div>
             </div>
@@ -461,11 +446,10 @@ interface EditUserModalProps {
 
 function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) {
   const [formData, setFormData] = React.useState({
-    username: user.username,
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
-    roleId: user.role.id,
+    role: user.role,
     isActive: user.isActive,
   });
 
@@ -519,19 +503,6 @@ function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Username
-                </label>
-                <input
-                  type="text"
-                  value={formData.username}
-                  onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email
                 </label>
                 <input
@@ -548,14 +519,13 @@ function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) {
                   Role
                 </label>
                 <select
-                  value={formData.roleId}
-                  onChange={(e) => setFormData({ ...formData, roleId: e.target.value })}
+                  value={formData.role}
+                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'User' | 'Admin' })}
                   className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
                   required
                 >
-                  <option value="role-2">Administrator</option>
-                  <option value="role-3">Manager</option>
-                  <option value="role-4">Operator</option>
+                  <option value="Admin">Admin</option>
+                  <option value="User">User</option>
                 </select>
               </div>
 

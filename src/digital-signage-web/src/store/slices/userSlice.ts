@@ -674,7 +674,8 @@ export const selectFilteredUsers = (state: RootState) => {
   if (state.users.searchQuery.trim()) {
     const query = state.users.searchQuery.toLowerCase()
     filteredUsers = filteredUsers.filter(user => 
-      user.username.toLowerCase().includes(query) ||
+      user.firstName.toLowerCase().includes(query) ||
+      user.lastName.toLowerCase().includes(query) ||
       user.email.toLowerCase().includes(query) ||
       user.role.toLowerCase().includes(query)
     )
@@ -712,8 +713,8 @@ export const selectSortedUsers = (state: RootState) => {
 
     switch (sortBy) {
       case 'name':
-        aValue = a.username.toLowerCase()
-        bValue = b.username.toLowerCase()
+        aValue = `${a.firstName} ${a.lastName}`.toLowerCase()
+        bValue = `${b.firstName} ${b.lastName}`.toLowerCase()
         break
       case 'email':
         aValue = a.email.toLowerCase()

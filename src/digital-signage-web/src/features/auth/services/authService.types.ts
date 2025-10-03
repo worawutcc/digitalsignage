@@ -2,7 +2,8 @@
  * Authentication service types and interfaces
  */
 
-import type { User, Tokens } from '@/store/slices/authSlice'
+import type { User } from '@/types/api'
+import type { Tokens } from '@/store/slices/authSlice'
 
 /**
  * Login credentials interface
@@ -14,11 +15,14 @@ export interface LoginCredentials {
 }
 
 /**
- * Login response from API
+ * Login response from API - matches OpenAPI schema
  */
 export interface LoginResponse {
+  accessToken: string
+  refreshToken: string
+  expiresIn: number
+  tokenType: string
   user: User
-  tokens: Tokens
 }
 
 /**
