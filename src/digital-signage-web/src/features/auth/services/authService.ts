@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api'
+import { saveAccessToken, saveRefreshToken } from '@/lib/auth'
 import type { User } from '@/types/api'
 import type { Tokens } from '@/store/slices/authSlice'
 import type {
@@ -36,10 +37,23 @@ export class AuthService {
    */
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     try {
-      const response = await apiClient.post<LoginResponse>('/api/auth/login', credentials)
+      const response = await apiClient.post<LoginResponse>('/api/auth/login', {
+        email: credentials.email,
+        password: credentials.password
+      })
+
+      // Save tokens to storage
+      if (response.data.accessToken) {
+        saveAccessToken(response.data.accessToken, credentials.rememberMe || false)
+      }
+      if (response.data.refreshToken) {
+        saveRefreshToken(response.data.refreshToken, credentials.rememberMe || false)
+      }
+
       return response.data
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Login failed')
+      console.error('Login API error:', error.response?.data || error.message)
+      throw new Error(error.response?.data?.message || 'Invalid email or password')
     }
   }
 

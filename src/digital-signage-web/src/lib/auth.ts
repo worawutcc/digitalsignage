@@ -4,15 +4,22 @@
  */
 
 /**
- * JWT token payload interface
+ * JWT token payload interface matching backend API format
  */
 export interface TokenPayload {
-  userId: string
+  nameid: string      // Backend uses 'nameid' instead of 'userId'
   email: string
-  role: 'admin' | 'manager' | 'user'
-  permissions: string[]
-  iat: number // Issued at (timestamp)
-  exp: number // Expiration (timestamp)
+  role: string        // Backend returns 'Admin', 'User', etc.
+  sub: string
+  jti: string
+  iat: number
+  nbf: number
+  exp: number
+  iss: string
+  aud: string
+  // Legacy frontend fields (for compatibility)
+  userId?: string
+  permissions?: string[]
 }
 
 /**

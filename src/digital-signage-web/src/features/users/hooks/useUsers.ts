@@ -2,6 +2,7 @@
  * useUsers Hook - React Query integration for user management
  */
 
+import React from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../services/userService';
 import type {
@@ -105,7 +106,7 @@ export function useUpdateUser() {
       userService.updateUser(id, data),
     onSuccess: (updatedUser) => {
       // Update the user detail cache
-      queryClient.setQueryData(userKeys.detail(updatedUser.id), updatedUser);
+      queryClient.setQueryData(userKeys.detail(updatedUser.userId), updatedUser);
       // Invalidate lists to refetch
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
     },
@@ -138,7 +139,7 @@ export function useActivateUser() {
   return useMutation({
     mutationFn: (id: number) => userService.activateUser(id),
     onSuccess: (updatedUser) => {
-      queryClient.setQueryData(userKeys.detail(updatedUser.id), updatedUser);
+      queryClient.setQueryData(userKeys.detail(updatedUser.userId), updatedUser);
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
     },
   });
@@ -153,7 +154,7 @@ export function useDeactivateUser() {
   return useMutation({
     mutationFn: (id: number) => userService.deactivateUser(id),
     onSuccess: (updatedUser) => {
-      queryClient.setQueryData(userKeys.detail(updatedUser.id), updatedUser);
+      queryClient.setQueryData(userKeys.detail(updatedUser.userId), updatedUser);
       queryClient.invalidateQueries({ queryKey: userKeys.lists() });
     },
   });
@@ -373,6 +374,3 @@ export function useRemoveUserSchedules() {
     },
   });
 }
-
-// Add React import for hooks
-import React from 'react';

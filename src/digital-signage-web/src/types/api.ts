@@ -12,14 +12,18 @@ export interface LoginResponse {
 }
 
 export interface User {
-  id: number
-  firstName: string
-  lastName: string
+  userId: number
   email: string
+  fullName: string
+  phoneNumber?: string
   role: 'Admin' | 'User'
   isActive: boolean
   createdAt: string
   lastLoginAt?: string
+  // Legacy fields for backward compatibility
+  id?: number
+  firstName?: string
+  lastName?: string
 }
 
 export interface Device {

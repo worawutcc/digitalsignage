@@ -90,9 +90,9 @@ export function UserList({
   const handleToggleUserStatus = async (user: User) => {
     try {
       if (user.isActive) {
-        await deactivateUserMutation.mutateAsync(user.id);
+        await deactivateUserMutation.mutateAsync(user.userId);
       } else {
-        await activateUserMutation.mutateAsync(user.id);
+        await activateUserMutation.mutateAsync(user.userId);
       }
     } catch (error) {
       console.error('Failed to toggle user status:', error);
@@ -189,14 +189,14 @@ export function UserList({
       render: (_, user) => (
         <div className="relative">
           <button
-            onClick={() => setActionMenuUserId(actionMenuUserId === user.id ? null : user.id)}
+            onClick={() => setActionMenuUserId(actionMenuUserId === user.userId ? null : user.userId)}
             className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
             aria-label="User actions"
           >
             <MoreVertical className="w-5 h-5" />
           </button>
 
-          {actionMenuUserId === user.id && (
+          {actionMenuUserId === user.userId && (
             <div className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-10">
               <div className="py-1" role="menu">
                 <button
@@ -213,7 +213,7 @@ export function UserList({
                 
                 <button
                   onClick={() => {
-                    router.push(`/users/${user.id}/schedules`);
+                    router.push(`/users/${user.userId}/schedules`);
                     setActionMenuUserId(null);
                   }}
                   className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -246,7 +246,7 @@ export function UserList({
 
                 <button
                   onClick={() => {
-                    handleResetPassword(user.id);
+                    handleResetPassword(user.userId);
                     setActionMenuUserId(null);
                   }}
                   className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -258,7 +258,7 @@ export function UserList({
 
                 <button
                   onClick={() => {
-                    handleDeleteUser(user.id);
+                    handleDeleteUser(user.userId);
                     setActionMenuUserId(null);
                   }}
                   className="flex items-center w-full px-4 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700"
