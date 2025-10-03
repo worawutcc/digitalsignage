@@ -1,7 +1,12 @@
+---
+applyTo: 'src/digital-signage-web/**'
+---
 # 🤖 GitHub Copilot Instructions for Digital Signage Next.js Project
 ## Template for creating and maintaining a Next.js frontend application with clean architecture.
 
-Auto-generated for Next.js Frontend. Last updated: 2025-10-01
+Auto-generated for Next.js Frontend. Last updated: 2025-10-03
+
+**Scope:** This guide applies exclusively to the Digital Signage web frontend development (Next.js 15, React 18, TypeScript). For API/backend development, refer to `copilot-instructions-api.instructions.md`.
 
 ## Active Technologies
 - **Next.js 15** with App Router (React 18, TypeScript)
@@ -14,75 +19,81 @@ Auto-generated for Next.js Frontend. Last updated: 2025-10-01
 - **Lucide React** for icons
 - **clsx** or **tailwind-variants** for conditional styling
 
-## Project Structure (Clean Architecture)
+## Frontend Project Structure (Web Only)
 ```
-src/digital-signage-web/
+digital_signage/
 ├── src/
-│   ├── app/                       # Next.js 13+ App Router
-│   │   ├── dashboard/
-│   │   │   ├── page.tsx
-│   │   │   ├── layout.tsx
-│   │   │   └── types.ts
-│   │   ├── (auth)/               # Route groups
-│   │   ├── admin/                # Admin pages
-│   │   ├── devices/              # Device management
-│   │   ├── media/                # Media library
-│   │   ├── layout.tsx            # Root layout
-│   │   └── page.tsx              # Home page
-│   │
-│   ├── components/               # Reusable UI components
-│   │   ├── Button/
-│   │   │   ├── Button.tsx
-│   │   │   └── Button.types.ts
-│   │   ├── Header/
-│   │   │   ├── Header.tsx
-│   │   │   └── Header.types.ts
-│   │   └── ui/                   # Base UI components
-│   │
-│   ├── features/                 # Feature-based organization
-│   │   ├── devices/
-│   │   │   ├── components/
-│   │   │   │   ├── DeviceCard.tsx
-│   │   │   │   └── DeviceCard.types.ts
-│   │   │   ├── hooks/
-│   │   │   │   └── useDevices.ts
-│   │   │   ├── services/
-│   │   │   │   └── deviceService.ts
-│   │   │   └── types.ts
-│   │   ├── auth/
-│   │   │   └── ...
-│   │   └── media/
-│   │       └── ...
-│   │
-│   ├── hooks/                    # Global custom hooks
-│   │   └── useLocalStorage.ts
-│   │
-│   ├── lib/                      # Utilities / infrastructure
-│   │   ├── api.ts               # Axios configuration
-│   │   ├── auth.ts              # JWT authentication
-│   │   └── utils.ts             # Helper functions
-│   │
-│   ├── services/                 # Business logic / API integration
-│   │   └── analyticsService.ts
-│   │
-│   ├── store/                    # Redux store
-│   │   ├── index.ts             # configureStore
-│   │   ├── rootReducer.ts
-│   │   └── slices/
-│   │       ├── authSlice.ts
-│   │       └── devicesSlice.ts
-│   │
-│   └── types/                    # Global types/interfaces
-│       └── index.ts
-├── public/                       # Static assets
-├── tests/                        # Test files
-├── .env.local                    # Environment variables
-├── next.config.js               # Next.js configuration
-├── tsconfig.json                # TypeScript configuration
-├── tailwind.config.js           # Tailwind configuration
-├── postcss.config.mjs           # PostCSS configuration
-└── package.json
+│   ├── digital-signage-web/         # Frontend Application
+│   │   ├── src/
+│   │   │   ├── app/                 # Next.js 13+ App Router
+│   │   │   │   ├── dashboard/
+│   │   │   │   │   ├── page.tsx
+│   │   │   │   │   ├── layout.tsx
+│   │   │   │   │   └── types.ts
+│   │   │   │   ├── (auth)/         # Route groups
+│   │   │   │   ├── admin/          # Admin pages
+│   │   │   │   ├── devices/        # Device management
+│   │   │   │   ├── media/          # Media library
+│   │   │   │   ├── layout.tsx      # Root layout
+│   │   │   │   └── page.tsx        # Home page
+│   │   │   │
+│   │   │   ├── components/         # Reusable UI components
+│   │   │   │   ├── Button/
+│   │   │   │   │   ├── Button.tsx
+│   │   │   │   │   └── Button.types.ts
+│   │   │   │   ├── Header/
+│   │   │   │   │   ├── Header.tsx
+│   │   │   │   │   └── Header.types.ts
+│   │   │   │   └── ui/             # Base UI components
+│   │   │   │
+│   │   │   ├── features/           # Feature-based organization
+│   │   │   │   ├── devices/
+│   │   │   │   │   ├── components/
+│   │   │   │   │   │   ├── DeviceCard.tsx
+│   │   │   │   │   │   └── DeviceCard.types.ts
+│   │   │   │   │   ├── hooks/
+│   │   │   │   │   │   └── useDevices.ts
+│   │   │   │   │   ├── services/
+│   │   │   │   │   │   └── deviceService.ts
+│   │   │   │   │   └── types.ts
+│   │   │   │   ├── auth/
+│   │   │   │   │   └── ...
+│   │   │   │   └── media/
+│   │   │   │       └── ...
+│   │   │   │
+│   │   │   ├── hooks/              # Global custom hooks
+│   │   │   │   └── useLocalStorage.ts
+│   │   │   │
+│   │   │   ├── lib/                # Utilities / infrastructure
+│   │   │   │   ├── api.ts         # Axios configuration
+│   │   │   │   ├── auth.ts        # JWT authentication
+│   │   │   │   └── utils.ts       # Helper functions
+│   │   │   │
+│   │   │   ├── services/          # Business logic / API integration
+│   │   │   │   └── analyticsService.ts
+│   │   │   │
+│   │   │   ├── store/             # Redux store
+│   │   │   │   ├── index.ts       # configureStore
+│   │   │   │   ├── rootReducer.ts
+│   │   │   │   └── slices/
+│   │   │   │       ├── authSlice.ts
+│   │   │   │       └── devicesSlice.ts
+│   │   │   │
+│   │   │   └── types/             # Global types/interfaces
+│   │   │       └── index.ts
+│   │   ├── public/                # Static assets
+│   │   ├── tests/                 # Test files
+│   │   ├── .env.local             # Environment variables
+│   │   ├── next.config.js         # Next.js configuration
+│   │   ├── tsconfig.json          # TypeScript configuration
+│   │   ├── tailwind.config.js     # Tailwind configuration
+│   │   ├── postcss.config.mjs     # PostCSS configuration
+│   │   └── package.json
+│   └── DigitalSignage.*/          # Backend projects (see API instructions)
+└── DigitalSignage.sln             # Solution file
 ```
+
+**Note:** This guide covers only the frontend web application in `src/digital-signage-web/`. Backend API development is handled separately with its own instruction file.
 
 ## General Guidelines
 - Use **TypeScript** instead of JavaScript.
