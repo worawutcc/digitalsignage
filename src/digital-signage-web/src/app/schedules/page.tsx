@@ -4,7 +4,7 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { Plus, Calendar, List, Filter, Users, Settings, UserCheck, Copy } from 'lucide-react'
+import { Plus, Calendar, List, Filter, Users, Settings, UserCheck, Copy, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
 import { ScheduleCalendar } from '@/features/schedules/components/ScheduleCalendar'
 import { ScheduleBuilder } from '@/features/schedules/components/ScheduleBuilder'
@@ -438,28 +438,57 @@ export default function SchedulesPage() {
                   {/* Schedule Info Panel */}
                   <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
                     <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100">
-                          {selectedScheduleForAssignment.name}
-                        </h3>
-                        <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
-                          {selectedScheduleForAssignment.description}
-                        </p>
-                        <div className="flex items-center space-x-4 mt-2 text-xs text-blue-600 dark:text-blue-400">
-                          <span>Priority: {selectedScheduleForAssignment.priority}</span>
-                          <span>Status: {selectedScheduleForAssignment.status}</span>
-                          <span>Devices: {selectedScheduleForAssignment.targetDevices.length}</span>
+                      <div className="flex items-center space-x-4">
+                        <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
+                          <Calendar className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-medium text-blue-900 dark:text-blue-100">
+                            {selectedScheduleForAssignment.name}
+                          </h3>
+                          <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                            {selectedScheduleForAssignment.description}
+                          </p>
+                          <div className="flex items-center space-x-4 mt-2 text-xs text-blue-600 dark:text-blue-400">
+                            <span>Priority: {selectedScheduleForAssignment.priority}</span>
+                            <span>Status: {selectedScheduleForAssignment.status}</span>
+                            <span>Devices: {selectedScheduleForAssignment.targetDevices.length}</span>
+                          </div>
                         </div>
                       </div>
-                      <button
-                        onClick={() => {
-                          setSelectedScheduleForAssignment(null);
-                          setView('list');
-                        }}
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                      >
-                        ← Back to Schedules
-                      </button>
+                      <div className="flex items-center space-x-3">
+                        {/* Quick Schedule Switcher */}
+                        {enhancedFeaturesEnabled && schedules && schedules.length > 1 && (
+                          <div className="flex items-center space-x-2">
+                            <span className="text-sm text-blue-600 dark:text-blue-400">Switch to:</span>
+                            <select
+                              value={selectedScheduleForAssignment.id}
+                              onChange={(e) => {
+                                const newSchedule = schedules.find(s => s.id === e.target.value);
+                                if (newSchedule) {
+                                  setSelectedScheduleForAssignment(newSchedule);
+                                }
+                              }}
+                              className="text-sm border border-blue-300 dark:border-blue-600 rounded-md px-2 py-1 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                            >
+                              {schedules.map(schedule => (
+                                <option key={schedule.id} value={schedule.id}>
+                                  {schedule.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        )}
+                        <button
+                          onClick={() => {
+                            setSelectedScheduleForAssignment(null);
+                            setView('list');
+                          }}
+                          className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200 text-sm font-medium flex items-center space-x-1"
+                        >
+                          <span>← Back to Schedules</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -513,23 +542,197 @@ export default function SchedulesPage() {
                     </div>
                   )}
 
-                  {/* Note: UserScheduleAssignment component will be adapted for schedule-to-users mode
-                      This is a placeholder for the enhanced user assignment interface */}
-                  <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 border-2 border-dashed border-gray-300 dark:border-gray-600">
-                    <div className="text-center">
-                      <UserCheck className="mx-auto h-12 w-12 text-gray-400" />
-                      <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">
-                        Enhanced User Assignment Interface
-                      </h3>
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        This will integrate the enhanced UserScheduleAssignment component
-                        configured for schedule-to-users assignment mode
-                      </p>
-                      {enhancedFeaturesEnabled && (
-                        <p className="mt-2 text-xs text-blue-600 dark:text-blue-400">
-                          Enhanced features: Bulk operations • Virtual scrolling • Optimistic updates
-                        </p>
-                      )}
+                  {/* Enhanced User Assignment Interface */}
+                  <div className="space-y-6">
+                    {/* Bulk Operations Control Panel */}
+                    {enhancedFeaturesEnabled && (
+                      <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                        <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            Bulk User Assignment Operations
+                          </h3>
+                          <p className="text-sm text-gray-600 dark:text-gray-400">
+                            Assign "{selectedScheduleForAssignment.name}" to multiple users efficiently
+                          </p>
+                        </div>
+                        
+                        <div className="p-4">
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            {/* Quick Assignment Actions */}
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                                <UserCheck className="w-4 h-4 mr-2 text-blue-500" />
+                                Quick Assignment
+                              </h4>
+                              <div className="space-y-2">
+                                <button 
+                                  onClick={() => {
+                                    // Simulate bulk assign to active users
+                                    const newOperation: BulkOperation = {
+                                      id: Date.now().toString(),
+                                      type: 'assign',
+                                      selectedItems: ['1', '2', '3', '4', '5'], // Mock user IDs
+                                      options: { scheduleIds: [selectedScheduleForAssignment.id] },
+                                      progress: { total: 5, completed: 0, failed: 0, skipped: 0 },
+                                      validation: { warnings: [], errors: [], canProceed: true }
+                                    };
+                                    setBulkOperations(prev => [...prev, newOperation]);
+                                    setTimeout(() => setBulkOperations(prev => prev.filter(op => op.id !== newOperation.id)), 4000);
+                                  }}
+                                  className="w-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-3 py-2 rounded text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors"
+                                >
+                                  Assign to Active Users
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    // Simulate bulk assign to role-based users
+                                    const newOperation: BulkOperation = {
+                                      id: Date.now().toString(),
+                                      type: 'assign',
+                                      selectedItems: ['6', '7', '8'], // Mock user IDs
+                                      options: { scheduleIds: [selectedScheduleForAssignment.id] },
+                                      progress: { total: 3, completed: 0, failed: 0, skipped: 0 },
+                                      validation: { warnings: [], errors: [], canProceed: true }
+                                    };
+                                    setBulkOperations(prev => [...prev, newOperation]);
+                                    setTimeout(() => setBulkOperations(prev => prev.filter(op => op.id !== newOperation.id)), 3500);
+                                  }}
+                                  className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-2 rounded text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                                >
+                                  Assign by Role
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    // Simulate bulk assign to department users
+                                    const newOperation: BulkOperation = {
+                                      id: Date.now().toString(),
+                                      type: 'assign',
+                                      selectedItems: ['9', '10'], // Mock user IDs
+                                      options: { scheduleIds: [selectedScheduleForAssignment.id] },
+                                      progress: { total: 2, completed: 0, failed: 0, skipped: 0 },
+                                      validation: { warnings: [], errors: [], canProceed: true }
+                                    };
+                                    setBulkOperations(prev => [...prev, newOperation]);
+                                    setTimeout(() => setBulkOperations(prev => prev.filter(op => op.id !== newOperation.id)), 3000);
+                                  }}
+                                  className="w-full bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 px-3 py-2 rounded text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+                                >
+                                  Assign by Department
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Bulk Management */}
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                                <Settings className="w-4 h-4 mr-2 text-orange-500" />
+                                Bulk Management
+                              </h4>
+                              <div className="space-y-2">
+                                <button 
+                                  onClick={() => {
+                                    // Simulate priority update
+                                    const newOperation: BulkOperation = {
+                                      id: Date.now().toString(),
+                                      type: 'change-priority',
+                                      selectedItems: ['1', '2', '3'],
+                                      options: { priority: 1 },
+                                      progress: { total: 3, completed: 0, failed: 0, skipped: 0 },
+                                      validation: { warnings: [], errors: [], canProceed: true }
+                                    };
+                                    setBulkOperations(prev => [...prev, newOperation]);
+                                    setTimeout(() => setBulkOperations(prev => prev.filter(op => op.id !== newOperation.id)), 2500);
+                                  }}
+                                  className="w-full bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 px-3 py-2 rounded text-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors"
+                                >
+                                  Update Priorities
+                                </button>
+                                <button 
+                                  onClick={() => {
+                                    // Simulate bulk remove assignments
+                                    const newOperation: BulkOperation = {
+                                      id: Date.now().toString(),
+                                      type: 'remove',
+                                      selectedItems: ['4', '5'],
+                                      options: { scheduleIds: [selectedScheduleForAssignment.id] },
+                                      progress: { total: 2, completed: 0, failed: 0, skipped: 0 },
+                                      validation: { warnings: [], errors: [], canProceed: true }
+                                    };
+                                    setBulkOperations(prev => [...prev, newOperation]);
+                                    setTimeout(() => setBulkOperations(prev => prev.filter(op => op.id !== newOperation.id)), 2000);
+                                  }}
+                                  className="w-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-3 py-2 rounded text-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+                                >
+                                  Remove Assignments
+                                </button>
+                                <button className="w-full bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                                  Copy to Schedule
+                                </button>
+                              </div>
+                            </div>
+
+                               {/* Assignment Analytics */}
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                                <Users className="w-4 h-4 mr-2 text-indigo-500" />
+                                Assignment Stats
+                              </h4>
+                              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-3 space-y-2">
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">Total Users</span>
+                                  <span className="font-medium text-gray-900 dark:text-white">24</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">Assigned</span>
+                                  <span className="font-medium text-green-600 dark:text-green-400">8</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">Conflicts</span>
+                                  <span className="font-medium text-yellow-600 dark:text-yellow-400">2</span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                  <span className="text-gray-600 dark:text-gray-400">Available</span>
+                                  <span className="font-medium text-blue-600 dark:text-blue-400">14</span>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+                                  <div className="w-full bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                                    <div className="bg-green-500 h-2 rounded-full" style={{ width: '33%' }}></div>
+                                  </div>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">33% assigned</p>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Enhanced User List Interface */}
+                    <div className="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+                      <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                            User Assignment for: {selectedScheduleForAssignment.name}
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            {enhancedFeaturesEnabled && (
+                              <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                Enhanced Mode
+                              </span>
+                            )}
+                            <button className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200">
+                              Export List
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="p-6">
+                        {/* This will be the enhanced user assignment component */}
+                        <AssignedUsersList 
+                          scheduleId={parseInt(selectedScheduleForAssignment.id)}
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>

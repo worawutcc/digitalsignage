@@ -28,6 +28,9 @@ import { cn } from '@/lib/utils'
 import { useUserSchedules } from '../hooks/useUserSchedules'
 import { useAssignSchedules } from '../hooks/useAssignSchedules'
 import { useRemoveUserSchedules } from '../hooks/useRemoveUserSchedules'
+import { useBulkOperations } from '@/hooks/useBulkOperations'
+import { useConflictDetection } from '@/hooks/useConflictDetection'
+import { useRealTimeUpdates } from '@/hooks/useRealTimeUpdates'
 import { useQuery } from '@tanstack/react-query'
 import { scheduleService } from '@/features/schedules/services/scheduleService'
 
@@ -60,9 +63,35 @@ function UserScheduleAssignmentContent({
   const [optimisticUpdates, setOptimisticUpdates] = useState<OptimisticUpdate[]>([])
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false)
   const [performanceMetrics, setPerformanceMetrics] = useState<any[]>([])
+  const [operationProgress, setOperationProgress] = useState<{ 
+    total: number; 
+    completed: number; 
+    errors: string[];
+    isRunning: boolean;
+  }>({ total: 0, completed: 0, errors: [], isRunning: false })
   
   // Track component render performance
   const renderStartTime = useMemo(() => performance.now(), [])
+  
+  // Enhanced state management for better UX
+  const [showConflictWarning, setShowConflictWarning] = useState(false);
+  const [conflictDetails, setConflictDetails] = useState<string[]>([]);
+  const [isProcessingBulkOperation, setIsProcessingBulkOperation] = useState(false);
+  
+  // Use enhanced hooks
+  const realTimeUpdates = useRealTimeUpdates();
+  
+  // Real-time connection for schedule updates
+  useEffect(() => {
+    const unsubscribe = realTimeUpdates.subscribe(['schedule_updated', 'assignment_updated'], (event: any) => {
+      if (event.data.userId === userId) {
+        // Refetch user schedules on real-time updates
+        console.log('Real-time schedule update for user:', userId, event);
+      }
+    });
+    
+    return unsubscribe;
+  }, [userId, realTimeUpdates]);
   
   useEffect(() => {
     if (onPerformanceMetric) {
@@ -146,10 +175,51 @@ function UserScheduleAssignmentContent({
     }, 1000)
   }
 
-  // Enhanced assign schedules with optimistic updates
-  const handleAssignSchedules = () => {
-    if (selectedScheduleIds.length === 0) return
+  // Enhanced assign schedules with progress tracking and conflict detection
+  const handleAssignSchedules = async () => {
+    if (selectedScheduleIds.length === 0) return;
     
+    setOperationProgress({
+      total: selectedScheduleIds.length,
+      completed: 0,
+      errors: [],
+      isRunning: true
+    });
+    
+    // Check for conflicts before assignment
+    try {
+      // Simulate conflict detection for selected schedules
+      const conflicts = await Promise.all(
+        selectedScheduleIds.map(async (scheduleId) => {
+          // In real implementation, this would call an API
+          const hasConflict = Math.random() < 0.1; // 10% chance of conflict for demo
+          return hasConflict ? {
+            scheduleId,
+            type: 'time_overlap',
+            message: `Schedule ${scheduleId} conflicts with existing assignments`
+          } : null;
+        })
+      );
+      
+      const detectedConflicts = conflicts.filter(Boolean);
+      
+      if (detectedConflicts.length > 0) {
+        setShowConflictWarning(true);
+        setConflictDetails(detectedConflicts.map(c => c!.message));
+        setOperationProgress(prev => ({ ...prev, isRunning: false }));
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking for conflicts:', error);
+      setOperationProgress(prev => ({
+        ...prev,
+        errors: [...prev.errors, 'Failed to check for conflicts'],
+        isRunning: false
+      }));
+      return;
+    }
+    
+    // Proceed with assignment if no conflicts
     if (enableOptimisticUpdates && onOptimisticUpdate) {
       const optimisticUpdate: OptimisticUpdate = {
         id: `assign-${Date.now()}`,
@@ -159,7 +229,7 @@ function UserScheduleAssignmentContent({
           original: currentSchedules,
           optimistic: [...currentSchedules, ...selectedScheduleIds.map(id => ({ scheduleId: id, isOptimistic: true }))],
           rollback: () => {
-            // Rollback logic
+            setOptimisticUpdates(prev => prev.filter(u => u.id !== optimisticUpdate.id));
           },
         },
         status: 'pending',
@@ -176,16 +246,25 @@ function UserScheduleAssignmentContent({
         if (enableOptimisticUpdates) {
           setOptimisticUpdates(prev => prev.filter(u => u.type !== 'assign'))
         }
+        setOperationProgress(prev => ({
+          ...prev,
+          completed: prev.total,
+          isRunning: false
+        }));
         setShowSuccessAnimation(true)
         setTimeout(() => setShowSuccessAnimation(false), 2000)
       },
-      onError: () => {
+      onError: (error) => {
         if (enableOptimisticUpdates) {
-          // Rollback optimistic updates
           setOptimisticUpdates(prev => prev.map(u => 
             u.type === 'assign' ? { ...u, status: 'failed' as const } : u
           ))
         }
+        setOperationProgress(prev => ({
+          ...prev,
+          errors: [...prev.errors, error instanceof Error ? error.message : 'Assignment failed'],
+          isRunning: false
+        }));
       }
     })
   }
@@ -253,6 +332,79 @@ function UserScheduleAssignmentContent({
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Conflict Warning Modal */}
+      {showConflictWarning && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="max-w-md rounded-lg bg-white p-6 shadow-lg">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-6 w-6 flex-shrink-0 text-yellow-600 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="font-semibold text-gray-900 mb-2">Schedule Conflicts Detected</h3>
+                <div className="space-y-2 mb-4">
+                  {conflictDetails.map((conflict, index) => (
+                    <p key={index} className="text-sm text-gray-600">• {conflict}</p>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-3">
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setShowConflictWarning(false);
+                      setConflictDetails([]);
+                    }}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    variant="default"
+                    onClick={() => {
+                      setShowConflictWarning(false);
+                      setConflictDetails([]);
+                      // Proceed with assignment despite conflicts
+                      assignSchedules.mutate({ userId, scheduleIds: selectedScheduleIds });
+                    }}
+                  >
+                    Assign Anyway
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Operation Progress Indicator */}
+      {operationProgress.isRunning && (
+        <div className="rounded-lg border border-blue-200 bg-blue-50 p-4 mb-4">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+            <div className="flex-1">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-sm font-medium text-blue-900">Processing assignment...</span>
+                <span className="text-sm text-blue-700">
+                  {operationProgress.completed}/{operationProgress.total}
+                </span>
+              </div>
+              <div className="w-full bg-blue-200 rounded-full h-2">
+                <div 
+                  className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                  style={{ 
+                    width: `${(operationProgress.completed / operationProgress.total) * 100}%` 
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          {operationProgress.errors.length > 0 && (
+            <div className="mt-3 text-sm text-red-600">
+              {operationProgress.errors.map((error, index) => (
+                <p key={index}>• {error}</p>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

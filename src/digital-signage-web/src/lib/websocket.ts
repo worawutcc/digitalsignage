@@ -16,12 +16,62 @@ export type RealTimeEventType =
   | 'system_alert'
   | 'heartbeat'
   | 'connection_established'
+  // Enhanced user management events for T027
+  | 'user_schedule_assigned'
+  | 'user_schedule_removed'
+  | 'user_schedule_conflict_detected'
+  | 'user_schedule_conflict_resolved'
+  | 'bulk_operation_started'
+  | 'bulk_operation_progress'
+  | 'bulk_operation_completed'
+  | 'bulk_operation_failed'
+  | 'user_status_changed'
+  | 'user_role_changed'
   | string
 
 export interface RealTimeEvent<TPayload = unknown> {
   type: RealTimeEventType
   payload: TPayload
   timestamp: string
+}
+
+// Enhanced user management event payloads for T027
+export interface UserScheduleAssignedPayload {
+  userId: number
+  scheduleId: number
+  assignedBy: number
+  priority?: number
+  conflictDetected?: boolean
+}
+
+export interface UserScheduleConflictPayload {
+  userId: number
+  conflictId: string
+  conflictType: 'overlap' | 'device_unavailable' | 'resource_conflict'
+  conflictingScheduleIds: number[]
+  message: string
+  severity: 'low' | 'medium' | 'high'
+  autoResolvable: boolean
+}
+
+export interface BulkOperationPayload {
+  operationId: string
+  type: 'assign_schedules' | 'remove_schedules' | 'update_users' | 'resolve_conflicts'
+  userId?: number
+  totalItems: number
+  processedItems: number
+  failedItems: number
+  progress: number // 0-100
+  status: 'started' | 'in_progress' | 'completed' | 'failed'
+  errors?: Array<{ itemId: string; message: string }>
+}
+
+export interface UserStatusChangedPayload {
+  userId: number
+  previousStatus: boolean
+  newStatus: boolean
+  changedBy: number
+  reason?: string
 }
 
 /**
@@ -237,6 +287,80 @@ class WebSocketClient {
       console.log('[WebSocketClient] Subscribed to event types:', eventTypes)
     } catch (error) {
       console.error('[WebSocketClient] Failed to subscribe to event types', error)
+    }
+  }
+
+  /**
+   * Enhanced user management subscriptions for T027
+   */
+
+  /**
+   * Subscribe to user schedule events for specific users
+   */
+  async subscribeToUserScheduleEvents(userIds: number[]) {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      console.warn('[WebSocketClient] Unable to subscribe to user events, not connected')
+      return
+    }
+
+    try {
+      await this.connection.invoke('SubscribeToUserEvents', userIds)
+      console.log('[WebSocketClient] Subscribed to user schedule events:', userIds)
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to subscribe to user events', error)
+    }
+  }
+
+  /**
+   * Subscribe to all user management events (admin only)
+   */
+  async subscribeToAllUserEvents() {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return
+    }
+
+    try {
+      await this.connection.invoke('SubscribeToAllUserEvents')
+      console.log('[WebSocketClient] Subscribed to all user management events')
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to subscribe to all user events', error)
+    }
+  }
+
+  /**
+   * Subscribe to bulk operation progress updates
+   */
+  async subscribeToBulkOperations(operationIds?: string[]) {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return
+    }
+
+    try {
+      if (operationIds) {
+        await this.connection.invoke('SubscribeToBulkOperations', operationIds)
+        console.log('[WebSocketClient] Subscribed to bulk operations:', operationIds)
+      } else {
+        await this.connection.invoke('SubscribeToAllBulkOperations')
+        console.log('[WebSocketClient] Subscribed to all bulk operations')
+      }
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to subscribe to bulk operations', error)
+    }
+  }
+
+  /**
+   * Subscribe to conflict detection events
+   */
+  async subscribeToConflictEvents() {
+    if (!this.connection || this.connection.state !== 'Connected') {
+      return
+    }
+
+    try {
+      await this.connection.invoke('SubscribeToConflictEvents')
+      console.log('[WebSocketClient] Subscribed to conflict detection events')
+    } catch (error) {
+      console.error('[WebSocketClient] Failed to subscribe to conflict events', error)
     }
   }
 
