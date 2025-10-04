@@ -329,6 +329,304 @@ export function ApiErrorBoundary({ children }: { children: ReactNode }) {
 }
 
 /**
+ * Bulk Operation Error Boundary
+ * Specialized error boundary for bulk operations with enhanced UX
+ * 
+ * @see T030 - Error boundary enhancements for bulk operation error handling
+ */
+export interface BulkOperationError extends Error {
+  operationType: 'bulk_update' | 'bulk_delete' | 'bulk_create'
+  totalItems: number
+  failedItems: number
+  successfulItems: number
+  failureDetails?: Array<{
+    itemId: string
+    error: string
+  }>
+}
+
+export function BulkOperationErrorBoundary({
+  children,
+  operationType,
+  onRetry,
+  onPartialRetry,
+}: {
+  children: ReactNode
+  operationType?: string
+  onRetry?: () => void
+  onPartialRetry?: (failedItemIds: string[]) => void
+}) {
+  return (
+    <ErrorBoundary
+      fallback={(error, reset) => {
+        const isBulkError = 'operationType' in error && 'totalItems' in error
+        const bulkError = isBulkError ? (error as BulkOperationError) : null
+
+        return (
+          <div className="rounded-lg border border-orange-200 bg-orange-50 p-6 dark:border-orange-800 dark:bg-orange-900/20">
+            <div className="space-y-4">
+              <div className="flex items-start gap-4">
+                <div className="text-3xl">🔄</div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-orange-900 dark:text-orange-300">
+                    Bulk Operation Error
+                  </h3>
+                  
+                  {bulkError ? (
+                    <div className="mt-2 space-y-2">
+                      <p className="text-sm text-orange-700 dark:text-orange-400">
+                        Operation: <span className="font-medium">{bulkError.operationType.replace('_', ' ')}</span>
+                      </p>
+                      
+                      <div className="grid grid-cols-3 gap-4 rounded-md bg-orange-100 p-3 dark:bg-orange-900/30">
+                        <div className="text-center">
+                          <div className="text-lg font-semibold text-orange-900 dark:text-orange-300">
+                            {bulkError.totalItems}
+                          </div>
+                          <div className="text-xs text-orange-700 dark:text-orange-400">
+                            Total
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-semibold text-green-700 dark:text-green-400">
+                            {bulkError.successfulItems}
+                          </div>
+                          <div className="text-xs text-orange-700 dark:text-orange-400">
+                            Successful
+                          </div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-lg font-semibold text-red-700 dark:text-red-400">
+                            {bulkError.failedItems}
+                          </div>
+                          <div className="text-xs text-orange-700 dark:text-orange-400">
+                            Failed
+                          </div>
+                        </div>
+                      </div>
+
+                      {bulkError.failureDetails && bulkError.failureDetails.length > 0 && (
+                        <details className="mt-3">
+                          <summary className="cursor-pointer text-sm font-medium text-orange-800 dark:text-orange-300">
+                            View Failed Items ({bulkError.failureDetails.length})
+                          </summary>
+                          <div className="mt-2 max-h-40 overflow-y-auto rounded-md bg-orange-100 p-3 dark:bg-orange-900/30">
+                            {bulkError.failureDetails.map((failure, index) => (
+                              <div key={index} className="mb-2 text-sm">
+                                <span className="font-mono text-orange-900 dark:text-orange-300">
+                                  {failure.itemId}
+                                </span>
+                                <span className="ml-2 text-orange-700 dark:text-orange-400">
+                                  {failure.error}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-sm text-orange-700 dark:text-orange-400">
+                      An error occurred during the bulk operation. Some items may have been processed successfully.
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={() => {
+                    reset()
+                    onRetry?.()
+                  }}
+                  size="sm"
+                  variant="default"
+                >
+                  Retry All
+                </Button>
+                
+                {bulkError && bulkError.failureDetails && onPartialRetry && (
+                  <Button
+                    onClick={() => {
+                      const failedIds = bulkError.failureDetails!.map(f => f.itemId)
+                      reset()
+                      onPartialRetry(failedIds)
+                    }}
+                    size="sm"
+                    variant="secondary"
+                  >
+                    Retry Failed Only ({bulkError.failedItems})
+                  </Button>
+                )}
+
+                {bulkError && bulkError.successfulItems > 0 && (
+                  <Button
+                    onClick={reset}
+                    size="sm"
+                    variant="outline"
+                    className="text-green-700 border-green-300 hover:bg-green-50 dark:text-green-400 dark:border-green-600 dark:hover:bg-green-900/20"
+                  >
+                    Continue ({bulkError.successfulItems} Completed)
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        )
+      }}
+      onError={(error, errorInfo) => {
+        console.error('Bulk Operation Error:', error, errorInfo)
+        
+        // Enhanced logging for bulk operations
+        if ('operationType' in error) {
+          const bulkError = error as BulkOperationError
+          console.group(`Bulk ${bulkError.operationType} Error Details`)
+          console.log('Total Items:', bulkError.totalItems)
+          console.log('Successful:', bulkError.successfulItems)
+          console.log('Failed:', bulkError.failedItems)
+          if (bulkError.failureDetails) {
+            console.log('Failure Details:', bulkError.failureDetails)
+          }
+          console.groupEnd()
+        }
+
+        // Track bulk operation errors for analytics
+        if (typeof window !== 'undefined' && window.gtag) {
+          window.gtag('event', 'bulk_operation_error', {
+            operation_type: operationType || 'unknown',
+            error_message: error.message,
+          })
+        }
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  )
+}
+
+/**
+ * Enhanced Async Error Boundary
+ * Handles promise rejections and async operation errors
+ */
+export function AsyncErrorBoundary({
+  children,
+  onAsyncError,
+}: {
+  children: ReactNode
+  onAsyncError?: (error: Error) => void
+}) {
+  React.useEffect(() => {
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      const error = event.reason instanceof Error 
+        ? event.reason 
+        : new Error(String(event.reason))
+      
+      console.error('Unhandled Promise Rejection:', error)
+      onAsyncError?.(error)
+      
+      // Prevent the default browser error handling
+      event.preventDefault()
+    }
+
+    window.addEventListener('unhandledrejection', handleUnhandledRejection)
+    return () => {
+      window.removeEventListener('unhandledrejection', handleUnhandledRejection)
+    }
+  }, [onAsyncError])
+
+  return (
+    <ErrorBoundary
+      fallback={(error, reset) => (
+        <div className="rounded-lg border border-purple-200 bg-purple-50 p-6 dark:border-purple-800 dark:bg-purple-900/20">
+          <div className="flex items-start gap-4">
+            <div className="text-3xl">⏳</div>
+            <div className="flex-1 space-y-2">
+              <h3 className="font-semibold text-purple-900 dark:text-purple-300">
+                Async Operation Error
+              </h3>
+              <p className="text-sm text-purple-700 dark:text-purple-400">
+                An asynchronous operation failed. This might be due to network issues or server problems.
+              </p>
+              <div className="flex gap-3 pt-2">
+                <Button onClick={reset} size="sm" variant="default">
+                  Retry
+                </Button>
+                <Button
+                  onClick={() => window.location.reload()}
+                  size="sm"
+                  variant="outline"
+                >
+                  Refresh Page
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      onError={(error) => {
+        console.error('Async Error:', error)
+      }}
+    >
+      {children}
+    </ErrorBoundary>
+  )
+}
+
+/**
+ * Context for providing error boundary utilities
+ */
+export interface ErrorBoundaryContextValue {
+  reportError: (error: Error, context?: string) => void
+  clearErrors: () => void
+}
+
+const ErrorBoundaryContext = React.createContext<ErrorBoundaryContextValue | null>(null)
+
+export function ErrorBoundaryProvider({ children }: { children: ReactNode }) {
+  const reportError = React.useCallback((error: Error, context?: string) => {
+    console.error(`Error${context ? ` in ${context}` : ''}:`, error)
+    
+    // Report to error monitoring service
+    if (process.env.NODE_ENV === 'production') {
+      // TODO: Send to error monitoring service (e.g., Sentry)
+    }
+  }, [])
+
+  const clearErrors = React.useCallback(() => {
+    // Clear any error state
+    console.log('Clearing error state')
+  }, [])
+
+  const value = React.useMemo(() => ({
+    reportError,
+    clearErrors,
+  }), [reportError, clearErrors])
+
+  return (
+    <ErrorBoundaryContext.Provider value={value}>
+      {children}
+    </ErrorBoundaryContext.Provider>
+  )
+}
+
+export function useErrorBoundary() {
+  const context = React.useContext(ErrorBoundaryContext)
+  if (!context) {
+    throw new Error('useErrorBoundary must be used within an ErrorBoundaryProvider')
+  }
+  return context
+}
+
+/**
+ * Hook for throwing errors to be caught by error boundaries
+ */
+export function useThrowError() {
+  return React.useCallback((error: Error) => {
+    throw error
+  }, [])
+}
+
+/**
  * HOC for wrapping components with error boundary
  */
 export function withErrorBoundary<P extends object>(

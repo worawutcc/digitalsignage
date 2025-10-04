@@ -13,7 +13,17 @@ import type {
   UserFilters,
   UserListResponse,
   RoleListResponse,
+  EnhancedUser,
+  UserScheduleAssignment,
+  BulkScheduleAssignmentRequest,
+  BulkOperationResponse,
+  UserScheduleAssignmentResponse,
+  CreateScheduleAssignmentRequest,
+  UpdateScheduleAssignmentRequest,
+  ConflictErrorResponse,
 } from '../types';
+import type { BulkOperation } from '@/types/bulk-operations';
+import type { ScheduleConflict } from '@/types/schedule-conflicts';
 
 /**
  * User Management Service
@@ -291,6 +301,287 @@ class UserService {
     }
 
     return date.toLocaleDateString();
+  }
+
+  // ============================================================================
+  // ENHANCED USER METHODS WITH SCHEDULE ASSIGNMENT
+  // ============================================================================
+
+  /**
+   * Get enhanced users list with schedule assignment and conflict data
+   */
+  async getEnhancedUsers(filters?: UserFilters): Promise<UserListResponse> {
+    const params = new URLSearchParams();
+    
+    // Standard filters
+    if (filters?.search) params.append('search', filters.search);
+    if (filters?.page) params.append('page', filters.page.toString());
+    if (filters?.limit) params.append('limit', filters.limit.toString());
+    if (filters?.sort) params.append('sort', filters.sort);
+    if (filters?.order) params.append('order', filters.order);
+    
+    if (filters?.role?.length) {
+      filters.role.forEach(r => params.append('role', r));
+    }
+    
+    if (filters?.status?.length) {
+      filters.status.forEach(s => params.append('status', s));
+    }
+
+    // Enhanced filters
+    if (filters?.department?.length) {
+      filters.department.forEach(d => params.append('department', d));
+    }
+
+    if (filters?.hasScheduleConflicts !== undefined) {
+      params.append('hasScheduleConflicts', filters.hasScheduleConflicts.toString());
+    }
+
+    if (filters?.assignedScheduleIds?.length) {
+      filters.assignedScheduleIds.forEach(id => params.append('assignedScheduleIds', id.toString()));
+    }
+
+    if (filters?.scheduleSyncStatus?.length) {
+      filters.scheduleSyncStatus.forEach(status => params.append('scheduleSyncStatus', status));
+    }
+
+    // Date range filters
+    if (filters?.lastScheduleUpdate?.from) {
+      params.append('lastScheduleUpdateFrom', filters.lastScheduleUpdate.from);
+    }
+    if (filters?.lastScheduleUpdate?.to) {
+      params.append('lastScheduleUpdateTo', filters.lastScheduleUpdate.to);
+    }
+
+    if (filters?.createdDate?.from) {
+      params.append('createdDateFrom', filters.createdDate.from);
+    }
+    if (filters?.createdDate?.to) {
+      params.append('createdDateTo', filters.createdDate.to);
+    }
+
+    const response = await apiClient.get<UserListResponse>(
+      `${this.basePath}?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Bulk assign schedules to multiple users
+   */
+  async bulkAssignSchedules(request: BulkScheduleAssignmentRequest): Promise<BulkOperationResponse> {
+    const response = await apiClient.post<BulkOperationResponse>(
+      `${this.basePath}/bulk-assign-schedules`,
+      request
+    );
+    return response.data;
+  }
+
+  /**
+   * Bulk remove schedule assignments from multiple users
+   */
+  async bulkRemoveScheduleAssignments(userIds: number[], scheduleIds: number[]): Promise<BulkOperationResponse> {
+    const response = await apiClient.post<BulkOperationResponse>(
+      `${this.basePath}/bulk-remove-schedules`,
+      { userIds, scheduleIds }
+    );
+    return response.data;
+  }
+
+  /**
+   * Get user's schedule assignments with conflicts
+   */
+  async getUserScheduleAssignments(
+    userId: number,
+    options?: {
+      includeInactive?: boolean;
+      startDate?: string;
+      endDate?: string;
+    }
+  ): Promise<UserScheduleAssignmentResponse> {
+    const params = new URLSearchParams();
+    
+    if (options?.includeInactive !== undefined) {
+      params.append('includeInactive', options.includeInactive.toString());
+    }
+    
+    if (options?.startDate) {
+      params.append('startDate', options.startDate);
+    }
+    
+    if (options?.endDate) {
+      params.append('endDate', options.endDate);
+    }
+
+    const response = await apiClient.get<UserScheduleAssignmentResponse>(
+      `${this.basePath}/${userId}/schedule-assignments?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Assign schedule to user
+   */
+  async assignScheduleToUser(userId: number, request: CreateScheduleAssignmentRequest): Promise<UserScheduleAssignment> {
+    try {
+      const response = await apiClient.post<{ success: boolean; data: UserScheduleAssignment }>(
+        `${this.basePath}/${userId}/schedule-assignments`,
+        request
+      );
+      return response.data.data;
+    } catch (error: any) {
+      // Handle conflict errors specially
+      if (error.response?.status === 409) {
+        const conflictError = error.response.data as ConflictErrorResponse;
+        throw new Error(`Schedule conflict detected: ${conflictError.error.message}`, { cause: conflictError });
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Update schedule assignment
+   */
+  async updateScheduleAssignment(
+    userId: number, 
+    assignmentId: number, 
+    request: UpdateScheduleAssignmentRequest
+  ): Promise<UserScheduleAssignment> {
+    const response = await apiClient.put<{ success: boolean; data: UserScheduleAssignment }>(
+      `${this.basePath}/${userId}/schedule-assignments/${assignmentId}`,
+      request
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Remove schedule assignment
+   */
+  async removeScheduleAssignment(userId: number, assignmentId: number): Promise<void> {
+    await apiClient.delete(`${this.basePath}/${userId}/schedule-assignments/${assignmentId}`);
+  }
+
+  /**
+   * Get users with schedule conflicts
+   */
+  async getUsersWithConflicts(options?: {
+    severity?: ('low' | 'medium' | 'high' | 'critical')[];
+    scheduleIds?: number[];
+    page?: number;
+    limit?: number;
+  }): Promise<UserListResponse> {
+    const params = new URLSearchParams();
+    params.append('hasScheduleConflicts', 'true');
+    
+    if (options?.severity?.length) {
+      options.severity.forEach(s => params.append('conflictSeverity', s));
+    }
+    
+    if (options?.scheduleIds?.length) {
+      options.scheduleIds.forEach(id => params.append('conflictScheduleIds', id.toString()));
+    }
+    
+    if (options?.page) params.append('page', options.page.toString());
+    if (options?.limit) params.append('limit', options.limit.toString());
+
+    const response = await apiClient.get<UserListResponse>(
+      `${this.basePath}?${params.toString()}`
+    );
+    return response.data;
+  }
+
+  /**
+   * Get schedule conflicts for a specific user
+   */
+  async getUserScheduleConflicts(userId: number): Promise<ScheduleConflict[]> {
+    const response = await apiClient.get<{ success: boolean; data: ScheduleConflict[] }>(
+      `${this.basePath}/${userId}/schedule-conflicts`
+    );
+    return response.data.data;
+  }
+
+  /**
+   * Resolve schedule conflict for user
+   */
+  async resolveUserScheduleConflict(
+    userId: number, 
+    conflictId: number, 
+    resolution: {
+      strategy: 'priority' | 'reschedule' | 'ignore';
+      parameters?: Record<string, any>;
+    }
+  ): Promise<void> {
+    await apiClient.post(
+      `${this.basePath}/${userId}/schedule-conflicts/${conflictId}/resolve`,
+      resolution
+    );
+  }
+
+  // ============================================================================
+  // UTILITY METHODS FOR ENHANCED FUNCTIONALITY
+  // ============================================================================
+
+  /**
+   * Get user assignment statistics
+   */
+  async getUserAssignmentStats(userId: number): Promise<{
+    totalAssigned: number;
+    activeAssignments: number;
+    conflictCount: number;
+    lastAssignmentDate?: string;
+  }> {
+    const response = await apiClient.get<{
+      success: boolean;
+      data: {
+        totalAssigned: number;
+        activeAssignments: number;
+        conflictCount: number;
+        lastAssignmentDate?: string;
+      };
+    }>(`${this.basePath}/${userId}/assignment-stats`);
+    return response.data.data;
+  }
+
+  /**
+   * Check if user can be assigned to schedule (conflict detection)
+   */
+  async canAssignUserToSchedule(userId: number, scheduleId: number): Promise<{
+    canAssign: boolean;
+    conflicts: ScheduleConflict[];
+    warnings: string[];
+  }> {
+    const response = await apiClient.get<{
+      success: boolean;
+      data: {
+        canAssign: boolean;
+        conflicts: ScheduleConflict[];
+        warnings: string[];
+      };
+    }>(`${this.basePath}/${userId}/can-assign-schedule/${scheduleId}`);
+    return response.data.data;
+  }
+
+  /**
+   * Get suggested users for schedule assignment (based on availability, role, etc.)
+   */
+  async getSuggestedUsersForSchedule(scheduleId: number, options?: {
+    limit?: number;
+    excludeUserIds?: number[];
+    requiredRole?: string;
+  }): Promise<EnhancedUser[]> {
+    const params = new URLSearchParams();
+    params.append('scheduleId', scheduleId.toString());
+    
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.requiredRole) params.append('requiredRole', options.requiredRole);
+    if (options?.excludeUserIds?.length) {
+      options.excludeUserIds.forEach(id => params.append('excludeUserIds', id.toString()));
+    }
+
+    const response = await apiClient.get<{ success: boolean; data: EnhancedUser[] }>(
+      `${this.basePath}/suggested-for-schedule?${params.toString()}`
+    );
+    return response.data.data;
   }
 }
 
