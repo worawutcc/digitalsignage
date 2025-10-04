@@ -3,26 +3,7 @@
 import { useEffect, useState } from 'react'
 import { Monitor, Users, Calendar, FileText, AlertTriangle, CheckCircle } from 'lucide-react'
 import { MetricCard } from './MetricCard'
-
-export interface DashboardStatsData {
-  totalDevices: number
-  activeDevices: number
-  offlineDevices: number
-  totalUsers: number
-  activeUsers: number
-  totalSchedules: number
-  activeSchedules: number
-  totalMediaFiles: number
-  mediaSizeGB: number
-  systemAlerts: number
-}
-
-export interface DashboardStatsProps {
-  data?: DashboardStatsData
-  loading?: boolean
-  className?: string
-  onRefresh?: () => void
-}
+import { DashboardStatsData, DashboardStatsProps } from './DashboardStats.types'
 
 /**
  * Dashboard statistics component displaying key metrics

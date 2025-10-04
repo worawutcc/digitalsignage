@@ -13,35 +13,39 @@ import NotificationCenter from '@/components/notifications/NotificationCenter'
 import { RealTimeEventsClient } from '@/components/providers/RealTimeEventsClient'
 
 /**
- * Default React Query configuration options
+ * Default React Query configuration options optimized for performance
  */
 const queryClientOptions: DefaultOptions = {
   queries: {
-    // Cache data for 5 minutes by default
-    staleTime: 5 * 60 * 1000,
-    // Keep unused data in cache for 10 minutes
-    cacheTime: 10 * 60 * 1000,
-    // Retry failed requests up to 3 times
+    // Cache data for different durations based on data type
+    staleTime: 5 * 60 * 1000, // 5 minutes default
+    // Keep unused data in cache longer for better UX
+    cacheTime: 30 * 60 * 1000, // 30 minutes
+    // Enable background refetching for fresh data
+    refetchOnWindowFocus: 'always',
+    refetchOnReconnect: 'always',
+    refetchOnMount: true,
+    // Retry configuration with exponential backoff
     retry: (failureCount, error) => {
       // Don't retry on authentication errors
       if (error instanceof ApiError && error.status === 401) {
         return false
       }
-      // Don't retry on client errors (4xx)
-      if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+      // Don't retry on client errors (4xx) except timeouts
+      if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408) {
         return false
       }
       // Retry up to 3 times for other errors
       return failureCount < 3
     },
-    // Retry delay with exponential backoff
-    retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
-    // Refetch on window focus for important data
-    refetchOnWindowFocus: true,
-    // Refetch on reconnect
-    refetchOnReconnect: true,
-    // Don't refetch on mount if data is fresh
-    refetchOnMount: true,
+    // Optimized retry delay with jitter
+    retryDelay: attemptIndex => {
+      const baseDelay = Math.min(1000 * 2 ** attemptIndex, 30000)
+      // Add jitter to prevent thundering herd
+      return baseDelay + Math.random() * 1000
+    },
+    // Enable network mode for better offline handling
+    networkMode: 'always',
   },
   mutations: {
     // Retry mutations once on network errors

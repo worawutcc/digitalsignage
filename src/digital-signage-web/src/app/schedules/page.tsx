@@ -4,7 +4,8 @@
 export const dynamic = 'force-dynamic'
 
 import { useState } from 'react'
-import { Plus, Calendar, List, Filter, Users, Settings, UserCheck } from 'lucide-react'
+import { Plus, Calendar, List, Filter, Users, Settings, UserCheck, Copy } from 'lucide-react'
+import Link from 'next/link'
 import { ScheduleCalendar } from '@/features/schedules/components/ScheduleCalendar'
 import { ScheduleBuilder } from '@/features/schedules/components/ScheduleBuilder'
 import { ConflictDetection } from '@/features/schedules/components/ConflictDetection'
@@ -118,6 +119,12 @@ export default function SchedulesPage() {
                   </div>
                 </div>
               )}
+              <Link href="/schedules/templates">
+                <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
+                  <Copy className="h-5 w-5" />
+                  Templates
+                </button>
+              </Link>
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"

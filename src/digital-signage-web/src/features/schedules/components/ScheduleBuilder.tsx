@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, X, Calendar, Clock, Target, Film } from 'lucide-react'
+import { Plus, X, Calendar, Clock, Target, Film, FileImage, Play } from 'lucide-react'
 import type {
   CreateScheduleRequest,
   TimeSlot,
@@ -14,6 +14,8 @@ import type {
 } from '../types'
 import { ConflictDetection } from './ConflictDetection'
 import { useValidateSchedule } from '../hooks/useSchedules'
+import { useMediaScheduleIntegration } from '@/hooks/useMediaScheduleIntegration'
+import { Button } from '@/components/ui/Button'
 
 // Validation schema
 const scheduleSchema = z.object({

@@ -7,17 +7,13 @@ import { Toast } from './Toast'
 import type { RootState } from '@/store'
 import { removeNotification } from '@/store/slices/uiSlice'
 import type { Notification as UINotification } from '@/store/slices/uiSlice'
+import { NotificationCenterProps } from './NotificationCenter.types'
 
 const DEFAULT_DURATIONS: Record<UINotification['type'], number> = {
   success: 5000,
   info: 5000,
   warning: 8000,
   error: 12000,
-}
-
-interface NotificationCenterProps {
-  maxVisible?: number
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right'
 }
 
 const POSITION_CLASS_MAP: Record<NonNullable<NotificationCenterProps['position']>, string> = {
@@ -49,8 +45,9 @@ export const NotificationCenter: React.FC<NotificationCenterProps> = ({
     setMounted(true)
     return () => {
       setMounted(false)
-      timersRef.current.forEach(timer => window.clearTimeout(timer))
-      timersRef.current.clear()
+      const timers = timersRef.current
+      timers.forEach(timer => window.clearTimeout(timer))
+      timers.clear()
     }
   }, [])
 
