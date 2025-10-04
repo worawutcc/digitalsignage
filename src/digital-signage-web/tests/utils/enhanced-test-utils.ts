@@ -23,10 +23,11 @@ export const testDataGenerators = {
    */
   generateUsers: (count: number): User[] => {
     return Array.from({ length: count }, (_, index) => ({
-      id: index + 1,
-      username: `user${index + 1}`,
+      userId: index + 1,
       email: `user${index + 1}@example.com`,
-      role: ['Admin', 'Manager', 'User'][index % 3] as 'Admin' | 'Manager' | 'User',
+      fullName: `User ${index + 1}`,
+      phoneNumber: `+1-555-000-${String(index + 1).padStart(4, '0')}`,
+      role: ['Admin', 'User'][index % 2] as 'Admin' | 'User',
       isActive: index % 4 !== 0, // Make every 4th user inactive
       createdAt: new Date(Date.now() - index * 86400000).toISOString(),
       updatedAt: new Date(Date.now() - index * 43200000).toISOString()
@@ -56,7 +57,7 @@ export const testDataGenerators = {
     const userSchedules: Record<number, UserSchedule[]> = {}
     
     users.forEach(user => {
-      userSchedules[user.id] = testDataGenerators.generateUserSchedules(user.id, schedulesPerUser)
+      userSchedules[user.userId] = testDataGenerators.generateUserSchedules(user.userId, schedulesPerUser)
     })
     
     return { users, userSchedules }

@@ -26,9 +26,27 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3, description: 'Overview and analytics' },
   { name: 'Devices', href: '/devices', icon: Monitor, description: 'Device management & monitoring' },
   { name: 'Device Groups', href: '/device-groups', icon: MonitorSpeaker, description: 'Device group management' },
-  { name: 'Media', href: '/media', icon: Image, description: 'Media library & content management' },
+  { 
+    name: 'Media', 
+    href: '/media', 
+    icon: Image, 
+    description: 'Media library & content management',
+    subItems: [
+      { name: 'Media Library', href: '/media' },
+      { name: 'Tags Management', href: '/media/tags' }
+    ]
+  },
   { name: 'Playlists', href: '/playlists', icon: Play, description: 'Content playlists' },
-  { name: 'Schedules', href: '/schedules', icon: Calendar, description: 'Schedule management' },
+  { 
+    name: 'Schedules', 
+    href: '/schedules', 
+    icon: Calendar, 
+    description: 'Schedule management',
+    subItems: [
+      { name: 'Schedule Management', href: '/schedules' },
+      { name: 'Templates', href: '/schedules/templates' }
+    ]
+  },
   { name: 'Analytics', href: '/analytics', icon: TrendingUp, description: 'Performance analytics' },
   { name: 'QR Codes', href: '/qr-codes', icon: QrCode, description: 'QR code management' },
   { name: 'Reports', href: '/reports', icon: FileBarChart, description: 'Reports & exports' },

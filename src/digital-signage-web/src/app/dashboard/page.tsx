@@ -6,6 +6,13 @@ export const dynamic = 'force-dynamic'
 import DashboardStats from '@/components/dashboard/DashboardStats'
 import { LineChart, BarChart, PieChart } from '@/components/charts'
 import AdminLayout from '@/components/layouts/AdminLayout'
+import { UnifiedSearch } from '@/components/ui/UnifiedSearch'
+import { RecentItems } from '@/features/dashboard/components/RecentItems'
+import { Button } from '@/components/ui/Button'
+import { Plus, Upload, Calendar, Tag, Copy, Users, RefreshCw, AlertCircle, TrendingUp, Activity } from 'lucide-react'
+import Link from 'next/link'
+import { useState } from 'react'
+import { cn } from '@/lib/utils'
 
 
 
@@ -49,32 +56,150 @@ const mockDeviceLocationData = [
 /**
  * Dashboard page showing system overview, metrics, and analytics
  * Displays real-time statistics, charts, and system health information
+ * Enhanced with Tailwind CSS 4 patterns and mobile-first responsive design
  */
 export default function DashboardPage() {
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  
   const handleRefreshStats = async () => {
+    setIsRefreshing(true)
     // In a real app, this would refetch data from the API
     console.log('Refreshing dashboard stats...')
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000))
+    setIsRefreshing(false)
   }
 
   return (
     <AdminLayout
       header={
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Dashboard</h1>
-          <p className="text-sm text-gray-600">
-            Monitor your digital signage system performance and health
-          </p>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Monitor your digital signage system performance and health
+            </p>
+          </div>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            <UnifiedSearch className="flex-1 sm:flex-none sm:w-80" />
+            <Button
+              onClick={handleRefreshStats}
+              variant="secondary"
+              size="sm"
+              className="shrink-0"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              <span className="hidden sm:inline ml-2">Refresh</span>
+            </Button>
+          </div>
         </div>
       }
     >
-      <div className="space-y-8">
-        {/* Main Statistics */}
-        <DashboardStats 
-          data={mockStatsData}
-          onRefresh={handleRefreshStats}
-        />
+      <div className="space-y-6 sm:space-y-8">
+        {/* System Health Alert */}
+        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/50 dark:to-red-950/50 border border-orange-200 dark:border-orange-800 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
+            <div>
+              <h3 className="font-medium text-orange-900 dark:text-orange-100">System Health Check</h3>
+              <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
+                3 devices offline • 2 schedules require attention • Storage at 78%
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
+          <div className="flex items-center gap-2 mb-6">
+            <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <Link href="/media" className="group">
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <Upload className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                  <span className="text-xs font-medium">Upload Media</span>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/schedules" className="group">
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
+                  <span className="text-xs font-medium">New Schedule</span>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/media/tags" className="group">
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <Tag className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                  <span className="text-xs font-medium">Manage Tags</span>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/schedules/templates" className="group">
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <Copy className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                  <span className="text-xs font-medium">Templates</span>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/users" className="group">
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+                  <span className="text-xs font-medium">User Mgmt</span>
+                </div>
+              </Button>
+            </Link>
+            <Link href="/devices" className="group">
+              <Button 
+                variant="secondary" 
+                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
+              >
+                <div className="flex flex-col items-center gap-2 w-full">
+                  <Plus className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs font-medium">Add Device</span>
+                </div>
+              </Button>
+            </Link>
+          </div>
+        </div>
+
+        {/* Recent Items and Search (Mobile) */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2">
+            {/* Main Statistics */}
+            <DashboardStats 
+              data={mockStatsData}
+              onRefresh={handleRefreshStats}
+            />
+          </div>
+          <div className="space-y-6">
+            <UnifiedSearch className="md:hidden" />
+            <RecentItems maxItems={5} />
+          </div>
+        </div>
 
         {/* Charts Section */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

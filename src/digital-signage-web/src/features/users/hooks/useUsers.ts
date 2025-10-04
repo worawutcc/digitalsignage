@@ -2,7 +2,7 @@
  * useUsers Hook - React Query integration for user management
  */
 
-import React from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../services/userService';
 import type {
@@ -223,7 +223,7 @@ export function useDeleteRole() {
  * Hook to manage user filters with state
  */
 export function useUserFilters(initialFilters?: UserFilters) {
-  const [filters, setFilters] = React.useState<UserFilters>(
+  const [filters, setFilters] = useState<UserFilters>(
     initialFilters || {
       page: 1,
       limit: 10,
@@ -232,14 +232,14 @@ export function useUserFilters(initialFilters?: UserFilters) {
     }
   );
 
-  const updateFilters = React.useCallback(
+  const updateFilters = useCallback(
     (updates: Partial<UserFilters>) => {
       setFilters((prev) => ({ ...prev, ...updates }));
     },
     []
   );
 
-  const resetFilters = React.useCallback(() => {
+  const resetFilters = useCallback(() => {
     setFilters({
       page: 1,
       limit: 10,

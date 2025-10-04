@@ -132,7 +132,10 @@ export function DefaultScheduleToggle({
     onAnalyticsEvent, 
     analyticsEvent, 
     scheduleId, 
-    showConfirmation
+    showConfirmation,
+    enableOptimisticUpdates,
+    onOptimisticStart,
+    setDefaultSchedule
   ])
   
   // Execute the toggle action
