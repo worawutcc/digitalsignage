@@ -411,7 +411,7 @@ export function useEnhancedSearch<T = any>(config: SearchConfig<T>): EnhancedSea
     cacheStats.current.misses++
 
     // Apply search
-    let searchedItems = applySearch(items, debouncedQuery, searchFields)
+    const searchedItems = applySearch(items, debouncedQuery, searchFields)
     
     // Apply filters
     const filteredItems = applyFilters(searchedItems, filters)

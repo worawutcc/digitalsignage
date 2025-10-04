@@ -1,8 +1,9 @@
 /**
  * useUsers Hook - React Query integration for user management
+ * Enhanced with advanced filtering, search debouncing, and bulk operations
  */
 
-import React from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userService } from '../services/userService';
 import type {
@@ -13,7 +14,29 @@ import type {
   CreateRoleRequest,
   UpdateRoleRequest,
   UserFilters,
+  EnhancedUser,
+  BulkScheduleAssignmentRequest,
+  BulkOperationResponse,
+  UserScheduleAssignment,
+  ScheduleConflict,
 } from '../types';
+
+// Custom hook for debouncing search input
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 
 /**
  * Query keys for user management
@@ -33,15 +56,121 @@ export const userKeys = {
 } as const;
 
 /**
- * Hook to fetch paginated list of users with filters
+ * Enhanced hook to fetch paginated list of users with advanced filtering and search debouncing
  */
-export function useUsers(filters?: UserFilters) {
+export function useUsers(filters?: UserFilters, options?: {
+  debounceMs?: number;
+  enableSearch?: boolean;
+  enableAdvancedFiltering?: boolean;
+}) {
+  const { debounceMs = 300, enableSearch = true, enableAdvancedFiltering = true } = options || {};
+  
+  // Debounce search term to avoid excessive API calls
+  const debouncedSearchTerm = useDebounce(filters?.search || '', debounceMs);
+  
+  // Create enhanced filters with debounced search
+  const enhancedFilters = useMemo(() => {
+    if (!filters) return undefined;
+    
+    const result: UserFilters = { ...filters };
+    
+    if (enableSearch) {
+      if (debouncedSearchTerm) {
+        result.search = debouncedSearchTerm;
+      } else {
+        delete result.search;
+      }
+    }
+    
+    return result;
+  }, [filters, debouncedSearchTerm, enableSearch]);
+
   return useQuery({
-    queryKey: userKeys.list(filters),
-    queryFn: () => userService.getUsers(filters),
+    queryKey: userKeys.list(enhancedFilters),
+    queryFn: () => userService.getEnhancedUsers(enhancedFilters),
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,
+    placeholderData: (previousData: any) => previousData, // Keep previous data while loading new search
+    retry: (failureCount, error: any) => {
+      // Don't retry on client errors (400-499)
+      if (error?.response?.status >= 400 && error?.response?.status < 500) {
+        return false;
+      }
+      return failureCount < 3;
+    },
   });
+}
+
+/**
+ * Hook for advanced user filtering with state management and search debouncing
+ */
+export function useUsersWithAdvancedFiltering(initialFilters?: UserFilters) {
+  const [filters, setFilters] = useState<UserFilters>(
+    initialFilters || {
+      page: 1,
+      limit: 20,
+      sort: 'username',
+      order: 'asc',
+    }
+  );
+
+  const [searchTerm, setSearchTerm] = useState(filters.search || '');
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Update filters when debounced search term changes
+  useEffect(() => {
+    setFilters(prev => {
+      const updated: UserFilters = { ...prev, page: 1 };
+      if (debouncedSearchTerm) {
+        updated.search = debouncedSearchTerm;
+      } else {
+        delete updated.search;
+      }
+      return updated;
+    });
+  }, [debouncedSearchTerm]);
+
+  const updateFilters = useCallback((updates: Partial<UserFilters>) => {
+    setFilters(prev => ({
+      ...prev,
+      ...updates,
+      // Reset to first page when filters change
+      page: updates.page !== undefined ? updates.page : 1,
+    }));
+  }, []);
+
+  const updateSearch = useCallback((search: string) => {
+    setSearchTerm(search);
+  }, []);
+
+  const resetFilters = useCallback(() => {
+    const defaultFilters: UserFilters = {
+      page: 1,
+      limit: 20,
+      sort: 'username',
+      order: 'asc',
+    };
+    setFilters(defaultFilters);
+    setSearchTerm('');
+  }, []);
+
+  const query = useUsers(filters, { enableSearch: true, enableAdvancedFiltering: true });
+
+  return {
+    ...query,
+    filters,
+    searchTerm,
+    updateFilters,
+    updateSearch,
+    resetFilters,
+    isFiltered: Boolean(
+      filters.search ||
+      filters.role?.length ||
+      filters.status?.length ||
+      filters.department?.length ||
+      filters.hasScheduleConflicts !== undefined
+    ),
+  };
 }
 
 /**
@@ -219,11 +348,167 @@ export function useDeleteRole() {
   });
 }
 
+// ============================================================================
+// BULK OPERATIONS HOOKS
+// ============================================================================
+
+/**
+ * Hook for bulk schedule assignment to multiple users
+ */
+export function useBulkAssignSchedules() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (request: BulkScheduleAssignmentRequest) => 
+      userService.bulkAssignSchedules(request),
+    onSuccess: () => {
+      // Invalidate all user-related queries to refresh data
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['userSchedules'] });
+    },
+    onError: (error: any) => {
+      console.error('Bulk schedule assignment failed:', error);
+    },
+  });
+}
+
+/**
+ * Hook for bulk removal of schedule assignments
+ */
+export function useBulkRemoveScheduleAssignments() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userIds, scheduleIds }: { userIds: number[]; scheduleIds: number[] }) =>
+      userService.bulkRemoveScheduleAssignments(userIds, scheduleIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: ['userSchedules'] });
+    },
+    onError: (error: any) => {
+      console.error('Bulk schedule removal failed:', error);
+    },
+  });
+}
+
+/**
+ * Hook to get users with schedule conflicts
+ */
+export function useUsersWithConflicts(options?: {
+  severity?: ('low' | 'medium' | 'high' | 'critical')[];
+  scheduleIds?: number[];
+  page?: number;
+  limit?: number;
+}) {
+  return useQuery({
+    queryKey: ['users', 'conflicts', options],
+    queryFn: () => userService.getUsersWithConflicts(options),
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook to get user's schedule assignments with conflict information
+ */
+export function useUserScheduleAssignments(
+  userId: number,
+  options?: {
+    includeInactive?: boolean;
+    startDate?: string;
+    endDate?: string;
+  }
+) {
+  return useQuery({
+    queryKey: ['users', userId, 'schedule-assignments', options],
+    queryFn: () => userService.getUserScheduleAssignments(userId, options),
+    enabled: !!userId,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook to assign a schedule to a user
+ */
+export function useAssignScheduleToUser() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ userId, request }: { 
+      userId: number; 
+      request: { scheduleId: number; priority?: number; notes?: string; allowConflicts?: boolean } 
+    }) => userService.assignScheduleToUser(userId, request),
+    onSuccess: (_, { userId }) => {
+      queryClient.invalidateQueries({ queryKey: ['users', userId, 'schedule-assignments'] });
+      queryClient.invalidateQueries({ queryKey: userKeys.lists() });
+    },
+    onError: (error: any) => {
+      // Handle conflict errors specially
+      if (error.message && error.message.includes('conflict')) {
+        console.warn('Schedule conflict detected:', error);
+      } else {
+        console.error('Schedule assignment failed:', error);
+      }
+    },
+  });
+}
+
+/**
+ * Hook to get user assignment statistics
+ */
+export function useUserAssignmentStats(userId: number) {
+  return useQuery({
+    queryKey: ['users', userId, 'assignment-stats'],
+    queryFn: () => userService.getUserAssignmentStats(userId),
+    enabled: !!userId,
+    staleTime: 60000, // 1 minute
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook to check if user can be assigned to schedule
+ */
+export function useCanAssignUserToSchedule(userId: number, scheduleId: number) {
+  return useQuery({
+    queryKey: ['users', userId, 'can-assign', scheduleId],
+    queryFn: () => userService.canAssignUserToSchedule(userId, scheduleId),
+    enabled: !!userId && !!scheduleId,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook to get suggested users for schedule assignment
+ */
+export function useSuggestedUsersForSchedule(
+  scheduleId: number, 
+  options?: {
+    limit?: number;
+    excludeUserIds?: number[];
+    requiredRole?: string;
+  }
+) {
+  return useQuery({
+    queryKey: ['schedules', scheduleId, 'suggested-users', options],
+    queryFn: () => userService.getSuggestedUsersForSchedule(scheduleId, options),
+    enabled: !!scheduleId,
+    staleTime: 30000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ============================================================================
+// LEGACY HOOKS (keeping for backward compatibility)
+// ============================================================================
+
 /**
  * Hook to manage user filters with state
  */
 export function useUserFilters(initialFilters?: UserFilters) {
-  const [filters, setFilters] = React.useState<UserFilters>(
+  const [filters, setFilters] = useState<UserFilters>(
     initialFilters || {
       page: 1,
       limit: 10,
@@ -232,14 +517,14 @@ export function useUserFilters(initialFilters?: UserFilters) {
     }
   );
 
-  const updateFilters = React.useCallback(
+  const updateFilters = useCallback(
     (updates: Partial<UserFilters>) => {
       setFilters((prev) => ({ ...prev, ...updates }));
     },
     []
   );
 
-  const resetFilters = React.useCallback(() => {
+  const resetFilters = useCallback(() => {
     setFilters({
       page: 1,
       limit: 10,

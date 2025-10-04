@@ -9,7 +9,7 @@ import { authActions } from '@/store/slices/authSlice'
 export class ApiError extends Error {
   constructor(
     public status: number,
-    public data: any,
+    public data: unknown,
     message?: string,
     public code?: string
   ) {
@@ -21,7 +21,7 @@ export class ApiError extends Error {
 /**
  * API Response interface for consistent response handling
  */
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T
   message?: string
   success: boolean
@@ -201,27 +201,27 @@ apiClient.interceptors.response.use(
  */
 export const api = {
   // GET request
-  get: <T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  get: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     apiClient.get(url, config).then(response => response.data),
 
   // POST request
-  post: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  post: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     apiClient.post(url, data, config).then(response => response.data),
 
   // PUT request
-  put: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  put: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     apiClient.put(url, data, config).then(response => response.data),
 
   // PATCH request
-  patch: <T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  patch: <T = unknown>(url: string, data?: unknown, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     apiClient.patch(url, data, config).then(response => response.data),
 
   // DELETE request
-  delete: <T = any>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
+  delete: <T = unknown>(url: string, config?: AxiosRequestConfig): Promise<ApiResponse<T>> =>
     apiClient.delete(url, config).then(response => response.data),
 
   // Upload file
-  upload: <T = any>(url: string, file: File, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> => {
+  upload: <T = unknown>(url: string, file: File, onProgress?: (progress: number) => void): Promise<ApiResponse<T>> => {
     const formData = new FormData()
     formData.append('file', file)
 

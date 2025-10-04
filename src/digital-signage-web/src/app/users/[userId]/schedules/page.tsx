@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation'
 import { UserScheduleAssignment } from '@/features/users/components/UserScheduleAssignment'
 import { userService } from '@/features/users/services/userService'
 import { Breadcrumb } from '@/components/layout/Breadcrumb'
+import { EnhancedUserSchedulePage } from '../../../../features/users/components/EnhancedUserSchedulePage'
 
 /**
  * UserSchedulesPage
@@ -87,7 +88,7 @@ export default async function UserSchedulesPage({ params }: PageProps) {
 
       {/* Main Content */}
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <UserScheduleAssignment
+        <EnhancedUserSchedulePage
           userId={userId}
           user={{
             id: userId,

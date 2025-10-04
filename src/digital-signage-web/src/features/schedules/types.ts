@@ -1,7 +1,10 @@
 /**
  * Schedule Management Types
  * TypeScript interfaces for schedule-related data structures
+ * Enhanced with user assignment capabilities and conflict tracking
  */
+
+import type { User, UserScheduleAssignment } from '@/features/users/types'
 
 export interface TimeSlot {
   id: string
@@ -35,9 +38,12 @@ export interface ScheduleContent {
   transition?: 'fade' | 'slide' | 'zoom' | 'none'
 }
 
+/**
+ * Enhanced Schedule Conflict interface with user and resolution tracking
+ */
 export interface ScheduleConflict {
   id: string
-  type: 'overlap' | 'device_offline' | 'priority_conflict' | 'content_unavailable'
+  type: 'overlap' | 'device_offline' | 'priority_conflict' | 'content_unavailable' | 'user_assignment_conflict'
   schedules?: string[]
   device?: string
   devices?: string[]
@@ -52,8 +58,43 @@ export interface ScheduleConflict {
     id: string
     name: string
   }
+  
+  // Enhanced conflict tracking
+  userId?: string
+  userScheduleAssignmentId?: string
+  detectedAt: string
+  resolvedAt?: string
+  resolutionStrategy?: 'priority' | 'manual' | 'ignore' | 'auto'
+  resolvedBy?: {
+    id: string
+    name: string
+  }
+  isActive: boolean
+  autoResolutionAttempted: boolean
+  manualResolutionRequired: boolean
 }
 
+/**
+ * Conflict Resolution History
+ */
+export interface ConflictResolution {
+  id: string
+  conflictId: string
+  strategy: 'priority' | 'manual' | 'ignore' | 'auto'
+  resolvedBy: {
+    id: string
+    name: string
+  }
+  resolvedAt: string
+  resolution: string
+  impactedSchedules: string[]
+  impactedUsers: string[]
+  notes?: string
+}
+
+/**
+ * Enhanced Schedule interface with user assignment capabilities
+ */
 export interface Schedule {
   id: string
   name: string
@@ -73,6 +114,29 @@ export interface Schedule {
   }
   createdAt: string
   updatedAt: string
+  
+  // Enhanced fields for user assignment
+  assignedUsers?: UserScheduleAssignment[]
+  assignedUsersCount?: number
+  maxConcurrentUsers?: number
+  allowsConflicts: boolean
+  autoResolveConflicts: boolean
+  
+  // Content categorization
+  category?: string
+  tags?: string[]
+  
+  // Approval workflow
+  approvalStatus?: 'pending' | 'approved' | 'rejected'
+  approvedBy?: {
+    id: string
+    name: string
+    approvedAt: string
+  }
+  
+  // Performance and tracking
+  lastModified: string
+  conflictResolutionHistory?: ConflictResolution[]
 }
 
 export interface CalendarEvent {
@@ -91,6 +155,9 @@ export interface CalendarData {
   conflicts: ScheduleConflict[]
 }
 
+/**
+ * Enhanced Schedule Filters with user assignment filtering
+ */
 export interface ScheduleFilters {
   page?: number
   limit?: number
@@ -98,10 +165,71 @@ export interface ScheduleFilters {
   sort?: string
   order?: 'asc' | 'desc'
   status?: ('active' | 'inactive' | 'expired' | 'draft')[]
-  dateRange?: string
-  priority?: string
-  devices?: string[]
+  
+  // Enhanced filtering options
+  assignedUserId?: string
+  hasConflicts?: boolean
+  category?: string[]
+  tags?: string[]
+  dateRange?: {
+    from: string
+    to: string
+  }
+  approvalStatus?: ('pending' | 'approved' | 'rejected')[]
   createdBy?: string[]
+  lastModified?: {
+    from?: string
+    to?: string
+  }
+}
+
+// ============================================================================
+// USER ASSIGNMENT RELATED TYPES
+// ============================================================================
+
+/**
+ * Schedule assignment request
+ */
+export interface ScheduleAssignmentRequest {
+  scheduleId: string
+  userIds: string[]
+  assignmentSettings: {
+    priority: number
+    allowConflicts: boolean
+    notes?: string
+    notifyUsers: boolean
+  }
+}
+
+/**
+ * Schedule assignment response
+ */
+export interface ScheduleAssignmentResponse {
+  success: boolean
+  assignments: UserScheduleAssignment[]
+  conflicts: ScheduleConflict[]
+  summary: {
+    successful: number
+    failed: number
+    conflicted: number
+  }
+}
+
+/**
+ * Schedule with assignment summary
+ */
+export interface ScheduleWithUsers extends Schedule {
+  assignmentSummary: {
+    totalAssigned: number
+    activeAssignments: number
+    conflictedAssignments: number
+    pendingAssignments: number
+  }
+  recentAssignments: {
+    user: User
+    assignedAt: string
+    assignedBy: User
+  }[]
 }
 
 export interface ScheduleValidationRequest {

@@ -3,10 +3,12 @@
  * Export all public APIs from the users feature
  */
 
-// Components
-export { UserList } from './components/UserList';
-export { RoleManager } from './components/RoleManager';
-export { PermissionMatrix } from './components/PermissionMatrix';
+// Components - export as dynamic imports to avoid JSX compilation issues
+export const UserComponents = {
+  UserList: () => import('./components/UserList').then(m => ({ default: m.UserList })),
+  RoleManager: () => import('./components/RoleManager').then(m => ({ default: m.RoleManager })),
+  PermissionMatrix: () => import('./components/PermissionMatrix').then(m => ({ default: m.PermissionMatrix }))
+}
 
 // Hooks
 export {

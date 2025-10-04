@@ -1,0 +1,865 @@
+openapi: 3.0.3
+info:
+  title: User Management and Schedule Assignment API
+  description: Enhanced API endpoints for user management and schedule assignment functionality
+  version: 1.0.0
+  
+servers:
+  - url: http://localhost:5100
+    description: Development server
+
+paths:
+  # Enhanced User Management Endpoints
+  /api/users:
+    get:
+      tags: [User Management]
+      summary: Get paginated users with enhanced filtering
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: role
+          in: query
+          schema:
+            type: string
+            enum: [Admin, ContentManager, Viewer]
+        - name: search
+          in: query
+          schema:
+            type: string
+          description: Search by name, email, or username
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+        - name: department
+          in: query
+          schema:
+            type: string
+        - name: hasScheduleConflicts
+          in: query
+          schema:
+            type: boolean
+          description: Filter users with active schedule conflicts
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [username, email, firstName, lastName, lastLogin, createdAt]
+            default: username
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Users retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/users/bulk-assign-schedules:
+    post:
+      tags: [User Management]
+      summary: Bulk assign schedules to multiple users
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkScheduleAssignmentRequest'
+      responses:
+        '202':
+          description: Bulk operation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperationResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/users/{userId}/schedule-assignments:
+    get:
+      tags: [User Management]
+      summary: Get user's schedule assignments with conflicts
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: startDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter assignments from this date
+        - name: endDate
+          in: query
+          schema:
+            type: string
+            format: date
+          description: Filter assignments until this date
+      responses:
+        '200':
+          description: Schedule assignments retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScheduleAssignmentResponse'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    post:
+      tags: [User Management]
+      summary: Assign schedule to user
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateScheduleAssignmentRequest'
+      responses:
+        '201':
+          description: Schedule assigned successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScheduleAssignment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Schedule conflict detected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConflictErrorResponse'
+
+  /api/users/{userId}/schedule-assignments/{assignmentId}:
+    put:
+      tags: [User Management]
+      summary: Update schedule assignment
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateScheduleAssignmentRequest'
+      responses:
+        '200':
+          description: Assignment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserScheduleAssignment'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [User Management]
+      summary: Remove schedule assignment
+      parameters:
+        - $ref: '#/components/parameters/UserId'
+        - name: assignmentId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '204':
+          description: Assignment removed successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Schedule Conflict Management
+  /api/schedule-conflicts:
+    get:
+      tags: [Schedule Conflicts]
+      summary: Get all schedule conflicts
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: userId
+          in: query
+          schema:
+            type: integer
+          description: Filter conflicts for specific user
+        - name: severity
+          in: query
+          schema:
+            type: string
+            enum: [low, medium, high, critical]
+        - name: isActive
+          in: query
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Conflicts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conflicts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ScheduleConflict'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+
+  /api/schedule-conflicts/{conflictId}/resolve:
+    post:
+      tags: [Schedule Conflicts]
+      summary: Resolve schedule conflict
+      parameters:
+        - name: conflictId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                resolutionStrategy:
+                  type: string
+                  enum: [priority, manual, ignore]
+                  description: How to resolve the conflict
+                keepScheduleId:
+                  type: integer
+                  description: For manual resolution, which schedule to keep
+                notes:
+                  type: string
+                  description: Resolution notes
+              required: [resolutionStrategy]
+      responses:
+        '200':
+          description: Conflict resolved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScheduleConflict'
+
+  # Bulk Operations Management
+  /api/bulk-operations:
+    get:
+      tags: [Bulk Operations]
+      summary: Get user's bulk operations
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, failed, cancelled]
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [assign_schedules, update_users, delete_users, resolve_conflicts]
+      responses:
+        '200':
+          description: Bulk operations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  operations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/BulkOperation'
+                  pagination:
+                    $ref: '#/components/schemas/PaginationInfo'
+
+  /api/bulk-operations/{operationId}:
+    get:
+      tags: [Bulk Operations]
+      summary: Get bulk operation details
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operation details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperation'
+
+    delete:
+      tags: [Bulk Operations]
+      summary: Cancel bulk operation
+      parameters:
+        - name: operationId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Operation cancelled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkOperation'
+
+components:
+  parameters:
+    UserId:
+      name: userId
+      in: path
+      required: true
+      schema:
+        type: integer
+    Page:
+      name: page
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+    Limit:
+      name: limit
+      in: query
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 20
+
+  schemas:
+    PaginatedUserResponse:
+      type: object
+      properties:
+        users:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+        pagination:
+          $ref: '#/components/schemas/PaginationInfo'
+        filters:
+          type: object
+          properties:
+            role:
+              type: string
+            isActive:
+              type: boolean
+            search:
+              type: string
+            department:
+              type: string
+        sorting:
+          type: object
+          properties:
+            field:
+              type: string
+            direction:
+              type: string
+              enum: [asc, desc]
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        email:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        role:
+          $ref: '#/components/schemas/UserRole'
+        isActive:
+          type: boolean
+        lastLogin:
+          type: string
+          format: date-time
+          nullable: true
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        profilePicture:
+          type: string
+          nullable: true
+        phoneNumber:
+          type: string
+          nullable: true
+        department:
+          type: string
+          nullable: true
+        timezone:
+          type: string
+          nullable: true
+        assignedSchedulesCount:
+          type: integer
+          description: Count of active schedule assignments
+        conflictCount:
+          type: integer
+          description: Count of active schedule conflicts
+
+    UserRole:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          enum: [Admin, ContentManager, Viewer]
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Permission'
+        canAssignSchedules:
+          type: boolean
+        canManageUsers:
+          type: boolean
+        canViewAllSchedules:
+          type: boolean
+
+    Permission:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        resource:
+          type: string
+        action:
+          type: string
+        description:
+          type: string
+
+    UserScheduleAssignment:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        scheduleId:
+          type: integer
+        assignedAt:
+          type: string
+          format: date-time
+        assignedBy:
+          type: integer
+        status:
+          type: string
+          enum: [active, inactive, conflict, pending]
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+        notes:
+          type: string
+          nullable: true
+        user:
+          $ref: '#/components/schemas/User'
+        schedule:
+          $ref: '#/components/schemas/Schedule'
+        assignedByUser:
+          $ref: '#/components/schemas/User'
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleConflict'
+        lastSyncedAt:
+          type: string
+          format: date-time
+          nullable: true
+        syncStatus:
+          type: string
+          enum: [synced, pending, failed]
+
+    Schedule:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+          nullable: true
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        startTime:
+          type: string
+          format: time
+        endTime:
+          type: string
+          format: time
+        isActive:
+          type: boolean
+        priority:
+          type: integer
+        allowsConflicts:
+          type: boolean
+        maxConcurrentUsers:
+          type: integer
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        category:
+          type: string
+          nullable: true
+        assignedUsersCount:
+          type: integer
+        mediaFilesCount:
+          type: integer
+        devicesCount:
+          type: integer
+
+    ScheduleConflict:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        scheduleIds:
+          type: array
+          items:
+            type: integer
+        conflictType:
+          type: string
+          enum: [time_overlap, resource_conflict, device_conflict]
+        severity:
+          type: string
+          enum: [low, medium, high, critical]
+        detectedAt:
+          type: string
+          format: date-time
+        resolvedAt:
+          type: string
+          format: date-time
+          nullable: true
+        resolutionStrategy:
+          type: string
+          enum: [priority, manual, ignore]
+          nullable: true
+        resolvedBy:
+          type: integer
+          nullable: true
+        isActive:
+          type: boolean
+        overlapStart:
+          type: string
+          format: date-time
+        overlapEnd:
+          type: string
+          format: date-time
+        affectedDevices:
+          type: array
+          items:
+            type: integer
+        autoResolutionAttempted:
+          type: boolean
+        manualResolutionRequired:
+          type: boolean
+
+    BulkOperation:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          enum: [assign_schedules, update_users, delete_users, resolve_conflicts]
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed, cancelled]
+        progress:
+          type: integer
+          minimum: 0
+          maximum: 100
+        totalItems:
+          type: integer
+        processedItems:
+          type: integer
+        failedItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/BulkOperationError'
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: integer
+        metadata:
+          type: object
+          properties:
+            userIds:
+              type: array
+              items:
+                type: integer
+            scheduleIds:
+              type: array
+              items:
+                type: integer
+            assignmentData:
+              type: object
+            updateData:
+              type: object
+
+    BulkOperationError:
+      type: object
+      properties:
+        itemId:
+          type: integer
+        errorType:
+          type: string
+          enum: [validation, conflict, permission, network, unknown]
+        errorMessage:
+          type: string
+        retryable:
+          type: boolean
+        retryCount:
+          type: integer
+        lastAttemptAt:
+          type: string
+          format: date-time
+
+    BulkScheduleAssignmentRequest:
+      type: object
+      properties:
+        userIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+          maxItems: 100
+        scheduleIds:
+          type: array
+          items:
+            type: integer
+          minItems: 1
+          maxItems: 50
+        assignmentSettings:
+          type: object
+          properties:
+            priority:
+              type: integer
+              minimum: 1
+              maximum: 10
+              default: 5
+            allowConflicts:
+              type: boolean
+              default: false
+            notes:
+              type: string
+            replaceExisting:
+              type: boolean
+              default: false
+          required: []
+      required: [userIds, scheduleIds]
+
+    CreateScheduleAssignmentRequest:
+      type: object
+      properties:
+        scheduleId:
+          type: integer
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+        notes:
+          type: string
+        allowConflicts:
+          type: boolean
+          default: false
+      required: [scheduleId]
+
+    UpdateScheduleAssignmentRequest:
+      type: object
+      properties:
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+        notes:
+          type: string
+        status:
+          type: string
+          enum: [active, inactive, conflict, pending]
+
+    UserScheduleAssignmentResponse:
+      type: object
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserScheduleAssignment'
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleConflict'
+        summary:
+          type: object
+          properties:
+            totalAssignments:
+              type: integer
+            activeAssignments:
+              type: integer
+            conflictCount:
+              type: integer
+            lastUpdated:
+              type: string
+              format: date-time
+        upcomingSchedules:
+          type: array
+          items:
+            type: object
+            properties:
+              schedule:
+                $ref: '#/components/schemas/Schedule'
+              startsIn:
+                type: string
+                description: Human-readable time until start
+              duration:
+                type: string
+                description: Schedule duration
+
+    BulkOperationResponse:
+      type: object
+      properties:
+        operationId:
+          type: string
+        status:
+          type: string
+          enum: [pending, in_progress]
+        message:
+          type: string
+        estimatedDuration:
+          type: string
+          description: Estimated completion time
+
+    ConflictErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        conflicts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScheduleConflict'
+        suggestedResolutions:
+          type: array
+          items:
+            type: object
+            properties:
+              strategy:
+                type: string
+              description:
+                type: string
+              impactedSchedules:
+                type: array
+                items:
+                  type: integer
+
+    PaginationInfo:
+      type: object
+      properties:
+        page:
+          type: integer
+        limit:
+          type: integer
+        total:
+          type: integer
+        pages:
+          type: integer
+        hasNext:
+          type: boolean
+        hasPrev:
+          type: boolean
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              details:
+                type: object
+
+    Forbidden:
+      description: Insufficient permissions
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              requiredPermissions:
+                type: array
+                items:
+                  type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              resource:
+                type: string

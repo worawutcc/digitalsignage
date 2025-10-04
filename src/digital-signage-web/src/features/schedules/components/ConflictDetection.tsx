@@ -1,27 +1,47 @@
 'use client'
 
 import { AlertTriangle, AlertCircle, Info, X } from 'lucide-react'
+import { useViewport } from '@/lib/mobile-utils'
+import { MobileConflictList } from '@/components/mobile/MobileConflictResolution'
 import type { ScheduleConflict } from '../types'
+import type { ResolutionStrategy } from '@/types/schedule-conflicts'
 
 export interface ConflictDetectionProps {
   conflicts: ScheduleConflict[]
-  onResolve?: (conflictId: string) => void
+  onResolve?: (conflictId: string, strategy?: ResolutionStrategy) => void
   onDismiss?: (conflictId: string) => void
+  onResolveAll?: () => void
   className?: string
 }
 
 /**
  * ConflictDetection Component
- * Displays real-time schedule conflict warnings and errors
+ * Displays real-time schedule conflict warnings and errors with mobile-responsive design
  */
 export function ConflictDetection({
   conflicts,
   onResolve,
   onDismiss,
+  onResolveAll,
   className = '',
 }: ConflictDetectionProps) {
+  const viewport = useViewport()
+
   if (!conflicts || conflicts.length === 0) {
     return null
+  }
+
+  // Use mobile-optimized UI on mobile devices
+  if (viewport.isMobile) {
+    return (
+      <MobileConflictList
+        conflicts={conflicts}
+        onResolve={onResolve}
+        onDismiss={onDismiss}
+        onResolveAll={onResolveAll}
+        className={className}
+      />
+    )
   }
 
   const getConflictIcon = (severity: ScheduleConflict['severity']) => {

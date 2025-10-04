@@ -4,7 +4,7 @@ const nextConfig: NextConfig = {
   // External packages for server components (moved out of experimental in Next.js 15)
   serverExternalPackages: ['axios'],
   
-  // Image optimization configuration for S3 integration
+  // Image optimization configuration for S3 integration and external sources
   images: {
     remotePatterns: [
       {
@@ -20,6 +20,11 @@ const nextConfig: NextConfig = {
       {
         protocol: 'https',
         hostname: '**.s3.amazonaws.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'via.placeholder.com',
         pathname: '/**',
       },
     ],

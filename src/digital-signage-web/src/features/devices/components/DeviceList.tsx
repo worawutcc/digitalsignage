@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Monitor, MoreVertical, Wifi, WifiOff, MapPin, Clock, Settings } from 'lucide-react'
+import { Monitor, MoreVertical, Wifi, MapPin, Clock, Settings } from 'lucide-react'
 import { DataTable } from '@/components/tables/DataTable'
 import { Button } from '@/components/ui/Button'
 import { DeviceStatus } from './DeviceStatus'

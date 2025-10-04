@@ -9,7 +9,7 @@
 export const dynamic = 'force-dynamic';
 
 import React from 'react';
-import { Users, Shield, Calendar, Settings } from 'lucide-react';
+import { Users, Shield, Calendar, Settings, Zap, Layers, Loader2 } from 'lucide-react';
 import { UserList } from '@/features/users/components/UserList';
 import { RoleManager } from '@/features/users/components/RoleManager';
 import { UserScheduleAssignment } from '@/features/users/components/UserScheduleAssignment';
@@ -29,6 +29,7 @@ export default function UsersPage() {
   const [enhancedFeaturesEnabled, setEnhancedFeaturesEnabled] = React.useState(
     process.env.NEXT_PUBLIC_ENABLE_ENHANCED_UI === 'true'
   );
+  const [showBulkOperationsPanel, setShowBulkOperationsPanel] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -67,55 +68,286 @@ export default function UsersPage() {
           </div>
 
           {/* Performance Metrics Dashboard (when enhanced features are active) */}
-          {enhancedFeaturesEnabled && performanceMetrics.length > 0 && (
-            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+          {/* Enhanced Performance Dashboard */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
+            {/* Performance Metrics */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-blue-900 dark:text-blue-100">
-                  Performance Metrics
-                </h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Performance</h3>
+                <div className="flex items-center space-x-1">
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                  <span className="text-xs text-green-600 dark:text-green-400">Live</span>
+                </div>
+              </div>
+              {performanceMetrics.length > 0 ? (
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600 dark:text-gray-400">Avg Response</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {Math.round(
+                        performanceMetrics.reduce((acc, m) => acc + m.value, 0) / 
+                        performanceMetrics.length
+                      )}ms
+                    </span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-600 dark:text-gray-400">Operations</span>
+                    <span className="font-medium text-gray-900 dark:text-white">
+                      {performanceMetrics.length}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => setPerformanceMetrics([])}
+                    className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                  >
+                    Clear History
+                  </button>
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  No metrics yet
+                </div>
+              )}
+            </div>
+
+            {/* Enhanced Features Toggle */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Features</h3>
+                <Zap className={`w-4 h-4 ${enhancedFeaturesEnabled ? 'text-blue-500' : 'text-gray-400'}`} />
+              </div>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600 dark:text-gray-400">Enhanced Mode</span>
+                  <button
+                    onClick={() => setEnhancedFeaturesEnabled(!enhancedFeaturesEnabled)}
+                    className={`${
+                      enhancedFeaturesEnabled 
+                        ? 'bg-blue-600' 
+                        : 'bg-gray-200 dark:bg-gray-700'
+                    } relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2`}
+                  >
+                    <span
+                      className={`${
+                        enhancedFeaturesEnabled ? 'translate-x-5' : 'translate-x-1'
+                      } inline-block h-3 w-3 transform rounded-full bg-white transition-transform`}
+                    />
+                  </button>
+                </div>
+                {enhancedFeaturesEnabled && (
+                  <div className="text-xs text-green-600 dark:text-green-400">
+                    ✓ Bulk ops, real-time updates, advanced filters
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Quick Navigation Actions */}
+            <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Quick Actions</h3>
+                <Settings className="w-4 h-4 text-gray-500" />
+              </div>
+              <div className="space-y-2">
                 <button
-                  onClick={() => setPerformanceMetrics([])}
-                  className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200"
+                  onClick={() => setActiveTab('users')}
+                  className={`w-full text-left text-xs flex items-center p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    activeTab === 'users' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
+                  }`}
                 >
-                  Clear
+                  <Users className="w-3 h-3 mr-2" />
+                  Manage Users
+                </button>
+                <button
+                  onClick={() => setShowBulkOperationsPanel(!showBulkOperationsPanel)}
+                  className={`w-full text-left text-xs flex items-center p-2 rounded hover:bg-gray-50 dark:hover:bg-gray-700 ${
+                    showBulkOperationsPanel ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'text-gray-600 dark:text-gray-400'
+                  }`}
+                >
+                  <Layers className="w-3 h-3 mr-2" />
+                  Bulk Operations
                 </button>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-                {performanceMetrics.slice(-4).map((metric, index) => (
-                  <div key={index} className="text-center">
-                    <div className="font-medium text-blue-800 dark:text-blue-200">
-                      {metric.value.toFixed(1)}{metric.unit}
-                    </div>
-                    <div className="text-blue-600 dark:text-blue-400">
-                      {metric.name}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
-          )}
 
-          {/* Active Bulk Operations */}
-          {bulkOperations.length > 0 && (
-            <div className="mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
-              <h3 className="text-sm font-medium text-yellow-900 dark:text-yellow-100 mb-2">
-                Active Bulk Operations ({bulkOperations.length})
-              </h3>
-              <div className="space-y-2">
-                {bulkOperations.map((operation) => (
-                  <div key={operation.id} className="flex items-center justify-between text-xs">
-                    <span className="text-yellow-800 dark:text-yellow-200">
-                      {operation.type}: {operation.selectedItems.length} items
-                    </span>
-                    <span className="text-yellow-600 dark:text-yellow-400">
-                      In Progress...
-                    </span>
+            {/* Active Bulk Operations Status */}
+            <div className={`p-4 rounded-lg shadow border transition-all duration-200 ${
+              bulkOperations.length > 0 
+                ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' 
+                : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <h3 className={`text-sm font-semibold ${
+                  bulkOperations.length > 0 
+                    ? 'text-yellow-900 dark:text-yellow-100' 
+                    : 'text-gray-900 dark:text-white'
+                }`}>
+                  Bulk Operations
+                </h3>
+                {bulkOperations.length > 0 && (
+                  <div className="flex items-center space-x-1">
+                    <Loader2 className="w-3 h-3 animate-spin text-yellow-600" />
+                    <span className="text-xs text-yellow-600 dark:text-yellow-400">Active</span>
                   </div>
-                ))}
+                )}
+              </div>
+              {bulkOperations.length > 0 ? (
+                <div className="space-y-2">
+                  {bulkOperations.slice(0, 2).map((operation) => (
+                    <div key={operation.id} className="text-xs">
+                      <div className="flex items-center justify-between">
+                        <span className="text-yellow-800 dark:text-yellow-200 truncate max-w-24">
+                          {operation.type}
+                        </span>
+                        <span className="text-yellow-600 dark:text-yellow-400 ml-1">
+                          {Math.round((operation.progress.completed / operation.progress.total) * 100)}%
+                        </span>
+                      </div>
+                      <div className="text-yellow-700 dark:text-yellow-300">
+                        {operation.selectedItems.length} items
+                      </div>
+                    </div>
+                  ))}
+                  {bulkOperations.length > 2 && (
+                    <div className="text-xs text-yellow-600 dark:text-yellow-400">
+                      +{bulkOperations.length - 2} more...
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  No active operations
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Enhanced Bulk Operations Panel */}
+        {showBulkOperationsPanel && (
+          <div className="mb-6 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Bulk Operations Center</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    Perform batch operations on multiple users, schedules, and roles
+                  </p>
+                </div>
+                <button
+                  onClick={() => setShowBulkOperationsPanel(false)}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  <Settings className="w-5 h-5" />
+                </button>
               </div>
             </div>
-          )}
-        </div>
+            
+            <div className="p-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* User Operations */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                    <Users className="w-4 h-4 mr-2 text-blue-500" />
+                    User Operations
+                  </h4>
+                  <div className="space-y-2">
+                    <button className="w-full bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 px-3 py-2 rounded text-sm hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors">
+                      Bulk Activate Users
+                    </button>
+                    <button className="w-full bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 px-3 py-2 rounded text-sm hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors">
+                      Bulk Deactivate Users
+                    </button>
+                    <button className="w-full bg-purple-50 dark:bg-purple-900/20 text-purple-700 dark:text-purple-300 px-3 py-2 rounded text-sm hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors">
+                      Change User Roles
+                    </button>
+                  </div>
+                </div>
+
+                {/* Schedule Operations */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                    <Calendar className="w-4 h-4 mr-2 text-green-500" />
+                    Schedule Operations
+                  </h4>
+                  <div className="space-y-2">
+                    <button className="w-full bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 px-3 py-2 rounded text-sm hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors">
+                      Assign Schedules
+                    </button>
+                    <button className="w-full bg-orange-50 dark:bg-orange-900/20 text-orange-700 dark:text-orange-300 px-3 py-2 rounded text-sm hover:bg-orange-100 dark:hover:bg-orange-900/30 transition-colors">
+                      Remove Assignments
+                    </button>
+                    <button className="w-full bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-300 px-3 py-2 rounded text-sm hover:bg-yellow-100 dark:hover:bg-yellow-900/30 transition-colors">
+                      Update Priorities
+                    </button>
+                  </div>
+                </div>
+
+                {/* Advanced Operations */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white flex items-center">
+                    <Zap className="w-4 h-4 mr-2 text-indigo-500" />
+                    Advanced Operations
+                  </h4>
+                  <div className="space-y-2">
+                    <button className="w-full bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 px-3 py-2 rounded text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/30 transition-colors">
+                      Export User Data
+                    </button>
+                    <button className="w-full bg-teal-50 dark:bg-teal-900/20 text-teal-700 dark:text-teal-300 px-3 py-2 rounded text-sm hover:bg-teal-100 dark:hover:bg-teal-900/30 transition-colors">
+                      Import Users
+                    </button>
+                    <button className="w-full bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-3 py-2 rounded text-sm hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors">
+                      Generate Reports
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Operation Status */}
+              {bulkOperations.length > 0 && (
+                <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                    Active Operations ({bulkOperations.length})
+                  </h4>
+                  <div className="space-y-3">
+                    {bulkOperations.map((operation) => (
+                      <div
+                        key={operation.id}
+                        className="bg-gray-50 dark:bg-gray-700 p-3 rounded-lg"
+                      >
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <Loader2 className="w-4 h-4 animate-spin text-blue-500" />
+                            <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              {operation.type}
+                            </span>
+                          </div>
+                          <span className="text-sm text-gray-600 dark:text-gray-400">
+                            {Math.round((operation.progress.completed / operation.progress.total) * 100)}%
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs text-gray-600 dark:text-gray-400">
+                          <span>{operation.selectedItems.length} items selected</span>
+                          <span>
+                            {operation.progress.completed}/{operation.progress.total} completed
+                          </span>
+                        </div>
+                        <div className="mt-2 bg-gray-200 dark:bg-gray-600 rounded-full h-2">
+                          <div
+                            className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                            style={{
+                              width: `${(operation.progress.completed / operation.progress.total) * 100}%`
+                            }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Enhanced Tabs with Schedule Assignment */}
         <div className="border-b border-gray-200 dark:border-gray-700 mb-6">
@@ -176,6 +408,43 @@ export default function UsersPage() {
                 onEditUser={(user) => {
                   setSelectedUser(user);
                   setShowEditUserModal(true);
+                }}
+                // Enhanced features when enabled
+                enableBulkOperations={enhancedFeaturesEnabled}
+                enableVirtualization={enhancedFeaturesEnabled}
+                enableConflictDetection={enhancedFeaturesEnabled}
+                enableRealTimeUpdates={enhancedFeaturesEnabled}
+                onBulkAssignSchedules={(userIds, scheduleIds) => {
+                  // Trigger bulk operation
+                  const newOperation: BulkOperation = {
+                    id: Date.now().toString(),
+                    type: 'assign',
+                    selectedItems: userIds.map(id => id.toString()),
+                    options: { scheduleIds: scheduleIds.map(id => id.toString()) },
+                    progress: { total: userIds.length, completed: 0, failed: 0, skipped: 0 },
+                    validation: { warnings: [], errors: [], canProceed: true }
+                  };
+                  setBulkOperations(prev => [...prev, newOperation]);
+                  
+                  // Simulate progress and remove after completion
+                  setTimeout(() => {
+                    setBulkOperations(prev => prev.filter(op => op.id !== newOperation.id));
+                  }, 3000);
+                }}
+                onBulkRemoveAssignments={(userIds, scheduleIds) => {
+                  const newOperation: BulkOperation = {
+                    id: Date.now().toString(),
+                    type: 'remove',
+                    selectedItems: userIds.map(id => id.toString()),
+                    options: { scheduleIds: scheduleIds.map(id => id.toString()) },
+                    progress: { total: userIds.length, completed: 0, failed: 0, skipped: 0 },
+                    validation: { warnings: [], errors: [], canProceed: true }
+                  };
+                  setBulkOperations(prev => [...prev, newOperation]);
+                  
+                  setTimeout(() => {
+                    setBulkOperations(prev => prev.filter(op => op.id !== newOperation.id));
+                  }, 2500);
                 }}
               />
             </div>
@@ -282,6 +551,9 @@ export default function UsersPage() {
               setShowCreateUserModal(false);
               // User list will auto-refresh via React Query
             }}
+            onPerformanceMetric={(metric) => {
+              setPerformanceMetrics(prev => [...prev.slice(-9), metric]);
+            }}
           />
         )}
 
@@ -297,6 +569,9 @@ export default function UsersPage() {
               setSelectedUser(null);
               // User list will auto-refresh via React Query
             }}
+            onPerformanceMetric={(metric) => {
+              setPerformanceMetrics(prev => [...prev.slice(-9), metric]);
+            }}
           />
         )}
       </div>
@@ -310,9 +585,10 @@ export default function UsersPage() {
 interface CreateUserModalProps {
   onClose: () => void;
   onSuccess: () => void;
+  onPerformanceMetric?: (metric: PerformanceMetric) => void;
 }
 
-function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
+function CreateUserModal({ onClose, onSuccess, onPerformanceMetric }: CreateUserModalProps) {
   const [formData, setFormData] = React.useState({
     email: '',
     password: '',
@@ -323,9 +599,31 @@ function CreateUserModal({ onClose, onSuccess }: CreateUserModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement user creation logic
-    console.log('Create user:', formData);
-    onSuccess();
+    const startTime = performance.now();
+    
+    try {
+      // TODO: Implement user creation logic
+      console.log('Create user:', formData);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Track performance metric
+      if (onPerformanceMetric) {
+        const endTime = performance.now();
+        onPerformanceMetric({
+          type: 'interaction',
+          name: 'User Creation',
+          value: endTime - startTime,
+          unit: 'ms',
+          timestamp: Date.now()
+        });
+      }
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Failed to create user:', error);
+    }
   };
 
   return (
@@ -442,9 +740,10 @@ interface EditUserModalProps {
   user: User;
   onClose: () => void;
   onSuccess: () => void;
+  onPerformanceMetric?: (metric: PerformanceMetric) => void;
 }
 
-function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) {
+function EditUserModal({ user, onClose, onSuccess, onPerformanceMetric }: EditUserModalProps) {
   const [formData, setFormData] = React.useState({
     email: user.email,
     firstName: user.firstName,
@@ -455,9 +754,31 @@ function EditUserModal({ user, onClose, onSuccess }: EditUserModalProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Implement user update logic
-    console.log('Update user:', formData);
-    onSuccess();
+    const startTime = performance.now();
+    
+    try {
+      // TODO: Implement user update logic
+      console.log('Update user:', formData);
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 400));
+      
+      // Track performance metric
+      if (onPerformanceMetric) {
+        const endTime = performance.now();
+        onPerformanceMetric({
+          type: 'interaction',
+          name: 'User Update',
+          value: endTime - startTime,
+          unit: 'ms',
+          timestamp: Date.now()
+        });
+      }
+      
+      onSuccess();
+    } catch (error) {
+      console.error('Failed to update user:', error);
+    }
   };
 
   return (
