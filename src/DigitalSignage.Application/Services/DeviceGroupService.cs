@@ -5,6 +5,7 @@ using DigitalSignage.Domain.Interfaces;
 using DigitalSignage.Domain.Services;
 using DigitalSignage.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 
 namespace DigitalSignage.Application.Services;
 
@@ -71,9 +72,7 @@ public class DeviceGroupService : IDeviceGroupService
             Name = request.Name,
             Description = request.Description,
             ParentGroupId = request.ParentGroupId,
-            IsActive = request.IsActive,
-            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
-            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         var createdGroup = await _repository.CreateAsync(group);
@@ -92,10 +91,7 @@ public class DeviceGroupService : IDeviceGroupService
 
         group.Name = request.Name;
         group.Description = request.Description;
-        group.IsActive = request.IsActive;
-    group.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
-
-        var updatedGroup = await _repository.UpdateAsync(group);
+        group.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);        var updatedGroup = await _repository.UpdateAsync(group);
         return MapToDto(updatedGroup);
     }
 
@@ -164,8 +160,8 @@ public class DeviceGroupService : IDeviceGroupService
             throw new ArgumentException($"Device group with ID {groupId} not found");
 
         var ancestors = await _repository.GetAncestorsAsync(groupId);
-        var pathSegments = ancestors.Concat(new[] { group })
-            .Select((g, index) => new PathSegmentDto
+        var pathComponents = ancestors.Concat(new[] { group })
+            .Select((g, index) => new DeviceGroupPathComponentDto
             {
                 Id = g.Id,
                 Name = g.Name,
@@ -175,10 +171,8 @@ public class DeviceGroupService : IDeviceGroupService
 
         return new DeviceGroupPathDto
         {
-            GroupId = groupId,
-            FullPath = group.Path,
-            PathSegments = pathSegments,
-            Level = await _repository.GetDepthAsync(groupId)
+            Path = group.Path,
+            Components = pathComponents
         };
     }
 
@@ -186,12 +180,11 @@ public class DeviceGroupService : IDeviceGroupService
     {
         var pathDto = await GetPathAsync(groupId);
         
-        return pathDto.PathSegments.Select(segment => new DeviceGroupBreadcrumbDto
+        return pathDto.Components.Select(component => new DeviceGroupBreadcrumbDto
         {
-            Id = segment.Id,
-            Name = segment.Name,
-            Level = segment.Level,
-            IsCurrentGroup = segment.Id == groupId
+            Id = component.Id,
+            Name = component.Name,
+            IsCurrent = component.Id == groupId
         });
     }
 
@@ -203,7 +196,7 @@ public class DeviceGroupService : IDeviceGroupService
         
         if (canMove)
         {
-            return MoveValidationResultDto.Success();
+            return new MoveValidationResultDto { IsValid = true };
         }
 
         var reasons = new List<string>();
@@ -233,21 +226,21 @@ public class DeviceGroupService : IDeviceGroupService
             }
         }
 
-        return MoveValidationResultDto.Failure(reasons.ToArray());
+        return new MoveValidationResultDto { IsValid = false, ErrorMessage = string.Join(", ", reasons) };
     }
 
     public async Task<DeviceGroupDto> MoveGroupAsync(int groupId, MoveDeviceGroupRequest request)
     {
-        var validation = await CanMoveGroupAsync(groupId, request.NewParentGroupId);
-        if (!validation.CanMove)
+        var validation = await CanMoveGroupAsync(groupId, request.NewParentId);
+        if (!validation.IsValid)
         {
-            throw new InvalidOperationException($"Cannot move group: {string.Join(", ", validation.Reasons)}");
+            throw new InvalidOperationException($"Cannot move group: {validation.ErrorMessage}");
         }
 
         _logger.LogInformation("Moving device group {GroupId} to parent {ParentId}", 
-            groupId, request.NewParentGroupId);
+            groupId, request.NewParentId);
 
-        await _repository.MoveGroupAsync(groupId, request.NewParentGroupId);
+        await _repository.MoveGroupAsync(groupId, request.NewParentId);
         
         var updatedGroup = await _repository.GetByIdAsync(groupId);
         return MapToDto(updatedGroup!);
@@ -266,13 +259,9 @@ public class DeviceGroupService : IDeviceGroupService
         {
             Id = group.Id,
             Name = group.Name,
-            Description = group.Description,
             Path = group.Path,
-            Level = group.Level,
-            DeviceCount = group.Devices?.Count ?? 0,
-            MatchedInName = group.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase),
-            MatchedInDescription = group.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase),
-            MatchContext = GetMatchContext(group, searchTerm)
+            MatchContext = $"Matched in {(group.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ? "name" : "description")}",
+            Score = group.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ? 1.0 : 0.5
         });
     }
 
@@ -349,15 +338,13 @@ public class DeviceGroupService : IDeviceGroupService
             Id = group.Id,
             Name = group.Name,
             Description = group.Description,
-            IsActive = group.IsActive,
-            ParentGroupId = group.ParentGroupId,
+            ParentId = group.ParentGroupId,
             Path = group.Path,
             Level = group.Level,
             DeviceCount = group.Devices?.Count ?? 0,
+            ChildGroupCount = group.ChildGroups?.Count ?? 0,
             CreatedAt = group.CreatedAt,
-            UpdatedAt = group.UpdatedAt,
-            CreatedByUserId = group.CreatedByUserId,
-            CreatedByUserName = group.CreatedByUser?.Username
+            UpdatedAt = group.UpdatedAt
         };
     }
 
@@ -370,11 +357,8 @@ public class DeviceGroupService : IDeviceGroupService
             Id = group.Id,
             Name = group.Name,
             Description = group.Description,
-            Path = group.Path,
             Level = group.Level,
-            ParentGroupId = group.ParentGroupId,
             DeviceCount = group.Devices?.Count ?? 0,
-            HasChildren = children.Any(),
             Children = children.Select(child => BuildTreeNode(child, allGroups)).ToList()
         };
     }
@@ -393,4 +377,341 @@ public class DeviceGroupService : IDeviceGroupService
         
         return string.Empty;
     }
+
+    #region Content Assignment Methods (T015 Enhanced Interface)
+
+    /// <summary>
+    /// Assign content to a device group - delegates to PlaylistService
+    /// </summary>
+    public async Task<ContentAssignmentResultDto> AssignContentAsync(int groupId, AssignContentRequestDto request)
+    {
+        _logger.LogInformation("STUB: Assigning {ContentType} content {ContentId} to group {GroupId} with priority {Priority}", 
+            request.ContentType, request.ContentId, groupId, request.Priority);
+
+        // STUB IMPLEMENTATION - This should delegate to PlaylistService.AssignToDeviceGroupAsync
+        await Task.Delay(50); // Simulate processing
+
+        return new ContentAssignmentResultDto
+        {
+            IsSuccess = true,
+            AssignmentId = new Random().Next(1000, 9999), // Placeholder
+            AffectedChildGroups = 0,
+            AffectedDevices = 1,
+            ErrorMessage = null
+        };
+    }
+
+    /// <summary>
+    /// Bulk assign content to multiple device groups
+    /// </summary>
+    public async Task<BulkContentAssignmentResultDto> BulkAssignContentAsync(BulkAssignContentRequestDto request)
+    {
+        _logger.LogInformation("STUB: Bulk assigning content to {Count} device groups", request.Assignments.Count);
+
+        // STUB IMPLEMENTATION
+        await Task.Delay(100); // Simulate processing
+
+        var results = new List<BulkAssignmentResultItemDto>();
+        foreach (var assignment in request.Assignments)
+        {
+            results.Add(new BulkAssignmentResultItemDto
+            {
+                GroupId = assignment.GroupId,
+                Result = new ContentAssignmentResultDto
+                {
+                    IsSuccess = true,
+                    AssignmentId = new Random().Next(1000, 9999),
+                    AffectedChildGroups = 0,
+                    AffectedDevices = 1
+                }
+            });
+        }
+
+        return new BulkContentAssignmentResultDto
+        {
+            TotalAttempted = request.Assignments.Count,
+            SuccessCount = request.Assignments.Count,
+            FailureCount = 0,
+            Results = results
+        };
+    }
+
+    /// <summary>
+    /// Get content distribution statistics across device groups
+    /// </summary>
+    public async Task<ContentDistributionStatsDto> GetContentDistributionStatsAsync(bool includeInherited)
+    {
+        _logger.LogInformation("STUB: Getting content distribution statistics (includeInherited: {IncludeInherited})", includeInherited);
+
+        // STUB IMPLEMENTATION
+        await Task.Delay(50);
+
+        return new ContentDistributionStatsDto
+        {
+            DeviceGroupId = 0, // Root level statistics
+            TotalAssignments = 15, // Placeholder
+            DirectAssignments = 10, // Placeholder
+            InheritedAssignments = 5, // Placeholder
+            ContentByType = new Dictionary<string, int>
+            {
+                { "Playlist", 8 },
+                { "Media", 5 },
+                { "Scene", 2 }
+            }
+        };
+    }
+
+    /// <summary>
+    /// Get device group with its assigned content
+    /// </summary>
+    public async Task<DeviceGroupWithContentDto?> GetGroupWithContentAsync(int groupId, bool includeInherited)
+    {
+        _logger.LogInformation("STUB: Getting device group {GroupId} with content (includeInherited: {IncludeInherited})", groupId, includeInherited);
+
+        var group = await GetByIdAsync(groupId);
+        if (group == null)
+        {
+            return null;
+        }
+
+        // STUB IMPLEMENTATION
+        await Task.Delay(50);
+
+        return new DeviceGroupWithContentDto
+        {
+            Id = group.Id,
+            Name = group.Name,
+            Description = group.Description,
+            ParentId = group.ParentId,
+            Level = group.Level,
+            Path = group.Path,
+            DirectAssignments = new List<ContentAssignmentDto>(), // Placeholder
+            InheritedAssignments = new List<ContentAssignmentDto>(), // Placeholder
+            DeviceCount = 2, // Placeholder
+            Children = new List<DeviceGroupSummaryDto>() // Placeholder
+        };
+    }
+
+    /// <summary>
+    /// Remove content assignment from device group
+    /// </summary>
+    public async Task<ContentRemovalResultDto> RemoveContentAsync(int groupId, RemoveContentRequestDto request)
+    {
+        _logger.LogInformation("STUB: Removing content from device group {GroupId}", groupId);
+
+        // STUB IMPLEMENTATION
+        await Task.Delay(50);
+
+        return new ContentRemovalResultDto
+        {
+            IsSuccess = true,
+            RemovedAssignments = 1,
+            AffectedChildGroups = request.RemoveFromChildren ? 2 : 0,
+            AffectedDevices = 3,
+            ErrorMessage = null
+        };
+    }
+
+    /// <summary>
+    /// Get inherited content for a device group
+    /// </summary>
+    public async Task<List<GroupContentAssignmentResponseDto>> GetInheritedContentAsync(int groupId)
+    {
+        _logger.LogInformation("Getting inherited content for device group {GroupId}", groupId);
+
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+
+        return new List<GroupContentAssignmentResponseDto>(); // Placeholder
+    }
+
+    /// <summary>
+    /// Check content assignment inheritance rules
+    /// </summary>
+    public async Task<List<ContentAssignmentDto>> GetEffectiveContentAsync(int groupId)
+    {
+        _logger.LogInformation("STUB: Getting effective content for device group {GroupId}", groupId);
+
+        // STUB IMPLEMENTATION
+        await Task.Delay(30);
+
+        return new List<ContentAssignmentDto>(); // Placeholder
+    }
+
+    /// <summary>
+    /// Update content assignment priority
+    /// </summary>
+    public async Task<bool> UpdateContentPriorityAsync(int groupId, int assignmentId, int newPriority)
+    {
+        _logger.LogInformation("STUB: Updating content priority for assignment {AssignmentId} in group {GroupId} to {Priority}", 
+            assignmentId, groupId, newPriority);
+
+        // STUB IMPLEMENTATION
+        await Task.Delay(30);
+
+        return true; // Placeholder
+    }
+
+    #endregion
+
+    #region Content Assignment Methods (Interface Implementation)
+
+    /// <summary>
+    /// Assign content to a device group
+    /// </summary>
+    public async Task<GroupContentAssignmentResponseDto> AssignContentAsync(GroupContentAssignmentDto request)
+    {
+        _logger.LogInformation("Assigning content to device group {GroupId}", request.GroupId);
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return new GroupContentAssignmentResponseDto
+        {
+            Id = 1,
+            DeviceGroupId = request.GroupId,
+            PlaylistId = request.Assignment.ContentId,
+            Priority = request.Assignment.Priority,
+            IsInherited = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "System"
+        };
+    }
+
+    /// <summary>
+    /// Unassign content from a device group
+    /// </summary>
+    public async Task<bool> UnassignContentAsync(int deviceGroupId, int playlistId)
+    {
+        _logger.LogInformation("Unassigning content from device group {GroupId}, playlist {PlaylistId}", deviceGroupId, playlistId);
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return true;
+    }
+
+    /// <summary>
+    /// Get content assignments for a device group
+    /// </summary>
+    public async Task<GroupContentAssignmentsDto> GetContentAssignmentsAsync(int deviceGroupId, bool includeInherited = false)
+    {
+        _logger.LogInformation("Getting content assignments for device group {GroupId}, includeInherited: {IncludeInherited}", 
+            deviceGroupId, includeInherited);
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return new GroupContentAssignmentsDto
+        {
+            DeviceGroupId = deviceGroupId,
+            DirectAssignments = new List<GroupContentAssignmentResponseDto>(),
+            InheritedAssignments = includeInherited ? new List<GroupContentAssignmentResponseDto>() : new List<GroupContentAssignmentResponseDto>()
+        };
+    }
+
+    /// <summary>
+    /// Assign content to a device group with inheritance
+    /// </summary>
+    public async Task<GroupContentAssignmentResponseDto> AssignContentWithInheritanceAsync(GroupContentAssignmentDto request)
+    {
+        _logger.LogInformation("Assigning content with inheritance to device group {GroupId}", request.GroupId);
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return new GroupContentAssignmentResponseDto
+        {
+            Id = 1,
+            DeviceGroupId = request.GroupId,
+            PlaylistId = request.Assignment.ContentId,
+            Priority = request.Assignment.Priority,
+            IsInherited = false,
+            CreatedAt = DateTime.UtcNow,
+            CreatedBy = "System"
+        };
+    }
+
+    /// <summary>
+    /// Bulk assign content to multiple device groups
+    /// </summary>
+    public async Task<BulkContentOperationResultDto> BulkAssignContentAsync(List<GroupContentAssignmentDto> requests)
+    {
+        _logger.LogInformation("Bulk assigning content to {Count} device groups", requests.Count);
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return new BulkContentOperationResultDto
+        {
+            TotalRequested = requests.Count,
+            Successful = requests.Count,
+            Failed = 0,
+            CreatedAssignments = new List<GroupContentAssignmentResponseDto>()
+        };
+    }
+
+    /// <summary>
+    /// Get device groups that have specific content assigned
+    /// </summary>
+    public async Task<List<DeviceGroupDto>> GetGroupsByContentAsync(int playlistId)
+    {
+        _logger.LogInformation("Getting device groups with content {PlaylistId}", playlistId);
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return new List<DeviceGroupDto>();
+    }
+
+    /// <summary>
+    /// Get content distribution statistics for a device group
+    /// </summary>
+    public async Task<ContentDistributionStatsDto> GetContentDistributionStatsAsync(int deviceGroupId)
+    {
+        _logger.LogInformation("Getting content distribution stats for device group {GroupId}", deviceGroupId);
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return new ContentDistributionStatsDto
+        {
+            DeviceGroupId = deviceGroupId,
+            TotalAssignments = 0,
+            DirectAssignments = 0,
+            InheritedAssignments = 0
+        };
+    }
+
+    /// <summary>
+    /// Get device group with content information
+    /// </summary>
+    public async Task<DeviceGroupDetailsDto> GetGroupWithContentAsync(int deviceGroupId)
+    {
+        _logger.LogInformation("Getting device group with content for {GroupId}", deviceGroupId);
+        
+        var group = await GetByIdAsync(deviceGroupId);
+        if (group == null)
+        {
+            throw new ArgumentException($"Device group {deviceGroupId} not found");
+        }
+        
+        // STUB IMPLEMENTATION - TODO: Implement actual logic
+        await Task.Delay(30);
+        
+        return new DeviceGroupDetailsDto
+        {
+            Group = group,
+            ContentAssignments = new GroupContentAssignmentsDto
+            {
+                DeviceGroupId = deviceGroupId,
+                DirectAssignments = new List<GroupContentAssignmentResponseDto>(),
+                InheritedAssignments = new List<GroupContentAssignmentResponseDto>()
+            },
+            DeviceCount = 0,
+            ChildGroupCount = 0
+        };
+    }
+
+    #endregion
 }

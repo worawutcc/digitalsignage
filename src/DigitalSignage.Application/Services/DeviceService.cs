@@ -621,4 +621,102 @@ public class DeviceService : IDeviceService
 
         _logger.LogInformation("Device deactivated: {DeviceId} by user {UserId}", deviceId, userId);
     }
+
+    /// <summary>
+    /// Create device from approved registration request (T013-REVISED: Clean separation)
+    /// </summary>
+    public async Task<DeviceCreationResultDto> CreateDeviceFromRegistrationAsync(
+        DeviceRegistrationRequest registration,
+        string deviceName,
+        string? location = null,
+        int? deviceGroupId = null,
+        int? assignedUserId = null)
+    {
+        _logger.LogInformation("Creating device from approved registration {RegistrationId}", registration.RegistrationId);
+
+        try
+        {
+            // Generate device key
+            var deviceKey = GenerateDeviceKey(registration.MacAddress);
+            
+            // Create device entity
+            var device = new Device
+            {
+                Name = deviceName,
+                DeviceKey = deviceKey,
+                MacAddress = registration.MacAddress,
+                Location = location ?? registration.NetworkName ?? "Unknown",
+                Status = DeviceStatus.Registered, // Initial status after creation
+                Manufacturer = registration.Manufacturer,
+                Model = registration.DeviceModel,
+                AndroidVersion = registration.AndroidVersion,
+                DeviceGroupId = deviceGroupId,
+                IsActive = true,
+                AssignedUserId = assignedUserId,
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            };
+
+            // Add device to database  
+            _context.Set<Device>().Add(device);
+            await _context.SaveChangesAsync();
+
+            // Broadcast device creation event
+            await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
+            {
+                Type = "device_created",
+                Payload = SerializePayload(new
+                {
+                    DeviceId = device.Id,
+                    DeviceKey = device.DeviceKey,
+                    Name = device.Name,
+                    MacAddress = device.MacAddress,
+                    Status = device.Status.ToString().ToLower(),
+                    DeviceGroupId = device.DeviceGroupId,
+                    AssignedUserId = device.AssignedUserId,
+                    SourceRegistrationId = registration.RegistrationId
+                }),
+                Timestamp = DateTime.UtcNow.ToString("o")
+            });
+
+            var result = new DeviceCreationResultDto
+            {
+                DeviceId = device.Id,
+                DeviceKey = deviceKey,
+                DeviceName = deviceName,
+                MacAddress = registration.MacAddress,
+                Location = device.Location,
+                Manufacturer = registration.Manufacturer,
+                Model = registration.DeviceModel,
+                AndroidVersion = registration.AndroidVersion,
+                DeviceGroupId = deviceGroupId,
+                AssignedUserId = assignedUserId,
+                Status = device.Status,
+                CreatedAt = device.CreatedAt,
+                IsActive = device.IsActive,
+                SourceRegistrationId = registration.RegistrationId
+            };
+
+            _logger.LogInformation("Device created successfully: ID={DeviceId}, Key={DeviceKey}, MAC={MacAddress}", 
+                device.Id, deviceKey, registration.MacAddress);
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create device from registration {RegistrationId}", registration.RegistrationId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Generate a device authentication key (T013-REVISED: Moved from DeviceRegistrationService)
+    /// </summary>
+    private string GenerateDeviceKey(string macAddress)
+    {
+        // Simplified version - in production, use proper JWT token generation
+        var payload = $"{macAddress}_{new DateTimeOffset(DateTime.UtcNow).ToUnixTimeSeconds()}";
+        var bytes = System.Text.Encoding.UTF8.GetBytes(payload);
+        return Convert.ToBase64String(bytes);
+    }
 }

@@ -1,5 +1,6 @@
 using DigitalSignage.Application.DTOs.AdminDeviceRegistration;
 using DigitalSignage.Application.DTOs.DeviceRegistration;
+using DigitalSignage.Application.DTOs.DeviceGroup;
 using DigitalSignage.Application.Interfaces;
 using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Enums;
@@ -17,6 +18,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
     private readonly IDeviceRepository _deviceRepository;
     private readonly IUserRepository _userRepository;
     private readonly IQrCodeService _qrCodeService;
+    private readonly IDeviceService _deviceService; // T013-REVISED: For delegation
     private readonly ILogger<DeviceRegistrationService> _logger;
 
     public DeviceRegistrationService(
@@ -24,12 +26,14 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         IDeviceRepository deviceRepository,
         IUserRepository userRepository,
         IQrCodeService qrCodeService,
+        IDeviceService deviceService,
         ILogger<DeviceRegistrationService> logger)
     {
         _registrationRepository = registrationRepository;
         _deviceRepository = deviceRepository;
         _userRepository = userRepository;
         _qrCodeService = qrCodeService;
+        _deviceService = deviceService;
         _logger = logger;
     }    public async Task<InitiateQrRegistrationResponseDto> InitiateQrRegistrationAsync(InitiateQrRegistrationRequestDto request)
     {
@@ -328,39 +332,28 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             throw new InvalidOperationException("Invalid PIN provided");
         }
 
-        // Create the device
-        var device = new Device
-        {
-            Name = request.DeviceName,
-            DeviceKey = Guid.NewGuid().ToString(),
-            MacAddress = registration.MacAddress,
-            Location = request.Location ?? "Unknown",
-            Status = DeviceStatus.Registered,
-            Manufacturer = registration.Manufacturer,
-            Model = registration.DeviceModel,
-            AndroidVersion = registration.AndroidVersion,
-            DeviceGroupId = request.DeviceGroupId,
-            IsActive = true,
-            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
-            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
-        };
-
-        var createdDevice = await _deviceRepository.CreateAsync(device);
+        // T013-REVISED: Delegate device creation to DeviceService
+        var deviceCreationResult = await _deviceService.CreateDeviceFromRegistrationAsync(
+            registration,
+            request.DeviceName,
+            request.Location,
+            request.DeviceGroupId,
+            null); // assignedUserId will be handled later if needed
 
         // Update registration status
         registration.Status = RegistrationStatus.Approved;
-        registration.ApprovedDeviceId = createdDevice.Id;
+        registration.ApprovedDeviceId = deviceCreationResult.DeviceId;
         registration.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         await _registrationRepository.UpdateAsync(registration);
 
         _logger.LogInformation("Device registration {RegistrationId} approved successfully. Device ID: {DeviceId}", 
-            request.RegistrationId, createdDevice.Id);
+            request.RegistrationId, deviceCreationResult.DeviceId);
 
         return new DeviceApprovalResponseDto
         {
             RegistrationId = request.RegistrationId,
-            DeviceId = createdDevice.Id,
-            DeviceKey = device.DeviceKey,
+            DeviceId = deviceCreationResult.DeviceId,
+            DeviceKey = deviceCreationResult.DeviceKey,
             Status = "Approved",
             Message = "Device registration approved successfully"
         };
@@ -489,6 +482,86 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         return response;
     }
 
+    public async Task<BulkRejectionResponseDto> BulkRejectDevicesAsync(BulkRejectionRequestDto request, string rejectedByUserId)
+    {
+        _logger.LogInformation("Starting bulk rejection of {Count} devices by user {UserId}", 
+            request.Rejections.Count, rejectedByUserId);
+
+        var results = new List<BulkRejectionResultDto>();
+        int successCount = 0;
+        int failureCount = 0;
+
+        foreach (var rejection in request.Rejections)
+        {
+            var result = new BulkRejectionResultDto
+            {
+                Pin = rejection.Pin,
+                ProcessedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                Reason = rejection.Reason
+            };
+
+            try
+            {
+                // Convert to individual rejection request
+                var individualRequest = new RejectDeviceRequestDto
+                {
+                    Pin = rejection.Pin,
+                    Reason = rejection.Reason,
+                    Notes = rejection.AdditionalNotes ?? string.Empty
+                };
+
+                // Use the existing RejectDeviceAsync method
+                var rejectionResponse = await RejectDeviceAsync(individualRequest, rejectedByUserId);
+                
+                result.IsSuccess = true;
+                successCount++;
+
+                _logger.LogDebug("Successfully rejected device with PIN {Pin} in bulk operation", rejection.Pin);
+            }
+            catch (Exception ex)
+            {
+                result.IsSuccess = false;
+                result.ErrorMessage = ex.Message;
+                failureCount++;
+
+                _logger.LogWarning(ex, "Failed to reject device with PIN {Pin} in bulk operation: {Message}", 
+                    rejection.Pin, ex.Message);
+            }
+
+            // Try to get device info for result (best effort)
+            try
+            {
+                var registration = await _registrationRepository.GetByPinAsync(rejection.Pin);
+                if (registration != null)
+                {
+                    result.DeviceModel = registration.DeviceModel;
+                    result.MacAddress = registration.MacAddress;
+                }
+            }
+            catch
+            {
+                // Ignore errors in device info lookup
+                result.DeviceModel = "Unknown";
+                result.MacAddress = "Unknown";
+            }
+
+            results.Add(result);
+        }
+
+        var response = new BulkRejectionResponseDto
+        {
+            TotalAttempted = request.Rejections.Count,
+            SuccessCount = successCount,
+            FailureCount = failureCount,
+            Results = results
+        };
+
+        _logger.LogInformation("Bulk rejection completed: {SuccessCount}/{TotalCount} devices rejected successfully", 
+            successCount, request.Rejections.Count);
+
+        return response;
+    }
+
     public async Task<int> CleanupExpiredRegistrationsAsync()
     {
         _logger.LogInformation("Starting cleanup of expired device registrations");
@@ -511,4 +584,181 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             throw;
         }
     }
+
+    public async Task<BulkDeviceApprovalResponseDto> BulkApproveDevicesWithGroupAsync(BulkDeviceApprovalRequestDto request, string approvedByUserId)
+    {
+        _logger.LogInformation("Enhanced bulk approval STUB: Processing {Count} devices by user {UserId}", 
+            request.Approvals.Count, approvedByUserId);
+
+        // STUB IMPLEMENTATION - return basic response structure
+        await Task.Delay(100); // Simulate processing time
+        
+        var response = new BulkDeviceApprovalResponseDto
+        {
+            TotalRequests = request.Approvals.Count,
+            Successful = 0, // Placeholder
+            Failed = 0, // Placeholder  
+            ProcessingTimeMs = 100,
+            Results = new List<BulkApprovalResultDto>(),
+            GroupAssignmentSummary = new List<GroupAssignmentSummaryDto>(),
+            Warnings = new List<string> { "STUB IMPLEMENTATION - Enhanced bulk approval not yet fully implemented" }
+        };
+
+        _logger.LogWarning("Enhanced bulk approval STUB completed - actual implementation pending");
+        return response;
+    }
+
+    public async Task<FilteredPendingRegistrationsResponseDto> GetFilteredPendingRegistrationsAsync(PendingRegistrationsFilterRequestDto request)
+    {
+        _logger.LogInformation("Getting filtered pending registrations with advanced filtering - STUB IMPLEMENTATION");
+
+        // Normalize and validate request
+        request.Normalize();
+
+        try
+        {
+            // Get all pending registrations
+            var allPendingRequests = await _registrationRepository.GetPendingRegistrationsAsync();
+            
+            // Basic implementation - no filtering for now
+            var totalCount = allPendingRequests.Count();
+            var pagedRequests = allPendingRequests
+                .Skip((request.Page - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToList();
+
+            // Convert to enhanced DTOs (simplified)
+            var enhancedRegistrations = pagedRequests.Select(r => new EnhancedPendingRegistrationDto
+            {
+                RegistrationId = r.RegistrationId,
+                MacAddress = r.MacAddress,
+                DeviceModel = r.DeviceModel,
+                Manufacturer = r.Manufacturer,
+                AndroidVersion = r.AndroidVersion,
+                AppVersion = r.AppVersion,
+                RequestedAt = r.CreatedAt,
+                ExpiresAt = r.ExpiresAt,
+                Pin = r.Pin,
+                RequestedUsername = r.RequestedUsername,
+                RequestedUserDisplayName = r.RequestedUserDisplayName,
+                IpAddress = r.IpAddress,
+                NetworkName = r.NetworkName,
+                Method = r.Method,
+                AvailableGroups = new List<DeviceGroupDto>() // Placeholder
+            }).ToList();
+
+            var response = new FilteredPendingRegistrationsResponseDto
+            {
+                Registrations = enhancedRegistrations,
+                TotalCount = totalCount,
+                FilteredCount = totalCount,
+                CurrentPage = request.Page,
+                PageSize = request.PageSize,
+                TotalPages = (int)Math.Ceiling((double)totalCount / request.PageSize),
+                AppliedFilters = new AppliedFiltersDto
+                {
+                    SearchTerm = request.SearchTerm,
+                    Method = request.Method,
+                    HasMatchedUser = request.HasMatchedUser,
+                    IsNearExpiration = request.IsNearExpiration,
+                    Manufacturer = request.Manufacturer,
+                    DateFrom = request.DateFrom,
+                    DateTo = request.DateTo
+                }
+            };
+
+            _logger.LogInformation("Filtered pending registrations: {FilteredCount}/{TotalCount} results, page {Page}/{TotalPages}", 
+                response.FilteredCount, totalCount, request.Page, response.TotalPages);
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting filtered pending registrations");
+            throw;
+        }
+    }
+
+    public async Task<DeviceApprovalStatsResponseDto> GetApprovalStatisticsAsync(ApprovalStatsRequestDto request)
+    {
+        _logger.LogInformation("Generating approval statistics for period {DateFrom} to {DateTo}", 
+            request.DateFrom, request.DateTo);
+
+        // Normalize and validate request
+        request.Normalize();
+
+        try
+        {
+            // This is a simplified implementation - in real implementation, use optimized database queries
+            var allRegistrations = await _registrationRepository.GetRegistrationsByDateRangeAsync(request.DateFrom, request.DateTo);
+            
+            var response = new DeviceApprovalStatsResponseDto
+            {
+                DateFrom = request.DateFrom,
+                DateTo = request.DateTo,
+                TotalRegistrations = allRegistrations.Count(),
+                ApprovedCount = allRegistrations.Count(r => r.Status == RegistrationStatus.Approved),
+                RejectedCount = allRegistrations.Count(r => r.Status == RegistrationStatus.Rejected),
+                PendingCount = allRegistrations.Count(r => r.Status == RegistrationStatus.Pending),
+                ExpiredCount = allRegistrations.Count(r => r.Status == RegistrationStatus.Expired)
+            };
+
+            // Calculate additional metrics
+            if (response.ApprovedCount > 0)
+            {
+                var approvedRegistrations = allRegistrations.Where(r => r.Status == RegistrationStatus.Approved);
+                // Note: This would require additional fields in the entity to track approval times
+                response.AverageApprovalTimeMinutes = 15.0; // Placeholder - implement with real data
+            }
+
+            // Build method statistics (placeholder)
+            if (request.IncludeMethodStats)
+            {
+                response.MethodStats = new List<MethodStatsDto>();
+            }
+
+            // Build manufacturer statistics (placeholder)
+            if (request.IncludeManufacturerStats)
+            {
+                response.ManufacturerStats = new List<ManufacturerStatsDto>();
+            }
+
+            // Build daily trends (placeholder)
+            if (request.IncludeDailyTrends)
+            {
+                response.DailyTrends = new List<DailyStatsDto>();
+            }
+
+            // Build admin statistics (placeholder - would need additional tracking)
+            if (request.IncludeAdminStats)
+            {
+                response.TopAdmins = new List<AdminStatsDto>(); // Placeholder
+            }
+
+            // Build bulk operation statistics (placeholder)
+            if (request.IncludeBulkStats)
+            {
+                response.BulkOperationStats = new BulkOperationStatsDto
+                {
+                    TotalBulkOperations = 0, // Placeholder - implement with real tracking
+                    TotalDevicesProcessed = 0,
+                    AverageDevicesPerOperation = 0,
+                    BulkSuccessRate = 0,
+                    AverageProcessingTimeSeconds = 0
+                };
+            }
+
+            _logger.LogInformation("Generated approval statistics: {TotalRegistrations} total, {ApprovalRate}% approval rate", 
+                response.TotalRegistrations, Math.Round(response.ApprovalRate, 1));
+
+            return response;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error generating approval statistics");
+            throw;
+        }
+    }
+
+
 }

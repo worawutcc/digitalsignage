@@ -29,6 +29,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-03
 - PostgreSQL (backend) via REST API, LocalStorage/SessionStorage for client state (020-phase-1)
 - TypeScript 5.x with Next.js 15 (React 18), C# .NET 8 (backend) + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, React Hook Form + Zod, Axios, Lucide Reac (021-user-schedule-assignment)
 - PostgreSQL (backend data), LocalStorage/SessionStorage (client state), existing API endpoints (021-user-schedule-assignment)
+- C# .NET 8 (Backend), TypeScript 5.x (Frontend) + ASP.NET Core Web API, Entity Framework Core 9, Next.js 15, React 18, PostgreSQL, JWT Authentication, AWS S3 (027-device-approval-group)
 
 ## API Project Structure (Backend Only)
 ```
@@ -344,9 +345,9 @@ dotnet build
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
 ## Recent Changes
+- 027-device-approval-group: Added C# .NET 8 (Backend), TypeScript 5.x (Frontend) + ASP.NET Core Web API, Entity Framework Core 9, Next.js 15, React 18, PostgreSQL, JWT Authentication, AWS S3
 - 021-user-schedule-assignment: Added TypeScript 5.x with Next.js 15 (React 18), C# .NET 8 (backend) + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, React Hook Form + Zod, Axios, Lucide Reac
 - 020-phase-1: Added TypeScript 5.x with Next.js 15 (React 19)
-- 019-user-based-content: Added C# .NET 8, TypeScript 5.x + ASP.NET Core Web API, Entity Framework Core 9, PostgreSQL (Npgsql), Next.js 15, React 18
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

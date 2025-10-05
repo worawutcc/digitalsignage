@@ -222,6 +222,211 @@ public class NotificationHub : Hub
             Timestamp = DateTime.UtcNow.ToString("O")
         });
     }
+
+    #region Device Registration Events
+
+    /// <summary>
+    /// Join device registration updates group for admins
+    /// </summary>
+    public async Task JoinDeviceRegistrationUpdates()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "DeviceRegistrationUpdates");
+        _logger.LogInformation("Client {ConnectionId} joined DeviceRegistrationUpdates group", Context.ConnectionId);
+    }
+
+    /// <summary>
+    /// Leave device registration updates group
+    /// </summary>
+    public async Task LeaveDeviceRegistrationUpdates()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "DeviceRegistrationUpdates");
+        _logger.LogInformation("Client {ConnectionId} left DeviceRegistrationUpdates group", Context.ConnectionId);
+    }
+
+    /// <summary>
+    /// Notify about new device registration request
+    /// </summary>
+    public async Task NotifyNewDeviceRegistration(string deviceModel, string pin, DateTime expiresAt)
+    {
+        await Clients.Group("DeviceRegistrationUpdates").SendAsync("NewDeviceRegistration", new
+        {
+            Type = "new_device_registration",
+            Payload = SerializePayload(new { DeviceModel = deviceModel, Pin = pin, ExpiresAt = expiresAt.ToString("O") }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about device registration approval
+    /// </summary>
+    public async Task NotifyDeviceApproval(string deviceModel, string pin, string deviceKey, string approvedBy)
+    {
+        await Clients.Group("DeviceRegistrationUpdates").SendAsync("DeviceApproved", new
+        {
+            Type = "device_approved",
+            Payload = SerializePayload(new { DeviceModel = deviceModel, Pin = pin, DeviceKey = deviceKey, ApprovedBy = approvedBy }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about device registration rejection
+    /// </summary>
+    public async Task NotifyDeviceRejection(string deviceModel, string pin, string reason, string rejectedBy)
+    {
+        await Clients.Group("DeviceRegistrationUpdates").SendAsync("DeviceRejected", new
+        {
+            Type = "device_rejected",
+            Payload = SerializePayload(new { DeviceModel = deviceModel, Pin = pin, Reason = reason, RejectedBy = rejectedBy }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about bulk operation progress
+    /// </summary>
+    public async Task NotifyBulkOperationProgress(string operationType, int totalItems, int processedItems, int successCount, int failureCount)
+    {
+        await Clients.Group("DeviceRegistrationUpdates").SendAsync("BulkOperationProgress", new
+        {
+            Type = "bulk_operation_progress",
+            Payload = SerializePayload(new 
+            { 
+                OperationType = operationType, 
+                TotalItems = totalItems, 
+                ProcessedItems = processedItems,
+                SuccessCount = successCount,
+                FailureCount = failureCount,
+                IsComplete = processedItems >= totalItems
+            }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    #endregion
+
+    #region Device Group Events
+
+    /// <summary>
+    /// Join device group updates for specific group
+    /// </summary>
+    public async Task JoinDeviceGroupUpdates(int groupId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"DeviceGroup_{groupId}");
+        _logger.LogInformation("Client {ConnectionId} joined DeviceGroup_{GroupId} updates", Context.ConnectionId, groupId);
+    }
+
+    /// <summary>
+    /// Leave device group updates for specific group
+    /// </summary>
+    public async Task LeaveDeviceGroupUpdates(int groupId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"DeviceGroup_{groupId}");
+        _logger.LogInformation("Client {ConnectionId} left DeviceGroup_{GroupId} updates", Context.ConnectionId, groupId);
+    }
+
+    /// <summary>
+    /// Join all device group updates for admin dashboard
+    /// </summary>
+    public async Task JoinAllDeviceGroupUpdates()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "AllDeviceGroupUpdates");
+        _logger.LogInformation("Client {ConnectionId} joined AllDeviceGroupUpdates group", Context.ConnectionId);
+    }
+
+    /// <summary>
+    /// Leave all device group updates
+    /// </summary>
+    public async Task LeaveAllDeviceGroupUpdates()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "AllDeviceGroupUpdates");
+        _logger.LogInformation("Client {ConnectionId} left AllDeviceGroupUpdates group", Context.ConnectionId);
+    }
+
+    /// <summary>
+    /// Notify about content assignment to device group
+    /// </summary>
+    public async Task NotifyContentAssignment(int groupId, string groupName, string contentType, string contentName, int priority)
+    {
+        var payload = new
+        {
+            GroupId = groupId,
+            GroupName = groupName,
+            ContentType = contentType,
+            ContentName = contentName,
+            Priority = priority,
+            AssignedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify specific group subscribers
+        await Clients.Group($"DeviceGroup_{groupId}").SendAsync("ContentAssigned", new
+        {
+            Type = "content_assigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify admin dashboard
+        await Clients.Group("AllDeviceGroupUpdates").SendAsync("ContentAssigned", new
+        {
+            Type = "content_assigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about content removal from device group
+    /// </summary>
+    public async Task NotifyContentRemoval(int groupId, string groupName, string contentType, string contentName)
+    {
+        var payload = new
+        {
+            GroupId = groupId,
+            GroupName = groupName,
+            ContentType = contentType,
+            ContentName = contentName,
+            RemovedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify specific group subscribers
+        await Clients.Group($"DeviceGroup_{groupId}").SendAsync("ContentRemoved", new
+        {
+            Type = "content_removed",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify admin dashboard
+        await Clients.Group("AllDeviceGroupUpdates").SendAsync("ContentRemoved", new
+        {
+            Type = "content_removed",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about bulk content assignment progress
+    /// </summary>
+    public async Task NotifyBulkContentAssignmentProgress(int totalGroups, int processedGroups, int successCount, int failureCount)
+    {
+        await Clients.Group("AllDeviceGroupUpdates").SendAsync("BulkContentAssignmentProgress", new
+        {
+            Type = "bulk_content_assignment_progress",
+            Payload = SerializePayload(new
+            {
+                TotalGroups = totalGroups,
+                ProcessedGroups = processedGroups,
+                SuccessCount = successCount,
+                FailureCount = failureCount,
+                IsComplete = processedGroups >= totalGroups
+            }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    #endregion
     
     private int? GetUserId()
     {
