@@ -1,0 +1,126 @@
+openapi: 3.0.1
+info:
+  title: Dashboard API
+  version: 1.0.0
+paths:
+  /api/dashboard/stats:
+    get:
+      summary: Get dashboard statistics
+      responses:
+        '200':
+          description: Dashboard statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DashboardStats'
+  /api/dashboard/activity-logs:
+    get:
+      summary: Get recent activity logs
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Activity logs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ActivityLog'
+  /api/dashboard/system-health:
+    get:
+      summary: Get system health status
+      responses:
+        '200':
+          description: System health
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemHealth'
+components:
+  schemas:
+    DashboardStats:
+      type: object
+      required:
+        - totalDevices
+        - onlineDevices
+        - totalPlaylists
+        - activePlaylists
+        - totalMediaFiles
+        - totalSchedules
+        - activeSchedules
+        - systemUptime
+      properties:
+        totalDevices:
+          type: integer
+        onlineDevices:
+          type: integer
+        totalPlaylists:
+          type: integer
+        activePlaylists:
+          type: integer
+        totalMediaFiles:
+          type: integer
+        totalSchedules:
+          type: integer
+        activeSchedules:
+          type: integer
+        systemUptime:
+          type: integer
+    ActivityLog:
+      type: object
+      required:
+        - id
+        - timestamp
+        - type
+        - action
+        - details
+      properties:
+        id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+        type:
+          type: string
+        action:
+          type: string
+        details:
+          type: string
+        user:
+          type: string
+        deviceId:
+          type: string
+    SystemHealth:
+      type: object
+      required:
+        - overall
+        - components
+      properties:
+        overall:
+          type: string
+          enum: [healthy, warning, critical]
+        components:
+          type: array
+          items:
+            type: object
+            required:
+              - name
+              - status
+              - message
+              - lastCheck
+            properties:
+              name:
+                type: string
+              status:
+                type: string
+                enum: [healthy, warning, critical]
+              message:
+                type: string
+              lastCheck:
+                type: string
+                format: date-time

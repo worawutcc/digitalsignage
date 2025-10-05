@@ -1,4 +1,5 @@
 import { apiClient } from '@/lib/api'
+import { MockScheduleService, USE_MOCK_SCHEDULE_SERVICE } from '@/services/mockScheduleService'
 import type {
   Schedule,
   ScheduleFilters,
@@ -26,6 +27,11 @@ export class ScheduleService {
    * Get all schedules with optional filtering
    */
   async getAll(filters?: ScheduleFilters): Promise<Schedule[]> {
+    // Use mock service in development when API is not available
+    if (USE_MOCK_SCHEDULE_SERVICE || process.env.NODE_ENV === 'development') {
+      return MockScheduleService.getAll(filters)
+    }
+
     const params = new URLSearchParams()
     
     if (filters) {
@@ -37,14 +43,7 @@ export class ScheduleService {
       if (filters.status?.length) {
         filters.status.forEach(s => params.append('status', s))
       }
-      if (filters.dateRange) params.append('dateRange', filters.dateRange)
-      if (filters.priority) params.append('priority', filters.priority)
-      if (filters.devices?.length) {
-        filters.devices.forEach(d => params.append('devices', d))
-      }
-      if (filters.createdBy?.length) {
-        filters.createdBy.forEach(u => params.append('createdBy', u))
-      }
+      if (filters.assignedUserId) params.append('assignedUserId', filters.assignedUserId)
     }
 
     const response = await apiClient.get<{ success: boolean; data: Schedule[] }>(
@@ -57,6 +56,11 @@ export class ScheduleService {
    * Get schedule by ID
    */
   async getById(id: string): Promise<Schedule> {
+    // Use mock service in development
+    if (USE_MOCK_SCHEDULE_SERVICE || process.env.NODE_ENV === 'development') {
+      return MockScheduleService.getById(id)
+    }
+
     const response = await apiClient.get<{ success: boolean; data: Schedule }>(
       `/api/schedules/${id}`
     )
@@ -114,6 +118,11 @@ export class ScheduleService {
     devices?: string[],
     view?: 'month' | 'week' | 'day'
   ): Promise<CalendarData> {
+    // Use mock service in development
+    if (USE_MOCK_SCHEDULE_SERVICE || process.env.NODE_ENV === 'development') {
+      return MockScheduleService.getCalendarData(start, end, devices, view)
+    }
+
     const params = new URLSearchParams({
       start,
       end,
@@ -134,6 +143,11 @@ export class ScheduleService {
    * Get schedule statistics
    */
   async getStats(): Promise<ScheduleStats> {
+    // Use mock service in development
+    if (USE_MOCK_SCHEDULE_SERVICE || process.env.NODE_ENV === 'development') {
+      return MockScheduleService.getStats()
+    }
+
     const response = await apiClient.get<{ success: boolean; data: ScheduleStats }>(
       '/api/schedules/stats'
     )

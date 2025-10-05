@@ -14,6 +14,10 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         builder.HasKey(e => e.Id);
 
         // Configure properties
+        builder.Property(e => e.RegistrationId)
+               .IsRequired()
+               .HasDefaultValueSql("gen_random_uuid()");
+
         builder.Property(e => e.Pin)
                .HasMaxLength(10)
                .IsRequired();
@@ -74,6 +78,7 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
                .HasConversion<int>(); // Store as integer in database
 
         // Configure indexes
+        builder.HasIndex(e => e.RegistrationId).IsUnique();
         builder.HasIndex(e => e.Pin);
         builder.HasIndex(e => e.MacAddress);
         builder.HasIndex(e => e.Status);

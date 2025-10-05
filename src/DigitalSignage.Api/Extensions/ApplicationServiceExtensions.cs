@@ -59,6 +59,12 @@ public static class ApplicationServiceExtensions
         // DbContext mapping for services that need generic DbContext
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());
 
+        // User Service
+        services.AddScoped<IUserService, DigitalSignage.Application.Services.UserService>();
+        
+        // Dashboard Service
+        services.AddScoped<IDashboardService, DashboardService>();
+
         // Device Notification Services (Api layer implementations)
         services.AddScoped<IDeviceNotificationService, DeviceNotificationService>();
         services.AddScoped<IRealtimeEventBroadcaster, RealtimeEventBroadcaster>();

@@ -74,20 +74,20 @@ export function Sidebar({ className }: SidebarProps) {
   return (
     <div
       className={cn(
-        'flex h-full flex-col bg-gray-900 transition-all duration-300',
+        'flex h-full flex-col bg-slate-50 border-r border-slate-200 transition-all duration-300',
         isCollapsed ? 'w-16' : 'w-64',
         className
       )}
     >
-      <div className="flex h-16 items-center px-4">
+      <div className="flex h-16 items-center px-4 border-b border-slate-200">
         {!isCollapsed && (
-          <h2 className="text-xl font-bold text-white">Digital Signage</h2>
+          <h2 className="text-xl font-bold text-slate-800">Digital Signage</h2>
         )}
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
-          className="ml-auto text-gray-400 hover:text-white"
+          className="ml-auto text-slate-500 hover:text-slate-700 hover:bg-slate-100"
         >
           {isCollapsed ? <Menu className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
@@ -104,17 +104,17 @@ export function Sidebar({ className }: SidebarProps) {
                 <Link
                   href={item.href}
                   className={cn(
-                    'group flex items-center rounded-md px-2 py-2 text-sm font-medium transition-colors',
+                    'group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                     isActive
-                      ? 'bg-gray-800 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-blue-50 text-blue-700 border border-blue-200 shadow-sm'
+                      : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                   )}
                   title={isCollapsed ? item.description : undefined}
                 >
                   <Icon
                     className={cn(
                       'mr-3 h-5 w-5 flex-shrink-0',
-                      isActive ? 'text-white' : 'text-gray-400 group-hover:text-white'
+                      isActive ? 'text-blue-600' : 'text-slate-500 group-hover:text-slate-700'
                     )}
                   />
                   {!isCollapsed && (
@@ -127,21 +127,21 @@ export function Sidebar({ className }: SidebarProps) {
         </ul>
       </nav>
 
-      <div className="border-t border-gray-800 p-4">
+      <div className="border-t border-slate-200 p-4 bg-white">
         {!isCollapsed ? (
           <div className="flex items-center">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-700">
-              <span className="text-sm font-medium text-gray-300">A</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100">
+              <span className="text-sm font-medium text-blue-700">A</span>
             </div>
             <div className="ml-3 flex-1">
-              <p className="text-sm font-medium text-white">Admin User</p>
-              <p className="text-xs text-gray-400">admin@example.com</p>
+              <p className="text-sm font-medium text-slate-800">Admin User</p>
+              <p className="text-xs text-slate-500">admin@example.com</p>
             </div>
             <Button
               variant="ghost"
               size="sm"
               onClick={handleLogout}
-              className="text-gray-400 hover:text-white"
+              className="text-slate-500 hover:text-slate-700 hover:bg-slate-100"
               title="Sign out"
             >
               <LogOut className="h-4 w-4" />
@@ -152,7 +152,7 @@ export function Sidebar({ className }: SidebarProps) {
             variant="ghost"
             size="sm"
             onClick={handleLogout}
-            className="mx-auto text-gray-400 hover:text-white"
+            className="mx-auto text-slate-500 hover:text-slate-700 hover:bg-slate-100"
             title="Sign out"
           >
             <LogOut className="h-4 w-4" />

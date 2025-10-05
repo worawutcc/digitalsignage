@@ -1,0 +1,151 @@
+openapi: 3.0.1
+info:
+  title: Device API
+  version: 1.0.0
+paths:
+  /api/devices:
+    get:
+      summary: Get all devices
+      responses:
+        '200':
+          description: List of devices
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Device'
+    post:
+      summary: Register new device
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegisterRequest'
+      responses:
+        '201':
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+  /api/devices/{id}:
+    get:
+      summary: Get device by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '404':
+          description: Not found
+    put:
+      summary: Update device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Device'
+      responses:
+        '200':
+          description: Device updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+    delete:
+      summary: Delete device
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Device deleted
+        '404':
+          description: Not found
+components:
+  schemas:
+    Device:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - status
+        - lastSeen
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum: [AndroidTV, Tablet, Display, Kiosk]
+        status:
+          type: string
+          enum: [Online, Offline, Maintenance, Error]
+        location:
+          type: string
+        ipAddress:
+          type: string
+        macAddress:
+          type: string
+        lastSeen:
+          type: string
+          format: date-time
+        currentPlaylist:
+          type: string
+        systemInfo:
+          type: object
+        tags:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    DeviceRegisterRequest:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          enum: [AndroidTV, Tablet, Display, Kiosk]
+        location:
+          type: string
+        ipAddress:
+          type: string
+        macAddress:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string

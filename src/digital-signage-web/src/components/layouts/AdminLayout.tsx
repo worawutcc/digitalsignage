@@ -31,19 +31,19 @@ export default function AdminLayout({
 }: AdminLayoutProps) {
   return (
     <AuthWrapper requiredPermissions={requiredPermissions}>
-      <div className={cn('flex h-screen bg-gray-50', className)}>
+      <div className={cn('flex h-screen bg-slate-50', className)}>
         {showSidebar && <Sidebar />}
         
         <div className="flex flex-1 flex-col overflow-hidden">
           {/* Header */}
           {header && (
-            <header className="border-b bg-white px-6 py-4 shadow-sm">
+            <header className="border-b bg-white px-6 py-4 shadow-sm border-slate-200">
               {header}
             </header>
           )}
           
           {/* Main Content */}
-          <main className="flex-1 overflow-y-auto">
+          <main className="flex-1 overflow-y-auto bg-white">
             <div className="container mx-auto p-6">
               {children}
             </div>
