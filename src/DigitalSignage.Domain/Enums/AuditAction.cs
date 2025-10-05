@@ -53,5 +53,67 @@ public enum AuditAction
     /// <summary>
     /// Security check failed
     /// </summary>
-    SecurityViolation = 10
+    SecurityViolation = 10,
+    
+    // Device Group Content Management Actions
+    
+    /// <summary>
+    /// Content assigned to device group
+    /// </summary>
+    ContentAssigned = 11,
+    
+    /// <summary>
+    /// Content removed from device group
+    /// </summary>
+    ContentRemoved = 12,
+    
+    /// <summary>
+    /// Bulk content assignment initiated
+    /// </summary>
+    BulkContentAssignmentStarted = 13,
+    
+    /// <summary>
+    /// Bulk content assignment completed
+    /// </summary>
+    BulkContentAssignmentCompleted = 14,
+    
+    /// <summary>
+    /// Device group created
+    /// </summary>
+    DeviceGroupCreated = 15,
+    
+    /// <summary>
+    /// Device group updated
+    /// </summary>
+    DeviceGroupUpdated = 16,
+    
+    /// <summary>
+    /// Device group deleted
+    /// </summary>
+    DeviceGroupDeleted = 17,
+    
+    /// <summary>
+    /// Device group moved in hierarchy
+    /// </summary>
+    DeviceGroupMoved = 18,
+    
+    /// <summary>
+    /// Bulk device approval initiated
+    /// </summary>
+    BulkApprovalStarted = 19,
+    
+    /// <summary>
+    /// Bulk device approval completed
+    /// </summary>
+    BulkApprovalCompleted = 20,
+    
+    /// <summary>
+    /// Bulk device rejection initiated
+    /// </summary>
+    BulkRejectionStarted = 21,
+    
+    /// <summary>
+    /// Bulk device rejection completed
+    /// </summary>
+    BulkRejectionCompleted = 22
 }

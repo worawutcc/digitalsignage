@@ -580,7 +580,7 @@ public class DeviceGroupController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Moving device group {Id} to parent {ParentId}", id, request.NewParentGroupId);
+            _logger.LogInformation("Moving device group {Id} to parent {ParentId}", id, request.NewParentId);
             var movedGroup = await _deviceGroupService.MoveGroupAsync(id, request);
             return Ok(movedGroup);
         }
@@ -690,6 +690,239 @@ public class DeviceGroupController : ControllerBase
             {
                 Title = "Internal Server Error",
                 Detail = "An error occurred while searching device groups",
+                Status = 500,
+                Instance = HttpContext.Request.Path
+            });
+        }
+    }
+
+    #endregion
+
+    #region Content Assignment Operations
+
+    /// <summary>
+    /// Assign content (playlist/media) to a device group
+    /// </summary>
+    /// <param name="groupId">Device group ID</param>
+    /// <param name="request">Content assignment request</param>
+    /// <returns>Assignment result</returns>
+    [HttpPost("{groupId}/assign-content")]
+    [ProducesResponseType(typeof(ContentAssignmentResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ContentAssignmentResultDto>> AssignContent(
+        int groupId, 
+        [FromBody] AssignContentRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for content assignment to group {GroupId}", groupId);
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Assigning content to device group {GroupId}", groupId);
+            var groupAssignmentRequest = new GroupContentAssignmentDto
+            {
+                GroupId = groupId,
+                Assignment = request
+            };
+            var result = await _deviceGroupService.AssignContentAsync(groupAssignmentRequest);
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for content assignment to group {GroupId}", groupId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Group Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound,
+                Instance = HttpContext.Request.Path
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error assigning content to device group {GroupId}", groupId);
+            return StatusCode(500, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while assigning content to device group",
+                Status = 500,
+                Instance = HttpContext.Request.Path
+            });
+        }
+    }
+
+    /// <summary>
+    /// Bulk assign content to multiple device groups
+    /// </summary>
+    /// <param name="request">Bulk content assignment request</param>
+    /// <returns>Bulk assignment results</returns>
+    [HttpPost("bulk-assign-content")]
+    [ProducesResponseType(typeof(BulkContentAssignmentResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<BulkContentAssignmentResultDto>> BulkAssignContent([FromBody] BulkAssignContentRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for bulk content assignment");
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Bulk assigning content to {Count} device groups", request.Assignments.Count);
+            var result = await _deviceGroupService.BulkAssignContentAsync(request.Assignments);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during bulk content assignment");
+            return StatusCode(500, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred during bulk content assignment",
+                Status = 500,
+                Instance = HttpContext.Request.Path
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get content distribution statistics for device groups
+    /// </summary>
+    /// <param name="includeInherited">Include inherited content from parent groups</param>
+    /// <returns>Content distribution statistics</returns>
+    [HttpGet("content-distribution-stats")]
+    [ProducesResponseType(typeof(ContentDistributionStatsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ContentDistributionStatsDto>> GetContentDistributionStats([FromQuery] bool includeInherited = true)
+    {
+        try
+        {
+            _logger.LogInformation("Getting content distribution statistics");
+            var stats = await _deviceGroupService.GetContentDistributionStatsAsync(0); // Root level stats
+            return Ok(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting content distribution statistics");
+            return StatusCode(500, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving content distribution statistics",
+                Status = 500,
+                Instance = HttpContext.Request.Path
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get device group with its assigned content
+    /// </summary>
+    /// <param name="groupId">Device group ID</param>
+    /// <param name="includeInherited">Include inherited content from parent groups</param>
+    /// <returns>Device group with content details</returns>
+    [HttpGet("{groupId}/with-content")]
+    [ProducesResponseType(typeof(DeviceGroupWithContentDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceGroupWithContentDto>> GetGroupWithContent(
+        int groupId, 
+        [FromQuery] bool includeInherited = true)
+    {
+        try
+        {
+            _logger.LogInformation("Getting device group {GroupId} with content", groupId);
+            var result = await _deviceGroupService.GetGroupWithContentAsync(groupId);
+            
+            if (result == null)
+            {
+                return NotFound(new ProblemDetails
+                {
+                    Title = "Group Not Found",
+                    Detail = $"Device group with ID {groupId} was not found",
+                    Status = StatusCodes.Status404NotFound,
+                    Instance = HttpContext.Request.Path
+                });
+            }
+            
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting device group {GroupId} with content", groupId);
+            return StatusCode(500, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving device group with content",
+                Status = 500,
+                Instance = HttpContext.Request.Path
+            });
+        }
+    }
+
+    /// <summary>
+    /// Remove content assignment from a device group
+    /// </summary>
+    /// <param name="groupId">Device group ID</param>
+    /// <param name="request">Content removal request</param>
+    /// <returns>Removal result</returns>
+    [HttpDelete("{groupId}/remove-content")]
+    [ProducesResponseType(typeof(ContentRemovalResultDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ContentRemovalResultDto>> RemoveContent(
+        int groupId, 
+        [FromBody] RemoveContentRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for content removal from group {GroupId}", groupId);
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Removing content from device group {GroupId}", groupId);
+            // Use ContentId as playlistId for now
+            var contentId = request.ContentId ?? 0;
+            var success = await _deviceGroupService.UnassignContentAsync(groupId, contentId);
+            
+            var result = new ContentRemovalResultDto
+            {
+                IsSuccess = success,
+                RemovedAssignments = success ? 1 : 0,
+                AffectedChildGroups = 0,
+                AffectedDevices = success ? 1 : 0,
+                ErrorMessage = success ? null : "Failed to remove content"
+            };
+            
+            return Ok(result);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for content removal from group {GroupId}", groupId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Group Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound,
+                Instance = HttpContext.Request.Path
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing content from device group {GroupId}", groupId);
+            return StatusCode(500, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while removing content from device group",
                 Status = 500,
                 Instance = HttpContext.Request.Path
             });

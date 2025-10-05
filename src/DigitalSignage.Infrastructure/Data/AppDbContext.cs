@@ -44,6 +44,7 @@ public class AppDbContext : DbContext
     // Permission Management entities
     public DbSet<UserDeviceGroupPermission> UserDeviceGroupPermissions { get; set; }
     public DbSet<PermissionAuditLog> PermissionAuditLogs { get; set; }
+    public DbSet<DeviceGroupAuditLog> DeviceGroupAuditLogs { get; set; }
     public DbSet<UserDeviceAssociation> UserDeviceAssociations { get; set; }
     
     // User-based content entities (Feature 019)
@@ -90,6 +91,7 @@ public class AppDbContext : DbContext
         // Permission Management configurations
         modelBuilder.ApplyConfiguration(new UserDeviceGroupPermissionConfiguration());
         modelBuilder.ApplyConfiguration(new PermissionAuditLogConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceGroupAuditLogConfiguration());
         
         // User-based content configurations (Feature 019)
         modelBuilder.ApplyConfiguration(new UserScheduleConfiguration());

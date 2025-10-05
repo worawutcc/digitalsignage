@@ -227,6 +227,122 @@ public class AdminDeviceRegistrationController : ControllerBase
     }
 
     /// <summary>
+    /// Get pending device registrations with advanced filtering and pagination
+    /// </summary>
+    /// <param name="request">Filter and pagination options</param>
+    /// <returns>Filtered list of pending registrations</returns>
+    [HttpPost("pending/filtered")]
+    [ProducesResponseType(typeof(FilteredPendingRegistrationsResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<FilteredPendingRegistrationsResponseDto>> GetFilteredPendingRegistrations([FromBody] PendingRegistrationsFilterRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for filtered pending registrations");
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Admin retrieving filtered pending device registrations");
+            request.Normalize(); // Validate and normalize the request
+            var response = await _deviceRegistrationService.GetFilteredPendingRegistrationsAsync(request);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving filtered pending registrations");
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving filtered pending registrations",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get device registration approval statistics
+    /// </summary>
+    /// <param name="request">Date range and grouping options for statistics</param>
+    /// <returns>Registration approval statistics</returns>
+    [HttpPost("statistics")]
+    [ProducesResponseType(typeof(DeviceApprovalStatsResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceApprovalStatsResponseDto>> GetRegistrationStatistics([FromBody] ApprovalStatsRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for registration statistics");
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Admin retrieving registration statistics");
+            var response = await _deviceRegistrationService.GetApprovalStatisticsAsync(request);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving registration statistics");
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving registration statistics",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Bulk reject multiple device registrations
+    /// </summary>
+    /// <param name="request">Bulk rejection request with list of devices to reject</param>
+    /// <returns>Bulk rejection results with success/failure details</returns>
+    [HttpPost("bulk-reject")]
+    [ProducesResponseType(typeof(BulkRejectionResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<BulkRejectionResponseDto>> BulkRejectDevices([FromBody] BulkRejectionRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for bulk device rejection");
+            return BadRequest(ModelState);
+        }
+
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning("Unable to determine current user for bulk device rejection");
+            return Unauthorized();
+        }
+
+        try
+        {
+            _logger.LogInformation("Admin {UserId} performing bulk rejection of {Count} devices", userId, request.Rejections.Count);
+            var response = await _deviceRegistrationService.BulkRejectDevicesAsync(request, userId);
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during bulk device rejection");
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while processing bulk rejections",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
     /// Get current user ID from JWT claims
     /// </summary>
     /// <returns>User ID string or null if not found</returns>

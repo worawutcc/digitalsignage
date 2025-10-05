@@ -55,54 +55,54 @@ When creating this spec from a user prompt:
 ## User Scenarios & Testing *(mandatory)*
 
 ### Primary User Story
-A system administrator needs to manage Android TV devices that register themselves in a digital signage network. The admin must review device registration requests, approve/reject them, organize approved devices into logical groups, and assign content to those groups for targeted distribution.
+A system administrator needs to enhance the existing device approval workflow and organize approved devices using the current hierarchical group structure. The admin leverages existing approval mechanisms (DeviceApproval entity) and existing group management (DeviceGroup with parent/child relationships) to streamline device management and content distribution.
 
-The complete workflow follows: **Client TV → Install App → Self-Register → Admin Reviews → Admin Approves → Admin Creates/Manages Groups → Admin Assigns Devices to Groups → Admin Assigns Content to Groups**
+The workflow builds on existing infrastructure: **Device Self-Registers → Admin Reviews via Existing Approval System → Admin Organizes via Existing Group Hierarchy → Admin Assigns Content via Existing Playlist System**
 
 ### Acceptance Scenarios
-1. **Given** a new Android TV device has installed the digital signage app, **When** the device completes self-registration with generated PIN and device details, **Then** the system creates a pending registration request visible to administrators
-2. **Given** an administrator views the device approval dashboard, **When** they see pending registration requests with device information, **Then** they can approve or reject each request with optional admin notes
-3. **Given** an administrator has approved devices, **When** they create a new device group with name and description, **Then** the system creates the group and allows device assignment
-4. **Given** an administrator manages device groups, **When** they assign/remove devices to/from groups, **Then** the system updates group membership and reflects changes in content distribution
-5. **Given** device groups exist with assigned devices, **When** administrators assign content (media, schedules) to groups, **Then** all devices in those groups receive the assigned content
+1. **Given** devices register via existing DeviceRegistrationRequest workflow, **When** admin accesses existing approval dashboard, **Then** they can review pending requests with existing DeviceApproval workflow
+2. **Given** admin uses existing bulk approval API, **When** they process multiple DeviceRegistrationRequests, **Then** system creates DeviceApproval records and approved Device entities 
+3. **Given** existing hierarchical DeviceGroup structure, **When** admin manages groups via existing parent/child relationships, **Then** system maintains group hierarchy with proper validation
+4. **Given** approved devices exist, **When** admin assigns devices to existing DeviceGroups via DeviceGroupId, **Then** system updates device.DeviceGroupId relationships
+5. **Given** DeviceGroups with assigned devices, **When** admin creates PlaylistAssignments with DeviceGroupId, **Then** all devices in groups receive playlist content distribution
 
 ### Edge Cases
-- What happens when a device tries to register with a PIN that already exists?
-- How does the system handle approval of devices that have gone offline?
-- What happens when an administrator tries to delete a group that has active content assignments?
-- How does the system handle device reassignment between groups with different content?
+- How does existing PIN collision handling in DeviceRegistrationRequest work with bulk approvals?
+- How does existing DeviceApproval.Status validation handle offline devices during approval?
+- How does existing DeviceGroup.IsActive flag and PlaylistAssignment relationship prevent deletion of active groups?
+- How does existing Device.DeviceGroupId FK constraint handle device reassignment between groups with different playlist assignments?
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-#### Device Registration & Approval
-- **FR-001**: System MUST display all pending device registration requests in a dedicated admin dashboard
-- **FR-002**: System MUST show device details for each registration request including device ID, PIN, device type, IP address, and registration timestamp
-- **FR-003**: Administrators MUST be able to approve or reject device registration requests individually
-- **FR-004**: Administrators MUST be able to perform bulk approval/rejection operations on multiple devices
-- **FR-005**: System MUST allow administrators to add optional notes when approving or rejecting devices
-- **FR-006**: System MUST log all device approval/rejection actions with administrator identity and timestamp
-- **FR-007**: System MUST automatically notify approved devices of their registration status
-- **FR-008**: System MUST remove or archive rejected device registration requests
+#### Device Registration & Approval Enhancement
+- **FR-001**: System MUST enhance existing DeviceRegistrationRequest display with improved filtering and search capabilities
+- **FR-002**: System MUST utilize existing DeviceRegistrationRequest fields (MacAddress, Pin, DeviceModel, Status) in enhanced dashboard
+- **FR-003**: System MUST extend existing DeviceApproval workflow with streamlined individual approval process
+- **FR-004**: System MUST add bulk approval capabilities to existing AdminDeviceRegistrationController endpoints
+- **FR-005**: System MUST leverage existing DeviceApproval.Notes field for admin comments during approval
+- **FR-006**: System MUST extend existing RegistrationAuditLog for comprehensive approval action tracking
+- **FR-007**: System MUST enhance existing device notification system for approval status changes
+- **FR-008**: System MUST improve existing DeviceRegistrationRequest.Status handling for rejected requests
 
-#### Device Group Management  
-- **FR-009**: Administrators MUST be able to create new device groups with unique names and descriptions
-- **FR-010**: Administrators MUST be able to view all existing device groups with member counts
-- **FR-011**: Administrators MUST be able to edit device group names and descriptions
-- **FR-012**: Administrators MUST be able to delete empty device groups
-- **FR-013**: System MUST prevent deletion of device groups that have assigned content or active devices
-- **FR-014**: Administrators MUST be able to assign approved devices to one or more groups
-- **FR-015**: Administrators MUST be able to remove devices from groups
-- **FR-016**: System MUST support bulk device assignment operations to groups
-- **FR-017**: System MUST display group membership status for each device
+#### Device Group Management Enhancement
+- **FR-009**: System MUST enhance existing DeviceGroup creation with improved validation for Name and Description fields
+- **FR-010**: System MUST utilize existing DeviceGroup.Devices navigation property to display accurate member counts
+- **FR-011**: System MUST provide streamlined editing for existing DeviceGroup.Name and DeviceGroup.Description fields
+- **FR-012**: System MUST leverage existing DeviceGroup.IsActive soft delete and validate empty groups before deletion
+- **FR-013**: System MUST enhance existing PlaylistAssignment.DeviceGroupId FK constraint validation to prevent deletion of active groups
+- **FR-014**: System MUST streamline existing Device.DeviceGroupId assignment process for group membership
+- **FR-015**: System MUST provide intuitive device removal by clearing existing Device.DeviceGroupId relationships
+- **FR-016**: System MUST add bulk device assignment capabilities for existing Device.DeviceGroupId updates
+- **FR-017**: System MUST enhance existing Device entity queries to display current DeviceGroup membership status
 
-#### Content Assignment & Distribution
-- **FR-018**: Administrators MUST be able to assign media content to device groups
-- **FR-019**: Administrators MUST be able to assign schedules to device groups  
-- **FR-020**: System MUST automatically distribute assigned content to all devices in a group
-- **FR-021**: System MUST update content distribution when group membership changes
-- **FR-022**: Administrators MUST be able to view current content assignments for each group
+#### Content Assignment & Distribution Enhancement
+- **FR-018**: System MUST enhance existing PlaylistAssignment entity to support improved media content assignment to DeviceGroups
+- **FR-019**: System MUST extend existing Schedule entity relationships for group-level schedule assignment via PlaylistAssignment.DeviceGroupId
+- **FR-020**: System MUST leverage existing PlaylistAssignment.DeviceGroupId distribution mechanism for automatic content delivery to group devices
+- **FR-021**: System MUST enhance existing content distribution logic to handle Device.DeviceGroupId changes automatically
+- **FR-022**: System MUST provide comprehensive view of existing PlaylistAssignment records filtered by DeviceGroupId for group content management
 
 #### User Interface & Experience
 - **FR-023**: System MUST provide an intuitive dashboard showing pending approvals count and recent activity
@@ -110,12 +110,12 @@ The complete workflow follows: **Client TV → Install App → Self-Register →
 - **FR-025**: System MUST provide responsive design for various screen sizes
 - **FR-026**: System MUST show real-time updates for device status changes and new registrations
 
-### Key Entities *(include if feature involves data)*
-- **Device Registration Request**: Represents a pending device seeking approval, contains device identity, PIN, network info, registration timestamp, and approval status
-- **Device Group**: Logical collection of approved devices, contains group name, description, device membership list, and content assignments
-- **Device Approval Record**: Historical record of approval/rejection decisions, contains admin identity, decision timestamp, status, and optional notes
-- **Group Membership**: Association between devices and groups, supports many-to-many relationships with assignment timestamps
-- **Content Assignment**: Link between device groups and content (media/schedules), enables targeted content distribution
+### Key Entities *(leveraging existing data model)*
+- **DeviceRegistrationRequest** (Existing): Contains RegistrationId, MacAddress, Pin, Status, MatchedUserId, ApprovedDeviceId with full approval workflow
+- **DeviceApproval** (Existing): Links to DeviceRegistrationRequest with ApprovedByUserId, Status, DeviceName, DeviceGroupId assignment, and Notes
+- **DeviceGroup** (Existing): Hierarchical structure with ParentGroupId, contains Name, Description, CreatedByUserId, and IsActive flag
+- **Device** (Existing): References DeviceGroup via DeviceGroupId FK, contains Status, ManagedByUserId, and full device lifecycle management
+- **PlaylistAssignment** (Existing): Supports both DeviceId and DeviceGroupId for targeted content distribution with Priority and AssignedByUserId tracking
 
 ---
 

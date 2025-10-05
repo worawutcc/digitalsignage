@@ -25,9 +25,9 @@ public class AdminDeviceRegistrationBulkContractTests : IClassFixture<WebApplica
     }
 
     [Fact]
-    public async Task BulkApproveDevices_ValidRequest_ShouldReturn200OK()
+    public async Task BulkApproveDevices_EnhancedWithGroupAssignment_ShouldReturn200OK()
     {
-        // Arrange
+        // Arrange - Enhanced bulk approval with hierarchical group assignment
         var jwtToken = "valid-admin-jwt-token";
         _client.DefaultRequestHeaders.Authorization = 
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", jwtToken);
@@ -39,15 +39,17 @@ public class AdminDeviceRegistrationBulkContractTests : IClassFixture<WebApplica
                 new
                 {
                     RegistrationId = Guid.NewGuid().ToString(),
-                    DeviceName = "Conference Room A Display",
+                    DeviceName = "Marketing Display Main",
                     Pin = "A1B2C3",
-                    Location = "Conference Room A",
-                    DeviceGroupId = 1
+                    Location = "Building A - Lobby",
+                    DeviceGroupId = 1, // Root group
+                    InitialScheduleId = 5,
+                    Notes = "Approved for lobby deployment"
                 },
                 new
                 {
                     RegistrationId = Guid.NewGuid().ToString(),
-                    DeviceName = "Conference Room B Display",
+                    DeviceName = "Marketing Display Secondary",
                     Pin = "X9Y8Z7",
                     Location = "Conference Room B",
                     DeviceGroupId = 1

@@ -1,6 +1,7 @@
 using DigitalSignage.Application.DTOs;
 using DigitalSignage.Application.DTOs.Auth;
 using DigitalSignage.Application.DTOs.Device;
+using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Application.Interfaces;
@@ -13,41 +14,57 @@ public interface IDeviceService
     /// <summary>
     /// Update device status and broadcast event
     /// </summary>
-    public Task UpdateDeviceStatusAsync(string deviceKey, DeviceStatus newStatus, string? errorMessage = null);
+    Task UpdateDeviceStatusAsync(string deviceKey, DeviceStatus newStatus, string? errorMessage = null);
     
     /// <summary>
     /// Process device heartbeat and broadcast event if status changed
     /// </summary>
-    public Task ProcessHeartbeatAsync(string deviceKey, string ipAddress);
+    Task ProcessHeartbeatAsync(string deviceKey, string ipAddress);
     
     /// <summary>
     /// Get device by device key
     /// </summary>
-    public Task<DeviceDto?> GetByDeviceKeyAsync(string deviceKey);
+    Task<DeviceDto?> GetByDeviceKeyAsync(string deviceKey);
     
     // Device Registration Management methods
     /// <summary>
     /// Get all devices with filtering and pagination
     /// </summary>
-    public Task<PagedResult<DeviceResponseDto>> GetDevicesAsync(DeviceFilterDto filter);
+    Task<PagedResult<DeviceResponseDto>> GetDevicesAsync(DeviceFilterDto filter);
     
     /// <summary>
     /// Register a new device
     /// </summary>
-    public Task<DeviceResponseDto> RegisterDeviceAsync(DeviceRegistrationDto request, int userId);
+    Task<DeviceResponseDto> RegisterDeviceAsync(DeviceRegistrationDto request, int userId);
     
     /// <summary>
     /// Get device details by ID
     /// </summary>
-    public Task<DeviceDetailDto?> GetDeviceByIdAsync(int deviceId);
+    Task<DeviceDetailDto?> GetDeviceByIdAsync(int deviceId);
     
     /// <summary>
     /// Update device information
     /// </summary>
-    public Task<DeviceResponseDto> UpdateDeviceAsync(int deviceId, DeviceUpdateDto request, int userId);
+    Task<DeviceResponseDto> UpdateDeviceAsync(int deviceId, DeviceUpdateDto request, int userId);
     
     /// <summary>
     /// Deactivate a device (soft delete)
     /// </summary>
-    public Task DeactivateDeviceAsync(int deviceId, int userId);
+    Task DeactivateDeviceAsync(int deviceId, int userId);
+    
+    /// <summary>
+    /// Create device from approved registration request (T013-REVISED: Clean separation)
+    /// </summary>
+    /// <param name="registration">Approved registration request</param>
+    /// <param name="deviceName">Admin-assigned device name</param>
+    /// <param name="location">Device location</param>
+    /// <param name="deviceGroupId">Optional device group assignment</param>
+    /// <param name="assignedUserId">Optional user assignment</param>
+    /// <returns>Created device information</returns>
+    Task<DeviceCreationResultDto> CreateDeviceFromRegistrationAsync(
+        DeviceRegistrationRequest registration,
+        string deviceName,
+        string? location = null,
+        int? deviceGroupId = null,
+        int? assignedUserId = null);
 }
