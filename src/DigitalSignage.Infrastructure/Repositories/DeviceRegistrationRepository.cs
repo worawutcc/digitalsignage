@@ -1,80 +1,115 @@
 using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Enums;
 using DigitalSignage.Domain.Interfaces;
+using DigitalSignage.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace DigitalSignage.Infrastructure.Repositories;
 
 /// <summary>
-/// Temporary stub implementation of device registration repository
+/// Repository implementation for device registration operations with Entity Framework
 /// </summary>
 public class DeviceRegistrationRepository : IDeviceRegistrationRepository
 {
+    private readonly AppDbContext _context;
     private readonly ILogger<DeviceRegistrationRepository> _logger;
 
-    public DeviceRegistrationRepository(ILogger<DeviceRegistrationRepository> logger)
+    public DeviceRegistrationRepository(AppDbContext context, ILogger<DeviceRegistrationRepository> logger)
     {
+        _context = context;
         _logger = logger;
     }
 
-    public Task<DeviceRegistrationRequest?> GetByIdAsync(Guid id)
+    public async Task<DeviceRegistrationRequest?> GetByRegistrationIdAsync(Guid registrationId)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetByIdAsync not implemented");
-        return Task.FromResult<DeviceRegistrationRequest?>(null);
+        return await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .FirstOrDefaultAsync(r => r.RegistrationId == registrationId);
     }
 
-    public Task<DeviceRegistrationRequest?> GetByMacAddressAsync(string macAddress)
+    public async Task<DeviceRegistrationRequest?> GetByMacAddressAsync(string macAddress)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetByMacAddressAsync not implemented");
-        return Task.FromResult<DeviceRegistrationRequest?>(null);
+        return await _context.DeviceRegistrationRequests
+            .FirstOrDefaultAsync(r => r.MacAddress == macAddress);
     }
 
-    public Task<DeviceRegistrationRequest?> GetByPinAsync(string pin)
+    public async Task<DeviceRegistrationRequest?> GetPendingByMacAddressAsync(string macAddress)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetByPinAsync not implemented");
-        return Task.FromResult<DeviceRegistrationRequest?>(null);
+        return await _context.DeviceRegistrationRequests
+            .FirstOrDefaultAsync(r => r.MacAddress == macAddress && 
+                                     r.Status == RegistrationStatus.Pending &&
+                                     r.ExpiresAt > DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified));
     }
 
-    public Task<DeviceRegistrationRequest> AddAsync(DeviceRegistrationRequest registration)
+    public async Task<DeviceRegistrationRequest?> GetByPinAsync(string pin)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - AddAsync not implemented");
-        throw new NotImplementedException();
+        return await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .FirstOrDefaultAsync(r => r.Pin == pin);
     }
 
-    public Task<DeviceRegistrationRequest> UpdateAsync(DeviceRegistrationRequest registration)
+    public async Task<DeviceRegistrationRequest> AddAsync(DeviceRegistrationRequest registration)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - UpdateAsync not implemented");
-        throw new NotImplementedException();
+        _context.Set<DeviceRegistrationRequest>().Add(registration);
+        await _context.SaveChangesAsync();
+        return registration;
     }
 
-    public Task DeleteAsync(Guid id)
+    public async Task<DeviceRegistrationRequest> UpdateAsync(DeviceRegistrationRequest registration)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - DeleteAsync not implemented");
-        return Task.CompletedTask;
+        _context.Set<DeviceRegistrationRequest>().Update(registration);
+        await _context.SaveChangesAsync();
+        return registration;
     }
 
-    public Task<List<DeviceRegistrationRequest>> GetPendingRegistrationsAsync()
+    public async Task DeleteAsync(Guid registrationId)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetPendingRegistrationsAsync not implemented");
-        return Task.FromResult(new List<DeviceRegistrationRequest>());
+        var registration = await GetByRegistrationIdAsync(registrationId);
+        if (registration != null)
+        {
+            _context.Set<DeviceRegistrationRequest>().Remove(registration);
+            await _context.SaveChangesAsync();
+        }
     }
 
-    public Task<List<DeviceRegistrationRequest>> GetExpiredRegistrationsAsync()
+    public async Task<List<DeviceRegistrationRequest>> GetPendingRegistrationsAsync()
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetExpiredRegistrationsAsync not implemented");
-        return Task.FromResult(new List<DeviceRegistrationRequest>());
+        return await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .Where(r => r.Status == RegistrationStatus.Pending && r.ExpiresAt > DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified))
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync();
     }
 
-    public Task<List<DeviceRegistrationRequest>> GetRegistrationsByStatusAsync(RegistrationStatus status)
+    public async Task<List<DeviceRegistrationRequest>> GetExpiredRegistrationsAsync()
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetRegistrationsByStatusAsync not implemented");
-        return Task.FromResult(new List<DeviceRegistrationRequest>());
+        return await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .Where(r => r.ExpiresAt <= DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified))
+            .OrderBy(r => r.CreatedAt)
+            .ToListAsync();
     }
 
-    public Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTime startDate, DateTime endDate)
+    public async Task<List<DeviceRegistrationRequest>> GetRegistrationsByStatusAsync(RegistrationStatus status)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - GetRegistrationsByDateRangeAsync not implemented");
-        return Task.FromResult(new List<DeviceRegistrationRequest>());
+        return await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .Where(r => r.Status == status)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
+    }
+
+    public async Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTime startDate, DateTime endDate)
+    {
+        var startDateUnspecified = DateTime.SpecifyKind(startDate, DateTimeKind.Unspecified);
+        var endDateUnspecified = DateTime.SpecifyKind(endDate, DateTimeKind.Unspecified);
+        
+        return await _context.Set<DeviceRegistrationRequest>()
+            .Include(r => r.MatchedUser)
+            .Where(r => r.CreatedAt >= startDateUnspecified && r.CreatedAt <= endDateUnspecified)
+            .OrderByDescending(r => r.CreatedAt)
+            .ToListAsync();
     }
 
     public Task<List<DeviceRegistrationRequest>> SearchRegistrationsAsync(string? searchTerm = null, RegistrationStatus? status = null, DateTime? startDate = null, DateTime? endDate = null, int skip = 0, int take = 50)
@@ -83,16 +118,16 @@ public class DeviceRegistrationRepository : IDeviceRegistrationRepository
         return Task.FromResult(new List<DeviceRegistrationRequest>());
     }
 
-    public Task<bool> IsPinUniqueAsync(string pin)
+    public async Task<bool> IsPinUniqueAsync(string pin)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - IsPinUniqueAsync not implemented");
-        return Task.FromResult(true); // Always return true for testing
+        return !await _context.Set<DeviceRegistrationRequest>()
+            .AnyAsync(r => r.Pin == pin && r.Status == RegistrationStatus.Pending && r.ExpiresAt > DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified));
     }
 
-    public Task<bool> IsDeviceRegisteredAsync(string macAddress)
+    public async Task<bool> IsDeviceRegisteredAsync(string macAddress)
     {
-        _logger.LogWarning("DeviceRegistrationRepository is stubbed - IsDeviceRegisteredAsync not implemented");
-        return Task.FromResult(false); // Always return false for testing
+        return await _context.Set<DeviceRegistrationRequest>()
+            .AnyAsync(r => r.MacAddress == macAddress && r.Status == RegistrationStatus.Approved);
     }
 
     public Task<int> CountByStatusAsync(RegistrationStatus status)

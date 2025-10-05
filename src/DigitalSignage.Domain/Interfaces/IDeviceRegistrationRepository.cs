@@ -9,19 +9,20 @@ namespace DigitalSignage.Domain.Interfaces;
 public interface IDeviceRegistrationRepository
 {
     // Basic CRUD operations
-    Task<DeviceRegistrationRequest?> GetByIdAsync(Guid id);
-    Task<DeviceRegistrationRequest?> GetByMacAddressAsync(string macAddress);
-    Task<DeviceRegistrationRequest?> GetByPinAsync(string pin);
-    Task<DeviceRegistrationRequest> AddAsync(DeviceRegistrationRequest registration);
-    Task<DeviceRegistrationRequest> UpdateAsync(DeviceRegistrationRequest registration);
-    Task DeleteAsync(Guid id);
+    public Task<DeviceRegistrationRequest?> GetByRegistrationIdAsync(Guid registrationId);
+    public Task<DeviceRegistrationRequest?> GetByMacAddressAsync(string macAddress);
+    public Task<DeviceRegistrationRequest?> GetPendingByMacAddressAsync(string macAddress);
+    public Task<DeviceRegistrationRequest?> GetByPinAsync(string pin);
+    public Task<DeviceRegistrationRequest> AddAsync(DeviceRegistrationRequest registration);
+    public Task<DeviceRegistrationRequest> UpdateAsync(DeviceRegistrationRequest registration);
+    public Task DeleteAsync(Guid registrationId);
 
     // Query operations
-    Task<List<DeviceRegistrationRequest>> GetPendingRegistrationsAsync();
-    Task<List<DeviceRegistrationRequest>> GetExpiredRegistrationsAsync();
-    Task<List<DeviceRegistrationRequest>> GetRegistrationsByStatusAsync(RegistrationStatus status);
-    Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTime startDate, DateTime endDate);
-    Task<List<DeviceRegistrationRequest>> SearchRegistrationsAsync(
+    public Task<List<DeviceRegistrationRequest>> GetPendingRegistrationsAsync();
+    public Task<List<DeviceRegistrationRequest>> GetExpiredRegistrationsAsync();
+    public Task<List<DeviceRegistrationRequest>> GetRegistrationsByStatusAsync(RegistrationStatus status);
+    public Task<List<DeviceRegistrationRequest>> GetRegistrationsByDateRangeAsync(DateTime startDate, DateTime endDate);
+    public Task<List<DeviceRegistrationRequest>> SearchRegistrationsAsync(
         string? searchTerm = null,
         RegistrationStatus? status = null,
         DateTime? startDate = null,
@@ -30,20 +31,20 @@ public interface IDeviceRegistrationRepository
         int take = 50);
 
     // Validation operations
-    Task<bool> IsPinUniqueAsync(string pin);
-    Task<bool> IsDeviceRegisteredAsync(string macAddress);
+    public Task<bool> IsPinUniqueAsync(string pin);
+    public Task<bool> IsDeviceRegisteredAsync(string macAddress);
 
     // Statistics and maintenance
-    Task<int> CountByStatusAsync(RegistrationStatus status);
-    Task<Dictionary<RegistrationStatus, int>> GetRegistrationStatsAsync();
-    Task MarkExpiredRegistrationsAsync();
-    Task BulkUpdateStatusAsync(List<Guid> registrationIds, RegistrationStatus newStatus);
+    public Task<int> CountByStatusAsync(RegistrationStatus status);
+    public Task<Dictionary<RegistrationStatus, int>> GetRegistrationStatsAsync();
+    public Task MarkExpiredRegistrationsAsync();
+    public Task BulkUpdateStatusAsync(List<Guid> registrationIds, RegistrationStatus newStatus);
 
     // Audit log operations
-    Task<RegistrationAuditLog> AddAuditLogAsync(RegistrationAuditLog auditLog);
-    Task<List<RegistrationAuditLog>> GetAuditLogsAsync(Guid registrationId);
-    Task<List<RegistrationAuditLog>> GetAuditLogsByDateRangeAsync(DateTime startDate, DateTime endDate);
-    Task<List<RegistrationAuditLog>> GetAuditLogsByActionAsync(AuditAction action);
-    Task<List<RegistrationAuditLog>> GetAuditLogsByMacAddressAsync(string macAddress);
-    Task CleanupOldAuditLogsAsync(DateTime beforeDate);
+    public Task<RegistrationAuditLog> AddAuditLogAsync(RegistrationAuditLog auditLog);
+    public Task<List<RegistrationAuditLog>> GetAuditLogsAsync(Guid registrationId);
+    public Task<List<RegistrationAuditLog>> GetAuditLogsByDateRangeAsync(DateTime startDate, DateTime endDate);
+    public Task<List<RegistrationAuditLog>> GetAuditLogsByActionAsync(AuditAction action);
+    public Task<List<RegistrationAuditLog>> GetAuditLogsByMacAddressAsync(string macAddress);
+    public Task CleanupOldAuditLogsAsync(DateTime beforeDate);
 }

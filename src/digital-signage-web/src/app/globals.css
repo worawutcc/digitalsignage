@@ -4,49 +4,58 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #0f172a;
-  --primary: #2563eb;
+  --foreground: #1e293b;
+  --primary: #3b82f6;
   --primary-foreground: #ffffff;
-  --secondary: #f1f5f9;
-  --secondary-foreground: #0f172a;
-  --muted: #f8fafc;
+  --secondary: #f8fafc;
+  --secondary-foreground: #334155;
+  --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  --accent: #f1f5f9;
-  --accent-foreground: #0f172a;
+  --accent: #f0f9ff;
+  --accent-foreground: #1e40af;
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
   --border: #e2e8f0;
-  --input: #e2e8f0;
-  --ring: #2563eb;
+  --input: #f1f5f9;
+  --ring: #3b82f6;
   --radius: 0.5rem;
+  
+  /* Sidebar specific colors for lighter theme */
+  --sidebar-background: #f8fafc;
+  --sidebar-foreground: #334155;
+  --sidebar-active: #e0f2fe;
+  --sidebar-active-foreground: #0284c7;
+  --sidebar-hover: #f1f5f9;
+  --sidebar-border: #e2e8f0;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-primary: var(--primary);
-  --color-secondary: var(--secondary);
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
-}
+/* Remove @theme inline as it's causing lint errors - use standard Tailwind CSS variables instead */
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #020617;
-    --foreground: #f8fafc;
-    --primary: #3b82f6;
-    --primary-foreground: #f8fafc;
+    --background: #0f172a;
+    --foreground: #f1f5f9;
+    --primary: #60a5fa;
+    --primary-foreground: #1e293b;
     --secondary: #1e293b;
-    --secondary-foreground: #f8fafc;
-    --muted: #1e293b;
+    --secondary-foreground: #cbd5e1;
+    --muted: #334155;
     --muted-foreground: #94a3b8;
-    --accent: #1e293b;
-    --accent-foreground: #f8fafc;
+    --accent: #1e40af;
+    --accent-foreground: #e0f2fe;
     --destructive: #dc2626;
     --destructive-foreground: #f8fafc;
     --border: #334155;
     --input: #334155;
-    --ring: #3b82f6;
+    --ring: #60a5fa;
+    
+    /* Sidebar specific colors for dark theme */
+    --sidebar-background: #1e293b;
+    --sidebar-foreground: #cbd5e1;
+    --sidebar-active: #0f172a;
+    --sidebar-active-foreground: #60a5fa;
+    --sidebar-hover: #334155;
+    --sidebar-border: #475569;
   }
 }
 

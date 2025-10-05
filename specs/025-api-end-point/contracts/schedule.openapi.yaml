@@ -1,0 +1,157 @@
+openapi: 3.0.1
+info:
+  title: Schedule API
+  version: 1.0.0
+paths:
+  /api/schedules:
+    get:
+      summary: Get all schedules
+      responses:
+        '200':
+          description: List of schedules
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Schedule'
+    post:
+      summary: Create new schedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleCreateRequest'
+      responses:
+        '201':
+          description: Schedule created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+  /api/schedules/{id}:
+    get:
+      summary: Get schedule by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Schedule
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+        '404':
+          description: Not found
+    put:
+      summary: Update schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Schedule'
+      responses:
+        '200':
+          description: Schedule updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Schedule'
+    delete:
+      summary: Delete schedule
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Schedule deleted
+        '404':
+          description: Not found
+components:
+  schemas:
+    Schedule:
+      type: object
+      required:
+        - id
+        - name
+        - startTime
+        - endTime
+        - status
+        - createdAt
+        - updatedAt
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        recurrence:
+          type: object
+        mediaItems:
+          type: array
+          items:
+            type: string
+        devices:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [Active, Inactive, Error]
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    ScheduleCreateRequest:
+      type: object
+      required:
+        - name
+        - startTime
+        - endTime
+        - mediaItems
+        - devices
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        recurrence:
+          type: object
+        mediaItems:
+          type: array
+          items:
+            type: string
+        devices:
+          type: array
+          items:
+            type: string

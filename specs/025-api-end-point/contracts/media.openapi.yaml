@@ -1,0 +1,142 @@
+openapi: 3.0.1
+info:
+  title: Media API
+  version: 1.0.0
+paths:
+  /api/media:
+    get:
+      summary: Get all media files
+      responses:
+        '200':
+          description: List of media files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Media'
+    post:
+      summary: Upload new media file
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/MediaUploadRequest'
+      responses:
+        '201':
+          description: Media file uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+  /api/media/{id}:
+    get:
+      summary: Get media by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Media file
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+        '404':
+          description: Not found
+    put:
+      summary: Update media file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Media'
+      responses:
+        '200':
+          description: Media file updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Media'
+    delete:
+      summary: Delete media file
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Media file deleted
+        '404':
+          description: Not found
+components:
+  schemas:
+    Media:
+      type: object
+      required:
+        - id
+        - name
+        - fileName
+        - filePath
+        - mediaType
+        - fileSize
+        - uploadedAt
+        - lastModified
+        - isActive
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        fileName:
+          type: string
+        filePath:
+          type: string
+        mediaType:
+          type: string
+          enum: [Image, Video, Document]
+        fileSize:
+          type: integer
+        uploadedAt:
+          type: string
+          format: date-time
+        lastModified:
+          type: string
+          format: date-time
+        isActive:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        thumbnailUrl:
+          type: string
+        duration:
+          type: integer
+    MediaUploadRequest:
+      type: object
+      required:
+        - file
+      properties:
+        file:
+          type: string
+          format: binary
+        name:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
