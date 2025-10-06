@@ -7,4 +7,5 @@ public class AwsS3Settings
     public int PresignedUrlExpiryMinutes { get; set; } = 60;
     public string AccessKey { get; set; } = string.Empty;
     public string SecretKey { get; set; } = string.Empty;
+    public string CloudFrontUrl { get; set; } = string.Empty;
 }

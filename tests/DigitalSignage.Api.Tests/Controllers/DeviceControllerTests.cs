@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
 using DigitalSignage.Api.Controllers;
-using DigitalSignage.Application.Services.DeviceManagement;
+using DigitalSignage.Application.Interfaces;
 using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Enums;
 using Microsoft.Extensions.Logging;

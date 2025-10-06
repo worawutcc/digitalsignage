@@ -14,18 +14,70 @@ namespace DigitalSignage.Api.Controllers;
 public class DeviceRegistrationController : ControllerBase
 {
     private readonly IDeviceRegistrationService _deviceRegistrationService;
+    private readonly IEnhancedDeviceRegistrationService _enhancedDeviceRegistrationService;
     private readonly ILogger<DeviceRegistrationController> _logger;
 
     public DeviceRegistrationController(
         IDeviceRegistrationService deviceRegistrationService,
+        IEnhancedDeviceRegistrationService enhancedDeviceRegistrationService,
         ILogger<DeviceRegistrationController> logger)
     {
         _deviceRegistrationService = deviceRegistrationService;
+        _enhancedDeviceRegistrationService = enhancedDeviceRegistrationService;
         _logger = logger;
     }
 
     /// <summary>
-    /// Initiate device registration process
+    /// Enhanced device registration with optional hardware information
+    /// Supports both legacy registration (no hardware info) and enhanced registration (with hardware)
+    /// </summary>
+    /// <param name="request">Enhanced device registration request with optional hardware info</param>
+    /// <returns>Registration response with hardware detection job info if applicable</returns>
+    [HttpPost("enhanced-register")]
+    [ProducesResponseType(typeof(EnhancedDeviceRegistrationResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<EnhancedDeviceRegistrationResponseDto>> EnhancedRegister([FromBody] EnhancedDeviceRegistrationRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for enhanced device registration");
+            return BadRequest(ModelState);
+        }
+
+        try
+        {
+            _logger.LogInformation("Processing enhanced device registration for MAC: {MacAddress}, Hardware Info: {HasHardware}",
+                request.MacAddress, request.HardwareInfo != null);
+            
+            var response = await _enhancedDeviceRegistrationService.RegisterDeviceAsync(request);
+            return Ok(response);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation during enhanced registration for MAC: {MacAddress}", request.MacAddress);
+            return Conflict(new ProblemDetails
+            {
+                Title = "Registration Conflict",
+                Detail = ex.Message,
+                Status = StatusCodes.Status409Conflict
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing enhanced device registration for MAC: {MacAddress}", request.MacAddress);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while processing the enhanced registration request",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Initiate device registration process (legacy endpoint - maintained for backward compatibility)
     /// </summary>
     /// <param name="request">Device registration request</param>
     /// <returns>Registration details with PIN for admin approval</returns>
@@ -211,8 +263,50 @@ public class DeviceRegistrationController : ControllerBase
         }
     }
 
+
+
     /// <summary>
-    /// Check registration status
+    /// Check if device supports enhanced hardware information collection
+    /// Used by clients to determine whether to show hardware info form
+    /// </summary>
+    /// <param name="macAddress">Device MAC address</param>
+    /// <returns>True if device supports hardware information collection</returns>
+    [HttpGet("hardware-support/{macAddress}")]
+    [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<bool>> SupportsHardwareInfo(string macAddress)
+    {
+        if (string.IsNullOrWhiteSpace(macAddress))
+        {
+            _logger.LogWarning("Invalid MAC address provided for hardware support check");
+            return BadRequest(new ValidationProblemDetails
+            {
+                Title = "Invalid MAC Address",
+                Detail = "MAC address is required and cannot be empty"
+            });
+        }
+
+        try
+        {
+            _logger.LogInformation("Checking hardware support for MAC: {MacAddress}", macAddress);
+            var supportsHardware = await _enhancedDeviceRegistrationService.SupportsHardwareInfoAsync(macAddress);
+            return Ok(supportsHardware);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking hardware support for MAC: {MacAddress}", macAddress);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while checking hardware support",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Check registration status (legacy endpoint - maintained for backward compatibility)
     /// </summary>
     /// <param name="registrationId">Registration ID to check</param>
     /// <returns>Current registration status and details</returns>

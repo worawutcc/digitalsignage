@@ -137,6 +137,59 @@ export interface BulkScheduleUserAssignmentRequest {
  * Handles all schedule-related API calls
  */
 export class ScheduleService {
+  // Instance methods for compatibility with tests
+  /**
+   * Get all schedules (instance method)
+   */
+  async getSchedules(params?: ScheduleSearchParams): Promise<Schedule[]> {
+    if (params) {
+      return ScheduleService.search(params)
+    }
+    return ScheduleService.getAll()
+  }
+
+  /**
+   * Search schedules (instance method)
+   */
+  async searchSchedules(searchTerm: string): Promise<Schedule[]> {
+    return ScheduleService.search({ searchTerm })
+  }
+
+  /**
+   * Get schedule by ID (instance method)
+   */
+  async getScheduleById(id: number): Promise<Schedule> {
+    return ScheduleService.getById(id)
+  }
+
+  /**
+   * Get assigned users for a schedule (instance method)
+   */
+  async getAssignedUsers(scheduleId: number, params?: { page?: number; pageSize?: number }): Promise<{
+    users: User[]
+    assignments: UserScheduleAssignment[]
+    conflicts: ScheduleConflict[]
+    pagination?: {
+      page: number
+      limit: number
+      total: number
+      totalPages: number
+    }
+  }> {
+    const options: { includeInactive?: boolean; page?: number; limit?: number } = {}
+    if (params?.page !== undefined) options.page = params.page
+    if (params?.pageSize !== undefined) options.limit = params.pageSize
+    return ScheduleService.getAssignedUsers(scheduleId, Object.keys(options).length > 0 ? options : undefined)
+  }
+
+  /**
+   * Remove user from schedule (instance method)
+   */
+  async removeUserFromSchedule(scheduleId: number, userId: number): Promise<{ success: boolean }> {
+    const response = await apiClient.delete(`/api/schedules/${scheduleId}/users/${userId}`)
+    return response.data
+  }
+
   /**
    * Get all schedules
    */
@@ -668,3 +721,6 @@ export class ScheduleService {
     return response.data
   }
 }
+
+// Export both class and instance for different import styles
+export const scheduleService = new ScheduleService()

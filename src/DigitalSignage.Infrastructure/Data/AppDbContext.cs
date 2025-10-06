@@ -41,6 +41,11 @@ public class AppDbContext : DbContext
     public DbSet<DeviceApproval> DeviceApprovals { get; set; }
     public DbSet<RegistrationAuditLog> RegistrationAuditLogs { get; set; }
     
+    // Enhanced Device Registration entities (Feature 028)
+    public DbSet<DeviceHardwareProfile> DeviceHardwareProfiles { get; set; }
+    public DbSet<MediaVariant> MediaVariants { get; set; }
+    public DbSet<HardwareDetectionJob> HardwareDetectionJobs { get; set; }
+    
     // Permission Management entities
     public DbSet<UserDeviceGroupPermission> UserDeviceGroupPermissions { get; set; }
     public DbSet<PermissionAuditLog> PermissionAuditLogs { get; set; }
@@ -87,6 +92,11 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new DeviceRegistrationRequestConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceApprovalConfiguration());
         modelBuilder.ApplyConfiguration(new RegistrationAuditLogConfiguration());
+        
+        // Enhanced Device Registration configurations (Feature 028)
+        modelBuilder.ApplyConfiguration(new DeviceHardwareProfileConfiguration());
+        modelBuilder.ApplyConfiguration(new MediaVariantConfiguration());
+        modelBuilder.ApplyConfiguration(new HardwareDetectionJobConfiguration());
         
         // Permission Management configurations
         modelBuilder.ApplyConfiguration(new UserDeviceGroupPermissionConfiguration());

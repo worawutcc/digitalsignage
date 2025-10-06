@@ -9,6 +9,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using System.Text.Encodings.Web;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Security.Claims;
@@ -321,37 +324,5 @@ public class AuditTrailApiIntegrationTests : IClassFixture<WebApplicationFactory
             Assert.True(user.CreatedAt > DateTime.MinValue);
             Assert.True(user.UpdatedAt > DateTime.MinValue);
         }
-    }
-}
-
-// Test authentication handler for integration tests
-public class TestAuthenticationHandler : AuthenticationHandler<AuthenticationSchemeOptions>
-{
-    public TestAuthenticationHandler(IOptionsMonitor<AuthenticationSchemeOptions> options,
-        ILoggerFactory logger, UrlEncoder encoder, ISystemClock clock)
-        : base(options, logger, encoder, clock)
-    {
-    }
-
-    protected override Task<AuthenticateResult> HandleAuthenticateAsync()
-    {
-        var authHeader = Request.Headers["Authorization"].FirstOrDefault();
-        if (authHeader != null && authHeader.StartsWith("Test "))
-        {
-            var userId = authHeader.Substring(5); // Remove "Test " prefix
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.NameIdentifier, userId),
-                new Claim(ClaimTypes.Name, $"TestUser{userId}")
-            };
-
-            var identity = new ClaimsIdentity(claims, "Test");
-            var principal = new ClaimsPrincipal(identity);
-            var ticket = new AuthenticationTicket(principal, "Test");
-
-            return Task.FromResult(AuthenticateResult.Success(ticket));
-        }
-
-        return Task.FromResult(AuthenticateResult.NoResult());
     }
 }

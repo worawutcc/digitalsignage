@@ -53,6 +53,28 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         builder.Property(e => e.HardwareSpecs)
                .HasMaxLength(1000);
 
+        // Configure enhanced hardware information fields (Feature 028)
+        builder.Property(e => e.HardwareInfo)
+               .HasMaxLength(2000)
+               .IsRequired(false)
+               .HasColumnType("jsonb")
+               .HasComment("Enhanced hardware information JSON payload from device");
+
+        builder.Property(e => e.HasHardwareInfo)
+               .IsRequired()
+               .HasDefaultValue(false)
+               .HasComment("Flag indicating whether enhanced hardware information was provided");
+
+        builder.Property(e => e.HardwareProcessed)
+               .IsRequired()
+               .HasDefaultValue(false)
+               .HasComment("Flag indicating whether hardware information has been processed");
+
+        builder.Property(e => e.HardwareProcessedAt)
+               .HasColumnType("timestamp without time zone")
+               .IsRequired(false)
+               .HasComment("Timestamp when hardware information was processed");
+
         // Configure QR Code support fields
         builder.Property(e => e.QrCodeData)
                .HasMaxLength(2000)
@@ -91,6 +113,13 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         // Composite index for pending registration queries
         builder.HasIndex(e => new { e.Status, e.CreatedAt })
                .HasDatabaseName("IX_DeviceRegistrationRequests_Status_CreatedAt");
+        
+        // Indexes for hardware processing (Feature 028)
+        builder.HasIndex(e => e.HasHardwareInfo)
+               .HasDatabaseName("IX_DeviceRegistrationRequests_HasHardwareInfo");
+        
+        builder.HasIndex(e => e.HardwareProcessed)
+               .HasDatabaseName("IX_DeviceRegistrationRequests_HardwareProcessed");
         
         // Navigation properties
         // Matched user relationship (Feature 019)

@@ -370,10 +370,10 @@ export function useEnhancedUserScheduleAssignment(
     if (!enableEnhancedCaching || prefetchStrategy === 'none') return
     
     const prefetchRelatedData = async () => {
-      if (prefetchStrategy === 'related' && userSchedulesQuery.data?.schedules) {
+      if (prefetchStrategy === 'related' && userSchedulesQuery.data && 'data' in userSchedulesQuery.data && Array.isArray(userSchedulesQuery.data.data)) {
         // Enhanced prefetching can be implemented when schedule details endpoint is available
         // For now, we rely on the main user schedules query which contains schedule names and descriptions
-        console.log(`Enhanced caching enabled for ${userSchedulesQuery.data.schedules.length} schedules`)
+        console.log(`Enhanced caching enabled for ${userSchedulesQuery.data.data.length} schedules`)
       }
     }
     
@@ -407,8 +407,8 @@ export function useEnhancedUserScheduleAssignment(
     return {
       ...baseData,
       // Add computed properties
-      totalSchedules: baseData.schedules.length,
-      activeSchedules: baseData.schedules.filter(s => s.isActive).length,
+      totalSchedules: baseData.data?.length || 0,
+      activeSchedules: baseData.data?.filter((s: any) => s.isActive).length || 0,
       hasOptimisticUpdates: optimisticUpdates.length > 0,
       isRealTimeConnected: isRealTimeSyncActive,
       
@@ -416,7 +416,7 @@ export function useEnhancedUserScheduleAssignment(
       performanceMetrics: enablePerformanceMonitoring ? performanceMetrics : undefined,
       
       // Enhanced schedule data
-      schedules: baseData.schedules.map(schedule => ({
+      schedules: baseData.data?.map((schedule: any) => ({
         ...schedule,
         // Add computed properties to each schedule
         isOptimistic: optimisticUpdates.some(update => 

@@ -30,6 +30,8 @@ Auto-generated from all feature plans. Last updated: 2025-10-03
 - TypeScript 5.x with Next.js 15 (React 18), C# .NET 8 (backend) + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, React Hook Form + Zod, Axios, Lucide Reac (021-user-schedule-assignment)
 - PostgreSQL (backend data), LocalStorage/SessionStorage (client state), existing API endpoints (021-user-schedule-assignment)
 - C# .NET 8 (Backend), TypeScript 5.x (Frontend) + ASP.NET Core Web API, Entity Framework Core 9, Next.js 15, React 18, PostgreSQL, JWT Authentication, AWS S3 (027-device-approval-group)
+- C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Authentication, AWS S3 SDK, AutoMapper, SixLabors.ImageSharp, SignalR (028-enhanced-device-registration)
+- PostgreSQL (Npgsql provider) with Entity Framework Core migrations (028-enhanced-device-registration)
 
 ## API Project Structure (Backend Only)
 ```
@@ -345,9 +347,9 @@ dotnet build
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
 ## Recent Changes
+- 028-enhanced-device-registration: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Authentication, AWS S3 SDK, AutoMapper, SixLabors.ImageSharp, SignalR
 - 027-device-approval-group: Added C# .NET 8 (Backend), TypeScript 5.x (Frontend) + ASP.NET Core Web API, Entity Framework Core 9, Next.js 15, React 18, PostgreSQL, JWT Authentication, AWS S3
 - 021-user-schedule-assignment: Added TypeScript 5.x with Next.js 15 (React 18), C# .NET 8 (backend) + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, React Hook Form + Zod, Axios, Lucide Reac
-- 020-phase-1: Added TypeScript 5.x with Next.js 15 (React 19)
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

@@ -174,6 +174,7 @@ export function useRole(role: 'admin' | 'manager' | 'user'): PermissionCheck {
     // Map new role enum to old role strings
     const roleMapping = {
       'Admin': 'admin',
+      'Manager': 'manager',
       'User': 'user'
     }
 
@@ -201,6 +202,7 @@ export function useRoles(roles: Array<'admin' | 'manager' | 'user'>): Permission
     // Map new role enum to old role strings
     const roleMapping = {
       'Admin': 'admin',
+      'Manager': 'manager',
       'User': 'user'
     }
 

@@ -33,6 +33,14 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IPinGenerationService, PinGenerationService>();
         services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService>();
         
+        // Placeholder Services for Feature 028 (Enhanced Device Registration)
+        // TODO: Replace with full implementations when DTOs and repositories are complete
+        // Phase 3.4 Enhanced Device Registration - Placeholder services for compilation
+        services.AddScoped<IDeviceHardwareProfileService, PlaceholderDeviceHardwareProfileService>();
+        services.AddScoped<IOptimizedContentService, PlaceholderOptimizedContentService>();
+        services.AddScoped<IHardwareDetectionService, PlaceholderHardwareDetectionService>();
+        services.AddScoped<IEnhancedDeviceRegistrationService, PlaceholderEnhancedDeviceRegistrationService>();
+        
         // Android TV Management Application Services - temporarily disabled for compilation
         // services.AddScoped<IAndroidTVDeviceManagementService, AndroidTVDeviceManagementService>();
         // services.AddScoped<IAndroidTVConfigurationManagementService, AndroidTVConfigurationManagementService>();
