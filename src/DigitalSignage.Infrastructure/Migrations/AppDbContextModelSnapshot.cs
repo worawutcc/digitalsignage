@@ -1989,6 +1989,89 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.ToTable("RegistrationRecords", (string)null);
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.RegistrationRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("text");
+
+                    b.Property<int>("DeviceId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<bool>("Success")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<DateTime>("Timestamp")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_RegistrationRecord_CreatedAt");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_RegistrationRecord_UpdatedAt");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("DeviceId", "Timestamp")
+                        .HasDatabaseName("IX_RegistrationRecords_DeviceId_Timestamp");
+
+                    b.ToTable("RegistrationRecords", (string)null);
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Scene", b =>
                 {
                     b.Property<int>("Id")
@@ -2779,6 +2862,145 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                             t.HasCheckConstraint("CK_UserDeviceGroupPermissions_Permission", "\"Permission\" >= 0 AND \"Permission\" <= 3");
                         });
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.UserSchedule", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("AssignedByUserId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("ScheduleId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignedByUserId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_UserSchedule_CreatedAt");
+
+                    b.HasIndex("ScheduleId")
+                        .HasDatabaseName("IX_UserSchedules_ScheduleId");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_UserSchedule_UpdatedAt");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_UserSchedules_UserId");
+
+                    b.HasIndex("UserId", "ScheduleId")
+                        .IsUnique()
+                        .HasDatabaseName("IX_UserSchedules_UserId_ScheduleId");
+
+                    b.ToTable("UserSchedules", (string)null);
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.WebSocketConnectionLog", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("ConnectionId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<DateTime?>("DisconnectedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("disconnected_at");
+
+                    b.Property<string>("DisconnectionReason")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("IpAddress")
+                        .IsRequired()
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.Property<string>("UserAgent")
+                        .IsRequired()
+                        .HasMaxLength(512)
+                        .HasColumnType("character varying(512)");
+
+                    b.Property<int?>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId")
+                        .HasDatabaseName("IX_WebSocketConnectionLog_ConnectionId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_WebSocketConnectionLog_CreatedAt");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_WebSocketConnectionLog_UpdatedAt");
+
+                    b.HasIndex("UserId", "DisconnectedAt")
+                        .HasDatabaseName("IX_WebSocketConnectionLog_UserId_DisconnectedAt");
+
+                    b.ToTable("WebSocketConnectionLogs", (string)null);
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.UserSchedule", b =>
