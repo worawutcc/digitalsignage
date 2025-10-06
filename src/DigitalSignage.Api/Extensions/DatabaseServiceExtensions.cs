@@ -2,6 +2,7 @@ using DigitalSignage.Application.DTOs;
 using DigitalSignage.Application.Interfaces;
 using DigitalSignage.Infrastructure.Data;
 using DigitalSignage.Infrastructure.Services;
+using DigitalSignage.Infrastructure.Extensions;
 using Microsoft.EntityFrameworkCore;
 using Amazon.S3;
 
@@ -36,6 +37,9 @@ public static class DatabaseServiceExtensions
                 options.UseNpgsql(connectionString);
             }
         });
+
+        // Register repositories
+        services.AddRepositoryServices();
 
         return services;
     }

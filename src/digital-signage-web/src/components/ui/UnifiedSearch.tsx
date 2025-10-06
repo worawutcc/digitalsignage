@@ -95,7 +95,7 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
           title: 'Company Logo',
           type: 'media',
           path: '/media?id=1',
-          thumbnail: 'https://via.placeholder.com/40',
+          thumbnail: '/api/placeholder/media/1/thumbnail',
           lastModified: '2025-01-07',
           description: 'Image • logo, branding'
         },
@@ -112,7 +112,7 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
           title: 'Promotional Video',
           type: 'media',
           path: '/media?id=3',
-          thumbnail: 'https://via.placeholder.com/48',
+          thumbnail: '/api/placeholder/media/3/thumbnail',
           lastModified: '2025-01-05',
           description: 'Video • promotion, marketing'
         },

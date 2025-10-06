@@ -26,8 +26,8 @@ const mockMediaItems: MediaItem[] = [
     name: 'company-logo.png',
     type: 'image',
     size: 156000, // 156KB
-    url: 'https://via.placeholder.com/300x200/0ea5e9/ffffff?text=Company+Logo',
-    thumbnailUrl: 'https://via.placeholder.com/150x100/0ea5e9/ffffff?text=Logo',
+    url: '/api/placeholder/media/1', // Local placeholder endpoint
+    thumbnailUrl: '/api/placeholder/media/1/thumbnail',
     createdAt: '2025-01-07T00:00:00Z',
     updatedAt: '2025-01-07T00:00:00Z',
     tags: ['logo', 'branding'],
@@ -38,8 +38,8 @@ const mockMediaItems: MediaItem[] = [
     name: 'promo-video.mp4',
     type: 'video',
     size: 25600000, // 25.6MB
-    url: 'https://via.placeholder.com/640x360/10b981/ffffff?text=Promo+Video',
-    thumbnailUrl: 'https://via.placeholder.com/150x100/10b981/ffffff?text=Video',
+    url: '/api/placeholder/media/2',
+    thumbnailUrl: '/api/placeholder/media/2/thumbnail',
     duration: 90, // 1:30
     createdAt: '2025-01-06T00:00:00Z',
     updatedAt: '2025-01-06T00:00:00Z',
@@ -51,8 +51,8 @@ const mockMediaItems: MediaItem[] = [
     name: 'product-showcase.png',
     type: 'image', 
     size: 450000, // 450KB
-    url: 'https://via.placeholder.com/800x600/f59e0b/000000?text=Product+Showcase',
-    thumbnailUrl: 'https://via.placeholder.com/150x100/f59e0b/000000?text=Product',
+    url: '/api/placeholder/media/3',
+    thumbnailUrl: '/api/placeholder/media/3/thumbnail',
     createdAt: '2025-01-05T00:00:00Z',
     updatedAt: '2025-01-05T00:00:00Z',
     tags: ['product', 'showcase'],
@@ -63,8 +63,8 @@ const mockMediaItems: MediaItem[] = [
     name: 'holiday-announcement.mp4',
     type: 'video',
     size: 15200000, // 15.2MB
-    url: 'https://via.placeholder.com/640x360/dc2626/ffffff?text=Holiday+Video',
-    thumbnailUrl: 'https://via.placeholder.com/150x100/dc2626/ffffff?text=Holiday',
+    url: '/api/placeholder/media/4',
+    thumbnailUrl: '/api/placeholder/media/4/thumbnail',
     duration: 45,
     createdAt: '2025-01-04T00:00:00Z',
     updatedAt: '2025-01-04T00:00:00Z',
@@ -76,8 +76,8 @@ const mockMediaItems: MediaItem[] = [
     name: 'emergency-alert.png',
     type: 'image',
     size: 89000, // 89KB
-    url: 'https://via.placeholder.com/400x300/ef4444/ffffff?text=Emergency+Alert',
-    thumbnailUrl: 'https://via.placeholder.com/150x100/ef4444/ffffff?text=Alert',
+    url: '/api/placeholder/media/5',
+    thumbnailUrl: '/api/placeholder/media/5/thumbnail',
     createdAt: '2025-01-03T00:00:00Z',
     updatedAt: '2025-01-03T00:00:00Z',
     tags: ['emergency', 'alert'],
@@ -88,8 +88,8 @@ const mockMediaItems: MediaItem[] = [
     name: 'welcome-message.png',
     type: 'image',
     size: 234000, // 234KB
-    url: 'https://via.placeholder.com/600x400/8b5cf6/ffffff?text=Welcome',
-    thumbnailUrl: 'https://via.placeholder.com/150x100/8b5cf6/ffffff?text=Welcome',
+    url: '/api/placeholder/media/6',
+    thumbnailUrl: '/api/placeholder/media/6/thumbnail',
     createdAt: '2025-01-02T00:00:00Z',
     updatedAt: '2025-01-02T00:00:00Z',
     tags: ['welcome', 'greeting'],

@@ -137,30 +137,7 @@ export interface BulkScheduleUserAssignmentRequest {
  * Handles all schedule-related API calls
  */
 export class ScheduleService {
-  // Instance methods for compatibility with tests
-  /**
-   * Get all schedules (instance method)
-   */
-  async getSchedules(params?: ScheduleSearchParams): Promise<Schedule[]> {
-    if (params) {
-      return ScheduleService.search(params)
-    }
-    return ScheduleService.getAll()
-  }
-
-  /**
-   * Search schedules (instance method)
-   */
-  async searchSchedules(searchTerm: string): Promise<Schedule[]> {
-    return ScheduleService.search({ searchTerm })
-  }
-
-  /**
-   * Get schedule by ID (instance method)
-   */
-  async getScheduleById(id: number): Promise<Schedule> {
-    return ScheduleService.getById(id)
-  }
+  // Legacy instance methods removed - use new implementations below
 
   /**
    * Get assigned users for a schedule (instance method)
@@ -185,8 +162,24 @@ export class ScheduleService {
   /**
    * Remove user from schedule (instance method)
    */
-  async removeUserFromSchedule(scheduleId: number, userId: number): Promise<{ success: boolean }> {
-    const response = await apiClient.delete(`/api/schedules/${scheduleId}/users/${userId}`)
+  async removeUserFromSchedule(scheduleId: number, userId: number): Promise<void> {
+    const response = await apiClient.delete(`/api/admin/schedules/${scheduleId}/users/${userId}`)
+    return response.data
+  }
+
+  // Schedule CRUD Operations
+  async getSchedules(): Promise<Schedule[]> {
+    const response = await apiClient.get('/api/admin/schedules')
+    return response.data
+  }
+
+  async getScheduleById(id: number): Promise<Schedule> {
+    const response = await apiClient.get(`/api/admin/schedules/${id}`)
+    return response.data
+  }
+
+  async searchSchedules(params: ScheduleSearchParams): Promise<Schedule[]> {
+    const response = await apiClient.get('/api/admin/schedules/search', { params })
     return response.data
   }
 

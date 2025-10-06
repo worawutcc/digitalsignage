@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { QueryClient, QueryClientProvider, DefaultOptions, useQueryClient } from '@tanstack/react-query'
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 
@@ -19,33 +19,31 @@ const queryClientOptions: DefaultOptions = {
   queries: {
     // Cache data for different durations based on data type
     staleTime: 5 * 60 * 1000, // 5 minutes default
-    // Keep unused data in cache longer for better UX
+    // Keep unused data in cache longer for better UX  
     cacheTime: 30 * 60 * 1000, // 30 minutes
     // Enable background refetching for fresh data
-    refetchOnWindowFocus: 'always',
-    refetchOnReconnect: 'always',
+    refetchOnWindowFocus: false, // Disable to prevent too many requests
+    refetchOnReconnect: true,
     refetchOnMount: true,
     // Retry configuration with exponential backoff
-    retry: (failureCount, error) => {
+    retry: (failureCount, error: any) => {
       // Don't retry on authentication errors
-      if (error instanceof ApiError && error.status === 401) {
+      if (error?.status === 401) {
         return false
       }
       // Don't retry on client errors (4xx) except timeouts
-      if (error instanceof ApiError && error.status >= 400 && error.status < 500 && error.status !== 408) {
+      if (error?.status >= 400 && error?.status < 500 && error?.status !== 408) {
         return false
       }
-      // Retry up to 3 times for other errors
-      return failureCount < 3
+      // Retry up to 2 times for other errors (reduce from 3)
+      return failureCount < 2
     },
     // Optimized retry delay with jitter
     retryDelay: attemptIndex => {
-      const baseDelay = Math.min(1000 * 2 ** attemptIndex, 30000)
+      const baseDelay = Math.min(1000 * 2 ** attemptIndex, 10000) // Reduce max delay
       // Add jitter to prevent thundering herd
-      return baseDelay + Math.random() * 1000
+      return baseDelay + Math.random() * 500
     },
-    // Enable network mode for better offline handling
-    networkMode: 'always',
   },
   mutations: {
     // Retry mutations once on network errors
@@ -80,33 +78,22 @@ interface ProvidersProps {
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
   // Create Query Client instance (stable across re-renders)
   const [queryClient] = useState(() => createQueryClient())
-  const [isClient, setIsClient] = useState(false)
-
-  // Only render QueryClientProvider on client-side to avoid SSR issues
-  useEffect(() => {
-    setIsClient(true)
-  }, [])
 
   return (
     <ReduxProvider store={store}>
-      {isClient ? (
-        <QueryClientProvider client={queryClient}>
-          {children}
-          {/* Temporarily disable problematic components */}
-          {/* <RealTimeEventsClient /> */}
-          <NotificationCenter />
-          {/* Show React Query DevTools in development */}
-          {process.env.NODE_ENV === 'development' && (
-            <ReactQueryDevtools 
-              initialIsOpen={false}
-              position="bottom-right"
-            />
-          )}
-        </QueryClientProvider>
-      ) : (
-        // Server-side fallback without React Query
-        <>{children}</>
-      )}
+      <QueryClientProvider client={queryClient}>
+        {children}
+        {/* Temporarily disable problematic components */}
+        {/* <RealTimeEventsClient /> */}
+        <NotificationCenter />
+        {/* Show React Query DevTools in development */}
+        {process.env.NODE_ENV === 'development' && (
+          <ReactQueryDevtools 
+            initialIsOpen={false}
+            position="bottom-right"
+          />
+        )}
+      </QueryClientProvider>
     </ReduxProvider>
   )
 }

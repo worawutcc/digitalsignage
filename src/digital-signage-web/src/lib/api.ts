@@ -2,6 +2,7 @@ import axios, { AxiosInstance, AxiosError, AxiosRequestConfig } from 'axios'
 import type { RootState } from '@/store'
 import { store } from '@/store'
 import { authActions } from '@/store/slices/authSlice'
+import { TOKEN_STORAGE_KEY } from '@/lib/auth'
 
 /**
  * Custom API error class with enhanced error information
@@ -39,7 +40,9 @@ function getAuthToken(): string | null {
   
   // Fallback to localStorage for initial load
   if (typeof window !== 'undefined') {
-    return localStorage.getItem('auth_token')
+    return localStorage.getItem(TOKEN_STORAGE_KEY) || 
+           sessionStorage.getItem(TOKEN_STORAGE_KEY) ||
+           localStorage.getItem('auth_token') // Legacy fallback
   }
   return null
 }
@@ -80,17 +83,32 @@ apiClient.interceptors.request.use(
   (config) => {
     // Add authentication token
     const token = getAuthToken()
+    
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`)
+      console.log(`🔑 Token available: ${!!token}`)
+      
+      // Debug localStorage keys
+      if (typeof window !== 'undefined') {
+        const keys = Object.keys(localStorage).filter(k => k.includes('token') || k.includes('auth'))
+        console.log(`🗄️ Available auth keys:`, keys)
+        keys.forEach(key => {
+          console.log(`   ${key}:`, !!localStorage.getItem(key))
+        })
+      }
+      
+      if (token) {
+        console.log(`⏰ Token expired: ${isTokenExpired(token)}`)
+      }
+    }
+    
     if (token && !isTokenExpired(token)) {
       config.headers.Authorization = `Bearer ${token}`
     }
 
     // Add request ID for tracing
     config.headers['X-Request-ID'] = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-
-    // Log request in development
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`🔄 API Request: ${config.method?.toUpperCase()} ${config.url}`)
-    }
 
     return config
   },

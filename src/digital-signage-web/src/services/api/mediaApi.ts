@@ -1,18 +1,18 @@
 import { apiClient } from '@/lib/api'
 
 export interface Media {
-  id: string
+  id: number
   name: string
-  type: 'image' | 'video' | 'html'
-  size: number
+  fileName: string
+  type: 'Image' | 'Video' | 'Html'
+  fileSize: number
+  s3Key: string
   mimeType: string
-  url: string
-  thumbnailUrl?: string
-  metadata?: Record<string, any>
-  tags?: string[]
-  isActive: boolean
+  durationSeconds: number
   createdAt: string
-  updatedAt: string
+  updatedAt?: string
+  fileSizeFormatted: string
+  typeDisplayName: string
 }
 
 export interface MediaUploadRequest {

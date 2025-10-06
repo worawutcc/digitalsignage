@@ -26,4 +26,28 @@ public interface IScheduleService
     /// Check for schedule conflicts
     /// </summary>
     Task<bool> HasConflictsAsync(int deviceId, DateTime startDate, DateTime endDate, TimeSpan startTime, TimeSpan endTime, int? excludeScheduleId = null);
+
+    /// <summary>
+    /// Get schedules by date range
+    /// </summary>
+    Task<IEnumerable<ScheduleDto>> GetSchedulesByDateRangeAsync(DateTime startDate, DateTime endDate);
+}
+
+/// <summary>
+/// Schedule DTO for API responses
+/// </summary>
+public class ScheduleDto
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public TimeSpan StartTime { get; set; }
+    public TimeSpan EndTime { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public bool IsRecurring { get; set; }
+    public string? RecurrencePattern { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
 }

@@ -1,5 +1,6 @@
 /**
  * User Management Page
+ * Uses real userService and userPermissionService APIs
  * Comprehensive user and role management interface with enhanced schedule assignment
  */
 
@@ -13,6 +14,9 @@ import { Users, Shield, Calendar, Settings, Zap, Layers, Loader2 } from 'lucide-
 import { UserList } from '@/features/users/components/UserList';
 import { RoleManager } from '@/features/users/components/RoleManager';
 import { UserScheduleAssignment } from '@/features/users/components/UserScheduleAssignment';
+import { CreateUserModal } from '@/features/users/components/CreateUserModal';
+import { useQuery } from '@tanstack/react-query';
+import { userService, userPermissionService } from '@/services';
 import type { User, UserRole } from '@/features/users/types';
 import type { BulkOperation, BulkOperationResult, OptimisticUpdate, PerformanceMetric } from '@/types/enhanced-ui';
 
@@ -30,6 +34,28 @@ export default function UsersPage() {
     process.env.NEXT_PUBLIC_ENABLE_ENHANCED_UI === 'true'
   );
   const [showBulkOperationsPanel, setShowBulkOperationsPanel] = React.useState(false);
+
+  // Real API data fetching with React Query
+  const {
+    data: users = [],
+    isLoading: isLoadingUsers,
+    refetch: refetchUsers,
+    error: usersError
+  } = useQuery({
+    queryKey: ['users'],
+    queryFn: () => userService.getAllUsers(),
+    refetchInterval: 60000, // Refresh every minute
+  });
+
+  const {
+    data: userPermissions = [],
+    isLoading: isLoadingPermissions,
+    refetch: refetchPermissions
+  } = useQuery({
+    queryKey: ['user-permissions'],
+    queryFn: () => userPermissionService.getMyPermissions(),
+    refetchInterval: 60000,
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
@@ -579,159 +605,7 @@ export default function UsersPage() {
   );
 }
 
-/**
- * Create User Modal Component
- */
-interface CreateUserModalProps {
-  onClose: () => void;
-  onSuccess: () => void;
-  onPerformanceMetric?: (metric: PerformanceMetric) => void;
-}
-
-function CreateUserModal({ onClose, onSuccess, onPerformanceMetric }: CreateUserModalProps) {
-  const [formData, setFormData] = React.useState({
-    email: '',
-    password: '',
-    firstName: '',
-    lastName: '',
-    role: 'User' as 'Admin' | 'User',
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const startTime = performance.now();
-    
-    try {
-      // TODO: Implement user creation logic
-      console.log('Create user:', formData);
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Track performance metric
-      if (onPerformanceMetric) {
-        const endTime = performance.now();
-        onPerformanceMetric({
-          type: 'interaction',
-          name: 'User Creation',
-          value: endTime - startTime,
-          unit: 'ms',
-          timestamp: Date.now()
-        });
-      }
-      
-      onSuccess();
-    } catch (error) {
-      console.error('Failed to create user:', error);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-        <div className="fixed inset-0 transition-opacity bg-gray-500 bg-opacity-75" onClick={onClose}></div>
-
-        <div className="inline-block w-full max-w-md my-8 overflow-hidden text-left align-middle transition-all transform bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-          <form onSubmit={handleSubmit}>
-            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">
-                Create New User
-              </h3>
-            </div>
-
-            <div className="px-6 py-4 space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    First Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.firstName}
-                    onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Last Name
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.lastName}
-                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Email
-                </label>
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required
-                  minLength={8}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Role
-                </label>
-                <select
-                  value={formData.role}
-                  onChange={(e) => setFormData({ ...formData, role: e.target.value as 'User' | 'Admin' })}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:text-white"
-                  required
-                >
-                  <option value="">Select a role...</option>
-                  <option value="Admin">Admin</option>
-                  <option value="User">User</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-              >
-                Create User
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
+// CreateUserModal is now imported from separate file
 
 /**
  * Edit User Modal Component

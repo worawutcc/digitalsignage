@@ -271,8 +271,11 @@ public class OptimizedContentController : ControllerBase
     {
         try
         {
-            var from = fromDate ?? DateTime.UtcNow.AddDays(-30);
-            var to = toDate ?? DateTime.UtcNow;
+            // Convert DateTime parameters to Unspecified kind for PostgreSQL compatibility
+            var from = fromDate.HasValue ? DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Unspecified) 
+                                         : DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-30), DateTimeKind.Unspecified);
+            var to = toDate.HasValue ? DateTime.SpecifyKind(toDate.Value, DateTimeKind.Unspecified) 
+                                     : DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
 
             _logger.LogInformation("Getting optimization statistics from {From} to {To}", from, to);
 

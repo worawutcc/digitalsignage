@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Clock, FileImage, Calendar, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { RecentItem, RecentItemsProps } from '../types'
 
 /**
@@ -19,7 +18,6 @@ export function RecentItems({ className = '', maxItems = 5 }: RecentItemsProps) 
         type: 'media',
         path: '/media/1',
         accessedAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-        thumbnail: '/images/company-logo-thumb.png'
       },
       {
         id: '2',
@@ -34,7 +32,6 @@ export function RecentItems({ className = '', maxItems = 5 }: RecentItemsProps) 
         type: 'media',
         path: '/media/3',
         accessedAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
-        thumbnail: '/images/holiday-video-thumb.jpg'
       },
       {
         id: '4',
@@ -49,7 +46,6 @@ export function RecentItems({ className = '', maxItems = 5 }: RecentItemsProps) 
         type: 'media',
         path: '/media/5',
         accessedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-        thumbnail: '/images/product-showcase-thumb.png'
       }
     ]
 
@@ -113,19 +109,9 @@ export function RecentItems({ className = '', maxItems = 5 }: RecentItemsProps) 
             className="flex items-center gap-3 p-2 rounded-md hover:bg-muted/50 transition-colors group"
           >
             <div className="flex-shrink-0">
-              {item.thumbnail ? (
-                <Image
-                  src={item.thumbnail}
-                  alt={item.title}
-                  width={32}
-                  height={32}
-                  className="w-8 h-8 rounded object-cover bg-muted"
-                />
-              ) : (
-                <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
-                  {getItemIcon(item.type)}
-                </div>
-              )}
+              <div className="w-8 h-8 rounded bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+                {getItemIcon(item.type)}
+              </div>
             </div>
             
             <div className="flex-1 min-w-0">
