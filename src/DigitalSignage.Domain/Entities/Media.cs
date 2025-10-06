@@ -15,4 +15,9 @@ public class Media : BaseEntity
 
     // Navigation properties
     public ICollection<ScheduleMedia> ScheduleMedias { get; set; } = new List<ScheduleMedia>();
+    
+    /// <summary>
+    /// Device-optimized variants of this media (one-to-many relationship)
+    /// </summary>
+    public ICollection<MediaVariant> Variants { get; set; } = new List<MediaVariant>();
 }

@@ -7,7 +7,7 @@ export interface Device {
   deviceKey: string
   status: 'online' | 'offline' | 'maintenance'
   location: string
-  lastSeen: string
+  lastSeen: string | null
   currentScheduleId: string | null
   deviceGroupId: string
   resolution: string

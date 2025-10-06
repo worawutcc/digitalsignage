@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using Moq;
 using Xunit;
 using DigitalSignage.Api.Services;
+using DigitalSignage.Api.Hubs;
 using DigitalSignage.Application.DTOs;
 using DigitalSignage.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -14,7 +15,7 @@ namespace DigitalSignage.Api.Tests.Services;
 /// </summary>
 public class RealtimeEventBroadcasterTests : IDisposable
 {
-    private readonly Mock<IHubContext<Hubs.NotificationHub>> _hubContextMock;
+    private readonly Mock<IHubContext<NotificationHub>> _hubContextMock;
     private readonly Mock<ILogger<RealtimeEventBroadcaster>> _loggerMock;
     private readonly AppDbContext _context;
     private readonly RealtimeEventBroadcaster _broadcaster;

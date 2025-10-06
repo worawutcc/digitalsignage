@@ -81,6 +81,27 @@ public class DeviceRegistrationRequest : BaseEntity
     public string HardwareSpecs { get; set; } = "{}";
 
     /// <summary>
+    /// Enhanced hardware information JSON payload from device (Feature 028)
+    /// </summary>
+    [StringLength(2000)]
+    public string? HardwareInfo { get; set; }
+
+    /// <summary>
+    /// Flag indicating whether enhanced hardware information was provided (Feature 028)
+    /// </summary>
+    public bool HasHardwareInfo { get; set; } = false;
+
+    /// <summary>
+    /// Flag indicating whether hardware information has been processed (Feature 028)
+    /// </summary>
+    public bool HardwareProcessed { get; set; } = false;
+
+    /// <summary>
+    /// Timestamp when hardware information was processed (Feature 028)
+    /// </summary>
+    public DateTime? HardwareProcessedAt { get; set; }
+
+    /// <summary>
     /// Get HardwareSpecs as Dictionary for easier manipulation
     /// </summary>
     public Dictionary<string, object> GetHardwareSpecsAsDictionary()
@@ -181,6 +202,11 @@ public class DeviceRegistrationRequest : BaseEntity
     /// Foreign key to approved device (nullable)
     /// </summary>
     public int? ApprovedDeviceId { get; set; }
+
+    /// <summary>
+    /// Hardware detection job for processing enhanced hardware information (Feature 028)
+    /// </summary>
+    public HardwareDetectionJob? HardwareDetectionJob { get; set; }
 
     // Business logic methods
 

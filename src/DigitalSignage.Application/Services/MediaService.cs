@@ -142,7 +142,10 @@ public class MediaService : IMediaService
     public async Task<MediaUploadResponse> CreateUploadUrlAsync(string fileName, string contentType, long fileSize)
     {
         var mediaType = GetMediaTypeFromContentType(contentType);
-        var s3Key = $"media/{Guid.NewGuid()}/{fileName}";
+        
+        // Create key with new format: digitalsignage/ddmmyyyy/MediaType(enum string)/file
+        var dateFolder = DateTime.UtcNow.ToString("ddMMyyyy");
+        var s3Key = $"digitalsignage/{dateFolder}/{mediaType}/{fileName}";
         
         // Create media record first
         var media = new Media
@@ -256,14 +259,14 @@ public class MediaService : IMediaService
         if (media == null)
             throw new ArgumentException($"Media with ID {id} not found");
 
-        var expiry = expirationMinutes > 0 ? expirationMinutes : (int)TimeSpan.FromHours(_expirationSettings.S3PresignedUrlExpiryHours).TotalMinutes;
-        return await _fileUploadService.GetPresignedUrlAsync(media.S3Key, TimeSpan.FromMinutes(expiry));
+        // For GET operations, use CloudFront URL instead of presigned URL
+        return await _fileUploadService.GetCloudFrontUrlAsync(media.S3Key);
     }
 
     public async Task<string> GetPresignedUrlByS3KeyAsync(string s3Key, int expirationMinutes = 0)
     {
-        var expiry = expirationMinutes > 0 ? expirationMinutes : (int)TimeSpan.FromHours(_expirationSettings.S3PresignedUrlExpiryHours).TotalMinutes;
-        return await _fileUploadService.GetPresignedUrlAsync(s3Key, TimeSpan.FromMinutes(expiry));
+        // For GET operations, use CloudFront URL instead of presigned URL
+        return await _fileUploadService.GetCloudFrontUrlAsync(s3Key);
     }
 
     public async Task<bool> FileExistsAsync(int id)

@@ -16,10 +16,11 @@ export interface User {
   email: string
   fullName: string
   phoneNumber?: string
-  role: 'Admin' | 'User'
+  role: 'Admin' | 'User' | 'Manager'
   isActive: boolean
   createdAt: string
   lastLoginAt?: string
+  permissions?: string[]
   // Legacy fields for backward compatibility
   id?: number
   firstName?: string

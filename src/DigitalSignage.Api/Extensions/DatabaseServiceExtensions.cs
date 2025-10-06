@@ -53,6 +53,7 @@ public static class DatabaseServiceExtensions
             options.SecretKey = awsSection["SecretKey"] ?? string.Empty;
             options.BucketName = awsSection["S3:BucketName"] ?? string.Empty;
             options.Region = awsSection["S3:Region"] ?? string.Empty;
+            options.CloudFrontUrl = awsSection["S3:CloudFrontUrl"] ?? string.Empty;
             
             if (TimeSpan.TryParse(awsSection["S3:PresignedUrlExpiry"], out var expiry))
             {

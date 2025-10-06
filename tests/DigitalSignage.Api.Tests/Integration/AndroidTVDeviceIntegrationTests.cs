@@ -4,7 +4,7 @@ using System.Net.Http.Json;
 using System.Net;
 using Xunit;
 using DigitalSignage.Api;
-using DigitalSignage.Application.DTOs.AndroidTV;
+using DigitalSignage.Application.DTOs.Device;
 using DigitalSignage.Domain.Enums;
 
 namespace DigitalSignage.Api.Tests.Integration;

@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Moq;
 using Xunit;
 using DigitalSignage.Api.Controllers;
-using DigitalSignage.Application.Services.DeviceManagement;
+using DigitalSignage.Application.Interfaces;
 using DigitalSignage.Domain.Entities;
 using DigitalSignage.Domain.Enums;
 using Microsoft.Extensions.Logging;
@@ -13,27 +13,29 @@ namespace DigitalSignage.Api.Tests.Controllers
     {
         private readonly Mock<IDeviceService> _mockDeviceService;
         private readonly Mock<IDeviceRegistrationService> _mockRegistrationService;
-        private readonly Mock<IDeviceStatusService> _mockStatusService;
+        private readonly Mock<IDeviceMonitoringService> _mockStatusService;
         private readonly Mock<IDeviceConfigurationService> _mockConfigurationService;
         private readonly Mock<IBulkOperationsService> _mockBulkOperationsService;
-        private readonly Mock<ILogger<DeviceManagementController>> _mockLogger;
-        private readonly DeviceManagementController _controller;
+        private readonly Mock<ILogger<DeviceController>> _mockLogger;
+        private readonly DeviceController _controller;
 
         public DeviceManagementControllerTests()
         {
             _mockDeviceService = new Mock<IDeviceService>();
             _mockRegistrationService = new Mock<IDeviceRegistrationService>();
-            _mockStatusService = new Mock<IDeviceStatusService>();
+            _mockStatusService = new Mock<IDeviceMonitoringService>();
             _mockConfigurationService = new Mock<IDeviceConfigurationService>();
             _mockBulkOperationsService = new Mock<IBulkOperationsService>();
-            _mockLogger = new Mock<ILogger<DeviceManagementController>>();
+            _mockLogger = new Mock<ILogger<DeviceController>>();
             
-            _controller = new DeviceManagementController(
+            // Using existing DeviceController for integration
+            var mockAssociationService = new Mock<IUserDeviceAssociationService>();
+            var mockContentDeliveryService = new Mock<IContentDeliveryService>();
+            
+            _controller = new DeviceController(
+                mockAssociationService.Object,
+                mockContentDeliveryService.Object,
                 _mockDeviceService.Object,
-                _mockRegistrationService.Object,
-                _mockStatusService.Object,
-                _mockConfigurationService.Object,
-                _mockBulkOperationsService.Object,
                 _mockLogger.Object);
         }
 

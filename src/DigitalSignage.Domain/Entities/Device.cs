@@ -57,4 +57,9 @@ public class Device : BaseEntity
     public DeviceConfiguration? Configuration { get; set; }
     public ICollection<DeviceStatusLog> StatusLogs { get; set; } = new List<DeviceStatusLog>();
     public ICollection<RegistrationRecord> RegistrationRecords { get; set; } = new List<RegistrationRecord>();
+    
+    /// <summary>
+    /// Hardware profile for this device (one-to-one relationship)
+    /// </summary>
+    public DeviceHardwareProfile? HardwareProfile { get; set; }
 }
