@@ -1,10 +1,19 @@
 import { apiClient } from '@/lib/api'
+import type { QuickAssignRequest, QuickAssignResponse } from '@/types/quickAssign'
 
+/**
+ * Media type enum matching API MediaType
+ */
+export type MediaType = 'Image' | 'Video' | 'Html'
+
+/**
+ * Media DTO matching API MediaDto response
+ */
 export interface Media {
   id: number
   name: string
   fileName: string
-  type: 'Image' | 'Video' | 'Html'
+  type: MediaType
   fileSize: number
   s3Key: string
   mimeType: string
@@ -15,20 +24,46 @@ export interface Media {
   typeDisplayName: string
 }
 
+/**
+ * Request for uploading media
+ */
 export interface MediaUploadRequest {
   file: File
   name?: string
-  tags?: string[]
-  metadata?: Record<string, any>
+  durationSeconds?: number
+  type?: MediaType
 }
 
+/**
+ * Request for updating media metadata
+ */
 export interface MediaUpdateRequest {
   name?: string
-  tags?: string[]
-  metadata?: Record<string, any>
-  isActive?: boolean
+  durationSeconds?: number
 }
 
+/**
+ * Media statistics from API
+ */
+export interface MediaStatistics {
+  totalFileSize: number
+  totalFileSizeFormatted: string
+  countByType: Record<string, number>
+  totalFiles: number
+}
+
+/**
+ * Media validation result
+ */
+export interface MediaValidation {
+  mediaId: number
+  isValid: boolean
+  errors: string[]
+}
+
+/**
+ * Media usage information (future feature)
+ */
 export interface MediaUsage {
   scheduleCount: number
   playlistCount: number
@@ -36,6 +71,9 @@ export interface MediaUsage {
   lastUsed?: string
 }
 
+/**
+ * Bulk delete request (future feature)
+ */
 export interface BulkDeleteRequest {
   mediaIds: string[]
 }
@@ -86,9 +124,37 @@ export class MediaApi {
   }
 
   /**
-   * Upload new media file
+   * Upload new media file using presigned URL (PREFERRED METHOD)
+   * This method uploads directly to S3 without going through the API server
    */
   async upload(request: MediaUploadRequest): Promise<Media> {
+    // Step 1: Request presigned upload URL from backend
+    const uploadUrlResponse = await this.createUploadUrl(
+      request.file.name,
+      request.file.type,
+      request.file.size
+    )
+
+    // Step 2: Upload file directly to S3 using presigned URL
+    await this.uploadToS3(uploadUrlResponse.uploadUrl, request.file)
+
+    // Step 3: Update media metadata if provided
+    if (request.name || request.durationSeconds !== undefined) {
+      const updateRequest: MediaUpdateRequest = {}
+      if (request.name) updateRequest.name = request.name
+      if (request.durationSeconds !== undefined) updateRequest.durationSeconds = request.durationSeconds
+      
+      return await this.update(uploadUrlResponse.media.id.toString(), updateRequest)
+    }
+
+    return uploadUrlResponse.media
+  }
+
+  /**
+   * Legacy upload method (uploads through API server)
+   * Use upload() instead for better performance
+   */
+  async uploadLegacy(request: MediaUploadRequest): Promise<Media> {
     const formData = new FormData()
     formData.append('file', request.file)
     
@@ -96,12 +162,12 @@ export class MediaApi {
       formData.append('name', request.name)
     }
     
-    if (request.tags) {
-      formData.append('tags', JSON.stringify(request.tags))
+    if (request.durationSeconds !== undefined) {
+      formData.append('durationSeconds', request.durationSeconds.toString())
     }
     
-    if (request.metadata) {
-      formData.append('metadata', JSON.stringify(request.metadata))
+    if (request.type) {
+      formData.append('type', request.type)
     }
 
     const response = await apiClient.post('/api/media/upload', formData, {
@@ -110,6 +176,37 @@ export class MediaApi {
       }
     })
     return response.data
+  }
+
+  /**
+   * Create presigned upload URL for direct S3 upload
+   */
+  async createUploadUrl(fileName: string, contentType: string, fileSize: number): Promise<{
+    media: Media
+    uploadUrl: string
+    formFields: Record<string, string>
+  }> {
+    const response = await apiClient.post('/api/media/upload-url', null, {
+      params: {
+        fileName,
+        contentType,
+        fileSize
+      }
+    })
+    return response.data
+  }
+
+  /**
+   * Upload file directly to S3 using presigned URL
+   */
+  async uploadToS3(presignedUrl: string, file: File): Promise<void> {
+    await fetch(presignedUrl, {
+      method: 'PUT',
+      body: file,
+      headers: {
+        'Content-Type': file.type,
+      },
+    })
   }
 
   /**
@@ -210,6 +307,58 @@ export class MediaApi {
    */
   async bulkDeleteMedia(mediaIds: string[]): Promise<void> {
     return this.bulkDelete({ mediaIds })
+  }
+
+  /**
+   * Get media files by type
+   */
+  async getByType(type: MediaType): Promise<Media[]> {
+    const response = await apiClient.get(`/api/media/type/${type}`)
+    return response.data
+  }
+
+  /**
+   * Search media files by name or filename
+   */
+  async search(searchTerm: string): Promise<Media[]> {
+    const response = await apiClient.get(`/api/media/search`, {
+      params: { searchTerm }
+    })
+    return response.data
+  }
+
+  /**
+   * Get media statistics
+   */
+  async getStatistics(): Promise<MediaStatistics> {
+    const response = await apiClient.get('/api/media/statistics')
+    return response.data
+  }
+
+  /**
+   * Validate media file integrity
+   */
+  async validate(id: number): Promise<MediaValidation> {
+    const response = await apiClient.get(`/api/media/${id}/validate`)
+    return response.data
+  }
+
+  /**
+   * Get presigned URL with custom expiration
+   */
+  async getPresignedUrlWithExpiry(id: number, expirationMinutes: number = 60): Promise<string> {
+    const response = await apiClient.get(`/api/media/${id}/presigned-url`, {
+      params: { expirationMinutes }
+    })
+    return response.data
+  }
+
+  /**
+   * Quick assign media to users/devices after upload
+   */
+  async quickAssign(mediaId: number, request: QuickAssignRequest): Promise<QuickAssignResponse> {
+    const response = await apiClient.post(`/api/media/${mediaId}/quick-assign`, request)
+    return response.data
   }
 }
 

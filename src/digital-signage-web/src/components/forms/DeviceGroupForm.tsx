@@ -1,141 +1,153 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { X } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
-import type { DeviceGroup } from '@/types/api';
+import { useCreateDeviceGroup } from '@/hooks/useCreateDeviceGroup';
+import { useUpdateDeviceGroup } from '@/hooks/useUpdateDeviceGroup';
+import { useDeviceGroups } from '@/hooks/useDeviceGroups';
+import { useDeviceGroupNameValidation } from '@/hooks/useDeviceGroups';
+import { deviceGroupSchema } from '@/lib/validations/deviceGroup.schema';
+import type { 
+  DeviceGroup, 
+  CreateDeviceGroupRequest,
+  UpdateDeviceGroupRequest 
+} from '@/types/deviceGroup.types';
+import type { DeviceGroupFormData } from '@/lib/validations/deviceGroup.schema';
 
 interface DeviceGroupFormProps {
   group?: DeviceGroup | null;
   parentGroup?: DeviceGroup | null;
-  availableParents?: DeviceGroup[];
-  onSubmit: (data: DeviceGroupFormData) => void;
+  onSubmit?: (data: DeviceGroup) => void;
   onCancel: () => void;
-  isLoading?: boolean;
-}
-
-export interface DeviceGroupFormData {
-  name: string;
-  description: string;
-  parentGroupId?: number | undefined;
-  isActive: boolean;
+  mode?: 'create' | 'edit';
 }
 
 /**
- * Device Group Form Component
- * Handles create/edit operations for device groups
+ * Enhanced Device Group Form Component
+ * Handles create/edit operations for device groups with React Query integration
  * Following copilot-instructions-ui.instructions.md guidelines
  */
 export function DeviceGroupForm({
   group,
   parentGroup,
-  availableParents = [],
   onSubmit,
   onCancel,
-  isLoading = false
+  mode = group ? 'edit' : 'create'
 }: DeviceGroupFormProps) {
-  const [formData, setFormData] = useState<DeviceGroupFormData>({
-    name: '',
-    description: '',
-    isActive: true
-  });
+  // React Query hooks
+  const { data: availableParents = [] } = useDeviceGroups({}, { staleTime: 60000 });
   
-  const [errors, setErrors] = useState<Partial<DeviceGroupFormData>>({});
+  const createMutation = useCreateDeviceGroup({
+    onSuccess: (response) => {
+      if (response.data) {
+        onSubmit?.(response.data);
+      }
+    },
+    onError: (error) => {
+      console.error('Create error:', error);
+    },
+  });
 
-  // Initialize form data when editing or adding subgroup
+  const updateMutation = useUpdateDeviceGroup({
+    onSuccess: (response) => {
+      if (response.data) {
+        onSubmit?.(response.data);
+      }
+    },
+    onError: (error) => {
+      console.error('Update error:', error);
+    },
+  });
+
+  // Form setup with React Hook Form + Zod
+  const form = useForm<DeviceGroupFormData>({
+    resolver: zodResolver(deviceGroupSchema),
+    defaultValues: {
+      name: group?.name ?? '',
+      ...(group?.description && { description: group.description }),
+      ...(group?.parentId && { parentGroupId: group.parentId }),
+      ...(!group?.parentId && parentGroup?.id && { parentGroupId: parentGroup.id }),
+    },
+  });
+
+
+
+  const { handleSubmit, register, formState: { errors, isSubmitting }, watch, setValue } = form;
+
+  // Watch name for validation
+  const watchedName = watch('name');
+  const selectedParentId = watch('parentGroupId');
+
+  // Name uniqueness validation
+  const { data: isNameUnique } = useDeviceGroupNameValidation(
+    watchedName || '',
+    selectedParentId,
+    group?.id,
+    {
+      enabled: !!watchedName && watchedName.length >= 2,
+      staleTime: 2000,
+    }
+  );
+
+  // Reset form when group changes
   useEffect(() => {
     if (group) {
-      // Editing existing group
-      const data: DeviceGroupFormData = {
-        name: group.name,
-        description: group.description,
-        isActive: group.isActive
-      };
-      if (group.parentGroupId) {
-        data.parentGroupId = group.parentGroupId;
-      }
-      setFormData(data);
+      setValue('name', group.name);
+      setValue('description', group.description || '');
+      setValue('parentGroupId', group.parentId);
     } else if (parentGroup) {
-      // Adding subgroup
-      setFormData({
-        name: '',
-        description: '',
-        parentGroupId: parentGroup.id,
-        isActive: true
-      });
-    } else {
-      // Creating new root group
-      setFormData({
-        name: '',
-        description: '',
-        isActive: true
-      });
+      setValue('parentGroupId', parentGroup.id);
     }
-  }, [group, parentGroup]);
+  }, [group, parentGroup, setValue]);
 
-  const validateForm = (): boolean => {
-    const newErrors: Partial<DeviceGroupFormData> = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Group name is required';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Group name must be at least 2 characters';
-    } else if (formData.name.trim().length > 100) {
-      newErrors.name = 'Group name must be less than 100 characters';
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
-    } else if (formData.description.trim().length > 500) {
-      newErrors.description = 'Description must be less than 500 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    // Prepare data
-    const submitData: DeviceGroupFormData = {
-      name: formData.name.trim(),
-      description: formData.description.trim(),
-      isActive: formData.isActive
-    };
-    
-    if (formData.parentGroupId) {
-      submitData.parentGroupId = formData.parentGroupId;
-    }
-
-    onSubmit(submitData);
-  };
-
-  const handleInputChange = (field: keyof DeviceGroupFormData, value: string | number | boolean | undefined) => {
-    setFormData(prev => ({
-      ...prev,
-      [field]: value
-    }));
-
-    // Clear specific field error when user starts typing
-    if (errors[field]) {
-      setErrors(prev => ({
-        ...prev,
-        [field]: undefined
-      }));
+  const onFormSubmit = async (data: DeviceGroupFormData) => {
+    try {
+      if (mode === 'edit' && group) {
+        const updateData: UpdateDeviceGroupRequest = {
+          name: data.name,
+        };
+        if (data.description) {
+          updateData.description = data.description;
+        }
+        if (data.parentGroupId !== undefined) {
+          updateData.parentGroupId = data.parentGroupId;
+        }
+        await updateMutation.mutateAsync({ id: group.id, data: updateData });
+      } else {
+        const createData: CreateDeviceGroupRequest = {
+          name: data.name,
+        };
+        if (data.description) {
+          createData.description = data.description;
+        }
+        if (data.parentGroupId !== undefined) {
+          createData.parentGroupId = data.parentGroupId;
+        }
+        await createMutation.mutateAsync(createData);
+      }
+    } catch (error) {
+      // Error is handled by mutation error callbacks
+      console.error('Form submission error:', error);
     }
   };
 
-  const isEditing = !!group;
+  const isLoading = isSubmitting || createMutation.isLoading || updateMutation.isLoading;
+  const isEditing = mode === 'edit';
   const title = isEditing 
-    ? `Edit "${group.name}"` 
+    ? `Edit "${group?.name}"` 
     : parentGroup 
       ? `Add Subgroup to "${parentGroup.name}"` 
       : 'Create New Group';
+
+  // Filter available parents to exclude current group and its descendants
+  const filteredParents = availableParents.filter(parent => {
+    if (group && parent.id === group.id) return false;
+    if (group && parent.path?.startsWith(group.path + '/')) return false;
+    return true;
+  });
 
   return (
     <div className="p-6">
@@ -155,7 +167,7 @@ export function DeviceGroupForm({
       </div>
 
       {/* Form */}
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit(data => onFormSubmit(data as unknown as DeviceGroupFormData))} className="space-y-6">
         {/* Group Name */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -163,8 +175,7 @@ export function DeviceGroupForm({
           </label>
           <input
             type="text"
-            value={formData.name}
-            onChange={(e) => handleInputChange('name', e.target.value)}
+            {...register('name')}
             className={`w-full px-4 py-3 border rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 ${
               errors.name 
                 ? 'border-red-300 dark:border-red-500 bg-red-50 dark:bg-red-900/20' 
@@ -176,7 +187,13 @@ export function DeviceGroupForm({
           {errors.name && (
             <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-start">
               <span className="inline-block w-4 h-4 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs leading-4 text-center mr-2 mt-0.5">!</span>
-              {errors.name}
+              {errors.name.message}
+            </p>
+          )}
+          {watchedName && watchedName.length >= 2 && isNameUnique === false && (
+            <p className="mt-2 text-sm text-yellow-600 dark:text-yellow-400 flex items-start">
+              <span className="inline-block w-4 h-4 rounded-full bg-yellow-100 dark:bg-yellow-900 text-yellow-600 dark:text-yellow-400 text-xs leading-4 text-center mr-2 mt-0.5">!</span>
+              This name is already used in the selected location
             </p>
           )}
         </div>
@@ -184,11 +201,10 @@ export function DeviceGroupForm({
         {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
-            Description *
+            Description
           </label>
           <textarea
-            value={formData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
+            {...register('description')}
             rows={4}
             className={`w-full px-4 py-3 border rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 resize-none ${
               errors.description 
@@ -202,31 +218,32 @@ export function DeviceGroupForm({
             {errors.description ? (
               <p className="text-sm text-red-600 dark:text-red-400 flex items-start">
                 <span className="inline-block w-4 h-4 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs leading-4 text-center mr-2 mt-0.5">!</span>
-                {errors.description}
+                {errors.description.message}
               </p>
             ) : (
               <span></span>
             )}
             <span className="text-xs text-gray-500 dark:text-gray-400">
-              {formData.description.length}/500
+              {watch('description')?.length || 0}/500
             </span>
           </div>
         </div>
 
         {/* Parent Group */}
-        {!parentGroup && availableParents.length > 0 && (
+        {!parentGroup && filteredParents.length > 0 && (
           <div>
             <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
               Parent Group
             </label>
             <select
-              value={formData.parentGroupId || ''}
-              onChange={(e) => handleInputChange('parentGroupId', e.target.value ? Number(e.target.value) : undefined)}
+              {...register('parentGroupId', { 
+                setValueAs: value => value === '' ? undefined : Number(value)
+              })}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white dark:focus:border-blue-400 hover:border-gray-400 dark:hover:border-gray-500"
               disabled={isLoading}
             >
               <option value="">None (Root Group)</option>
-              {availableParents.map((parent) => (
+              {filteredParents.map((parent) => (
                 <option key={parent.id} value={parent.id}>
                   {parent.path}
                 </option>
@@ -256,26 +273,7 @@ export function DeviceGroupForm({
           </div>
         )}
 
-        {/* Status */}
-        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
-          <label className="flex items-start cursor-pointer">
-            <input
-              type="checkbox"
-              checked={formData.isActive}
-              onChange={(e) => handleInputChange('isActive', e.target.checked)}
-              className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:border-gray-600 dark:bg-gray-700"
-              disabled={isLoading}
-            />
-            <div className="ml-3">
-              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                Active Group
-              </span>
-              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                When enabled, devices in this group will be available for content scheduling and management operations.
-              </p>
-            </div>
-          </label>
-        </div>
+
 
         {/* Actions */}
         <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 -mx-6 -mb-6 px-6 py-4 rounded-b-xl">
