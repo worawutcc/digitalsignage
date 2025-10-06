@@ -14,6 +14,11 @@ public class DeviceRegistrationRequest : BaseEntity
     public int Id { get; set; }
 
     /// <summary>
+    /// Unique registration identifier used in public APIs (exposed to clients)
+    /// </summary>
+    public Guid RegistrationId { get; set; } = Guid.NewGuid();
+
+    /// <summary>
     /// Device MAC address in AA:BB:CC:DD:EE:FF format
     /// </summary>
     [Required]

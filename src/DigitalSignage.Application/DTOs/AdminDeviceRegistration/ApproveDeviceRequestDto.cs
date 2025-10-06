@@ -8,6 +8,12 @@ namespace DigitalSignage.Application.DTOs.AdminDeviceRegistration;
 public class ApproveDeviceRequestDto
 {
     /// <summary>
+    /// Registration ID to approve
+    /// </summary>
+    [Required]
+    public Guid RegistrationId { get; set; }
+
+    /// <summary>
     /// Admin-assigned friendly name
     /// </summary>
     [Required]

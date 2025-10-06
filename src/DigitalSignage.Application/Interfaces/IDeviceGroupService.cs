@@ -43,4 +43,19 @@ public interface IDeviceGroupService
     // Batch operations
     Task<IEnumerable<DeviceGroupDto>> GetMultipleAsync(IEnumerable<int> ids);
     Task<Dictionary<int, int>> GetDeviceCountsAsync(IEnumerable<int> groupIds);
+
+    // Content assignment management (Enhanced - Integration with existing PlaylistService)
+    Task<GroupContentAssignmentResponseDto> AssignContentAsync(GroupContentAssignmentDto request);
+    Task<bool> UnassignContentAsync(int deviceGroupId, int playlistId);
+    Task<GroupContentAssignmentsDto> GetContentAssignmentsAsync(int deviceGroupId, bool includeInherited = false);
+
+    // Hierarchical content inheritance (New - Enhanced group-centric features)
+    Task<List<GroupContentAssignmentResponseDto>> GetInheritedContentAsync(int deviceGroupId);
+    Task<GroupContentAssignmentResponseDto> AssignContentWithInheritanceAsync(GroupContentAssignmentDto request);
+    Task<BulkContentOperationResultDto> BulkAssignContentAsync(List<GroupContentAssignmentDto> requests);
+
+    // Content assignment queries (New - Group-centric content management)
+    Task<List<DeviceGroupDto>> GetGroupsByContentAsync(int playlistId);
+    Task<ContentDistributionStatsDto> GetContentDistributionStatsAsync(int deviceGroupId);
+    Task<DeviceGroupDetailsDto> GetGroupWithContentAsync(int deviceGroupId);
 }

@@ -79,4 +79,34 @@ public interface IDeviceRegistrationService
     /// </summary>
     /// <returns>Number of expired registrations cleaned up</returns>
     Task<int> CleanupExpiredRegistrationsAsync();
+    
+    /// <summary>
+    /// Enhanced bulk approval with group assignment and progress tracking
+    /// </summary>
+    /// <param name="request">Enhanced bulk approval request with group assignment options</param>
+    /// <param name="approvedByUserId">ID of the admin user performing bulk approval</param>
+    /// <returns>Enhanced bulk approval response with progress tracking</returns>
+    Task<BulkDeviceApprovalResponseDto> BulkApproveDevicesWithGroupAsync(BulkDeviceApprovalRequestDto request, string approvedByUserId);
+    
+    /// <summary>
+    /// Get filtered pending registrations with advanced search and pagination
+    /// </summary>
+    /// <param name="request">Filter and pagination options</param>
+    /// <returns>Filtered list of pending registrations</returns>
+    Task<FilteredPendingRegistrationsResponseDto> GetFilteredPendingRegistrationsAsync(PendingRegistrationsFilterRequestDto request);
+    
+    /// <summary>
+    /// Get approval statistics and metrics for dashboard
+    /// </summary>
+    /// <param name="request">Date range and grouping options</param>
+    /// <returns>Approval statistics and metrics</returns>
+    Task<DeviceApprovalStatsResponseDto> GetApprovalStatisticsAsync(ApprovalStatsRequestDto request);
+    
+    /// <summary>
+    /// Rejects multiple device registration requests in a single operation
+    /// </summary>
+    /// <param name="request">Bulk rejection details</param>
+    /// <param name="rejectedByUserId">ID of the admin user performing bulk rejection</param>
+    /// <returns>Results of bulk rejection operation</returns>
+    Task<BulkRejectionResponseDto> BulkRejectDevicesAsync(BulkRejectionRequestDto request, string rejectedByUserId);
 }

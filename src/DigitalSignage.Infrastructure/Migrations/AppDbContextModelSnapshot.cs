@@ -427,6 +427,101 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.ToTable("DeviceGroups");
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceGroupAuditLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer")
+                        .HasColumnName("action");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+
+                    b.Property<int>("CreatedBy")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasDefaultValue("{}")
+                        .HasColumnName("details");
+
+                    b.Property<int>("DeviceGroupId")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_group_id");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error_message");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<string>("Metadata")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("metadata");
+
+                    b.Property<int>("Result")
+                        .HasColumnType("integer")
+                        .HasColumnName("result");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("UpdatedBy")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("user_agent");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("ix_device_group_audit_logs_action");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_device_group_audit_logs_created_at");
+
+                    b.HasIndex("DeviceGroupId")
+                        .HasDatabaseName("ix_device_group_audit_logs_device_group_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_device_group_audit_logs_user_id");
+
+                    b.HasIndex("Action", "CreatedAt")
+                        .HasDatabaseName("ix_device_group_audit_logs_action_created");
+
+                    b.HasIndex("DeviceGroupId", "CreatedAt")
+                        .HasDatabaseName("ix_device_group_audit_logs_group_created");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_device_group_audit_logs_user_created");
+
+                    b.ToTable("device_group_audit_logs", (string)null);
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceRegistrationRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -511,6 +606,11 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)");
 
+                    b.Property<Guid>("RegistrationId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasDefaultValueSql("gen_random_uuid()");
+
                     b.Property<string>("RequestedUserDisplayName")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
@@ -553,6 +653,9 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("Method");
 
                     b.HasIndex("Pin");
+
+                    b.HasIndex("RegistrationId")
+                        .IsUnique();
 
                     b.HasIndex("RequestedUsername")
                         .HasDatabaseName("IX_DeviceRegistrationRequests_RequestedUsername");
@@ -2552,6 +2655,27 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Navigation("CreatedByUser");
 
                     b.Navigation("ParentGroup");
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceGroupAuditLog", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.DeviceGroup", "DeviceGroup")
+                        .WithMany()
+                        .HasForeignKey("DeviceGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_group_audit_logs_device_group_id");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_group_audit_logs_user_id");
+
+                    b.Navigation("DeviceGroup");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceRegistrationRequest", b =>
