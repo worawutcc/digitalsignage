@@ -3,6 +3,7 @@
  * Following copilot-instructions-ui.instructions.md patterns with React Query
  */
 
+import { useState, useEffect } from 'react'
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import { deviceGroupKeys } from '@/hooks/keys/deviceGroupKeys'
 import { deviceGroupService } from '@/services/deviceGroupService'
@@ -207,7 +208,7 @@ export function useDeviceGroupStatistics(
 }
 
 /**
- * Hook for validating device group name uniqueness
+ * Hook for validating device group name uniqueness with debounce
  */
 export function useDeviceGroupNameValidation(
   name: string,
@@ -217,12 +218,24 @@ export function useDeviceGroupNameValidation(
     enabled?: boolean
     staleTime?: number
     cacheTime?: number
+    debounceMs?: number
   }
 ) {
+  const [debouncedName, setDebouncedName] = useState(name)
+  
+  // Debounce the name input to avoid excessive API calls
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedName(name)
+    }, options?.debounceMs ?? 500) // Default 500ms debounce
+    
+    return () => clearTimeout(timer)
+  }, [name, options?.debounceMs])
+  
   return useQuery({
-    queryKey: deviceGroupKeys.nameUnique(name, parentId),
-    queryFn: () => deviceGroupService.validateNameUnique(name, parentId, excludeId),
-    enabled: (options?.enabled ?? true) && !!name.trim(),
+    queryKey: deviceGroupKeys.nameUnique(debouncedName, parentId),
+    queryFn: () => deviceGroupService.validateNameUnique(debouncedName, parentId, excludeId),
+    enabled: (options?.enabled ?? true) && !!debouncedName.trim() && debouncedName.length >= 2,
     staleTime: options?.staleTime ?? 60000, // 1 minute
     cacheTime: options?.cacheTime ?? 300000, // 5 minutes
     refetchOnWindowFocus: false,

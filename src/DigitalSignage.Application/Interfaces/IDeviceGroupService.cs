@@ -39,6 +39,7 @@ public interface IDeviceGroupService
     Task<int> GetDescendantCountAsync(int groupId);
     Task<bool> HasChildrenAsync(int groupId);
     Task<bool> HasDevicesAsync(int groupId);
+    Task<bool> IsNameUniqueAsync(string name, int? parentId = null, int? excludeId = null);
 
     // Batch operations
     Task<IEnumerable<DeviceGroupDto>> GetMultipleAsync(IEnumerable<int> ids);

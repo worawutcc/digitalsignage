@@ -16,6 +16,7 @@ public class S3FileUploadService : IFileUploadService
     {
         _s3Client = s3Client;
         _s3Settings = s3Settings.Value;
+        // RegionEndpoint must be set when constructing the IAmazonS3 client, not here.
     }
 
     public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType)

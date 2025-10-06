@@ -136,7 +136,20 @@ export class MediaApi {
     )
 
     // Step 2: Upload file directly to S3 using presigned URL
-    await this.uploadToS3(uploadUrlResponse.uploadUrl, request.file)
+    // If this fails (CORS or network), fall back to server-side upload (legacy)
+    try {
+      await this.uploadToS3(uploadUrlResponse.uploadUrl, request.file)
+    } catch (err) {
+      // Log and fallback to server upload
+      // Note: Browser CORS errors surface as network errors — fallback is required when S3/CloudFront CORS isn't configured.
+      // Use the legacy server-side multipart upload as a reliable fallback.
+      // eslint-disable-next-line no-console
+      console.warn('Presigned S3 upload failed, falling back to server upload:', err)
+
+      // Use uploadLegacy which posts the file to the API server and returns created Media
+      const legacyResult = await this.uploadLegacy(request)
+      return legacyResult
+    }
 
     // Step 3: Update media metadata if provided
     if (request.name || request.durationSeconds !== undefined) {
@@ -200,13 +213,36 @@ export class MediaApi {
    * Upload file directly to S3 using presigned URL
    */
   async uploadToS3(presignedUrl: string, file: File): Promise<void> {
-    await fetch(presignedUrl, {
+    // eslint-disable-next-line no-console
+    console.log('[MediaApi] Uploading to S3:', {
+      url: presignedUrl.substring(0, 100) + '...',
+      fileName: file.name,
+      fileSize: file.size,
+      contentType: file.type
+    })
+
+    const res = await fetch(presignedUrl, {
       method: 'PUT',
       body: file,
       headers: {
         'Content-Type': file.type,
       },
     })
+
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      // eslint-disable-next-line no-console
+      console.error('[MediaApi] S3 upload failed:', {
+        status: res.status,
+        statusText: res.statusText,
+        body,
+        headers: Object.fromEntries(res.headers.entries())
+      })
+      throw new Error(`S3 upload failed with status ${res.status}: ${body}`)
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('[MediaApi] S3 upload successful')
   }
 
   /**

@@ -70,7 +70,8 @@ public class DeviceGroupService : IDeviceGroupService
         var group = new DeviceGroup
         {
             Name = request.Name,
-            Description = request.Description,
+            // Ensure Description is never null when saving to DB; default to empty string
+            Description = request.Description ?? string.Empty,
             ParentGroupId = request.ParentGroupId,
             CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
@@ -89,8 +90,17 @@ public class DeviceGroupService : IDeviceGroupService
 
         _logger.LogInformation("Updating device group with ID: {Id}", id);
 
-        group.Name = request.Name;
-        group.Description = request.Description;
+        // Only overwrite fields that are provided in the request (support partial updates)
+        if (request.Name != null)
+        {
+            group.Name = request.Name;
+        }
+
+        // Preserve existing description when the request omits it (null) to avoid violating NOT NULL constraint
+        if (request.Description != null)
+        {
+            group.Description = request.Description;
+        }
         group.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);        var updatedGroup = await _repository.UpdateAsync(group);
         return MapToDto(updatedGroup);
     }
@@ -298,6 +308,25 @@ public class DeviceGroupService : IDeviceGroupService
     {
         var group = await _repository.GetByIdAsync(groupId);
         return group?.Devices?.Any() ?? false;
+    }
+
+    public async Task<bool> IsNameUniqueAsync(string name, int? parentId = null, int? excludeId = null)
+    {
+        var allGroups = await _repository.GetAllAsync();
+        
+        // Filter by parent ID if provided
+        var siblings = parentId.HasValue
+            ? allGroups.Where(g => g.ParentGroupId == parentId.Value)
+            : allGroups.Where(g => g.ParentGroupId == null);
+        
+        // Exclude the current group if updating
+        if (excludeId.HasValue)
+        {
+            siblings = siblings.Where(g => g.Id != excludeId.Value);
+        }
+        
+        // Check if name exists (case-insensitive)
+        return !siblings.Any(g => g.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
     // Batch operations

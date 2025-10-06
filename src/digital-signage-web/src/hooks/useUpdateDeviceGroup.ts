@@ -13,7 +13,7 @@ import type {
 } from '@/types/deviceGroup.types'
 
 interface UseUpdateDeviceGroupOptions {
-  onSuccess?: (data: DeviceGroupResponse) => void
+  onSuccess?: (data: DeviceGroup) => void
   onError?: (error: Error) => void
   onSettled?: () => void
   enableOptimisticUpdate?: boolean
@@ -53,12 +53,7 @@ export function useUpdateDeviceGroup(
 
       console.log('Device group updated successfully:', updatedGroup.name)
       
-      // Create response object for callback
-      const response: DeviceGroupResponse = {
-        success: true,
-        data: updatedGroup
-      }
-      options?.onSuccess?.(response)
+      options?.onSuccess?.(updatedGroup)
     },
 
     onError: (error: Error) => {
@@ -135,12 +130,7 @@ export function useMoveDeviceGroup(
 
       console.log('Device group moved successfully:', updatedGroup.name)
       
-      // Create response object for callback
-      const response: DeviceGroupResponse = {
-        success: true,
-        data: updatedGroup
-      }
-      options?.onSuccess?.(response)
+      options?.onSuccess?.(updatedGroup)
     },
 
     onError: (error: Error) => {

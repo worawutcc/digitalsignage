@@ -38,27 +38,31 @@ export function DeviceGroupForm({
   mode = group ? 'edit' : 'create'
 }: DeviceGroupFormProps) {
   // React Query hooks
-  const { data: availableParents = [] } = useDeviceGroups({}, { staleTime: 60000 });
+  const { 
+    data: availableParents = [], 
+    isLoading: isLoadingParents,
+    error: parentsError 
+  } = useDeviceGroups({}, { staleTime: 60000 });
+  
+  // availableParents loaded via useDeviceGroups
   
   const createMutation = useCreateDeviceGroup({
-    onSuccess: (response) => {
-      if (response.data) {
-        onSubmit?.(response.data);
-      }
+    onSuccess: (data) => {
+      console.log('✅ Create success callback triggered');
+      onSubmit?.(data);
     },
     onError: (error) => {
-      console.error('Create error:', error);
+      console.error('❌ Create error:', error);
     },
   });
 
   const updateMutation = useUpdateDeviceGroup({
-    onSuccess: (response) => {
-      if (response.data) {
-        onSubmit?.(response.data);
-      }
+    onSuccess: (data) => {
+      console.log('✅ Update success callback triggered');
+      onSubmit?.(data);
     },
     onError: (error) => {
-      console.error('Update error:', error);
+      console.error('❌ Update error:', error);
     },
   });
 
@@ -104,7 +108,15 @@ export function DeviceGroupForm({
   }, [group, parentGroup, setValue]);
 
   const onFormSubmit = async (data: DeviceGroupFormData) => {
+    // Prevent duplicate submissions
+    if (createMutation.isPending || updateMutation.isPending) {
+      console.warn('⚠️ Submission already in progress, ignoring duplicate request');
+      return;
+    }
+
     try {
+      console.log('📤 Form submit started', { mode, data });
+      
       if (mode === 'edit' && group) {
         const updateData: UpdateDeviceGroupRequest = {
           name: data.name,
@@ -130,11 +142,11 @@ export function DeviceGroupForm({
       }
     } catch (error) {
       // Error is handled by mutation error callbacks
-      console.error('Form submission error:', error);
+      console.error('❌ Form submission error:', error);
     }
   };
 
-  const isLoading = isSubmitting || createMutation.isLoading || updateMutation.isLoading;
+  const isLoading = isSubmitting || createMutation.isPending || updateMutation.isPending;
   const isEditing = mode === 'edit';
   const title = isEditing 
     ? `Edit "${group?.name}"` 
@@ -142,12 +154,28 @@ export function DeviceGroupForm({
       ? `Add Subgroup to "${parentGroup.name}"` 
       : 'Create New Group';
 
+  // Flatten tree structure to get all groups
+  const flattenGroups = (groups: DeviceGroup[]): DeviceGroup[] => {
+    return groups.reduce((acc: DeviceGroup[], group) => {
+      acc.push(group);
+      if (group.children && group.children.length > 0) {
+        acc.push(...flattenGroups(group.children));
+      }
+      return acc;
+    }, []);
+  };
+  
+  const allGroups = flattenGroups(availableParents);
+  console.log('📦 All Groups (flattened):', allGroups.length, allGroups);
+  
   // Filter available parents to exclude current group and its descendants
-  const filteredParents = availableParents.filter(parent => {
+  const filteredParents = allGroups.filter(parent => {
     if (group && parent.id === group.id) return false;
     if (group && parent.path?.startsWith(group.path + '/')) return false;
     return true;
   });
+  
+  console.log('✂️ Filtered Parents:', filteredParents.length, filteredParents);
 
   return (
     <div className="p-6">
@@ -243,11 +271,15 @@ export function DeviceGroupForm({
               disabled={isLoading}
             >
               <option value="">None (Root Group)</option>
-              {filteredParents.map((parent) => (
-                <option key={parent.id} value={parent.id}>
-                  {parent.path}
-                </option>
-              ))}
+              {filteredParents.map((parent) => {
+                const displayText = parent.path || parent.name || `Group ${parent.id}`;
+                console.log(`🏷️ Parent ${parent.id}: path="${parent.path}", name="${parent.name}", display="${displayText}"`);
+                return (
+                  <option key={parent.id} value={parent.id}>
+                    {displayText}
+                  </option>
+                );
+              })}
             </select>
             <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
               Select a parent group to create this as a subgroup, or leave empty for a root-level group.

@@ -69,14 +69,33 @@ public static class DatabaseServiceExtensions
         var awsAccessKey = configuration["AWS:AccessKey"];
         var awsSecretKey = configuration["AWS:SecretKey"];
         var awsRegion = configuration["AWS:S3:Region"];
+        var bucketName = configuration["AWS:S3:BucketName"];
         
-        if (!string.IsNullOrEmpty(awsAccessKey) && !string.IsNullOrEmpty(awsSecretKey))
+        if (!string.IsNullOrEmpty(awsAccessKey) && !string.IsNullOrEmpty(awsSecretKey) && !string.IsNullOrEmpty(awsRegion))
         {
-            services.AddSingleton<Amazon.Runtime.AWSCredentials>(
-                new Amazon.Runtime.BasicAWSCredentials(awsAccessKey, awsSecretKey));
+            // Create AWS credentials
+            var credentials = new Amazon.Runtime.BasicAWSCredentials(awsAccessKey, awsSecretKey);
+            
+            // Create S3 config with custom region and service URL
+            var s3Config = new Amazon.S3.AmazonS3Config
+            {
+                // For custom/local zones, use direct service URL instead of RegionEndpoint
+                ServiceURL = $"https://s3.{awsRegion}.amazonaws.com",
+                // Use virtual-hosted-style addressing (bucketname.s3.region.amazonaws.com)
+                ForcePathStyle = false,
+                // Enable HTTPS
+                UseHttp = false
+            };
+            
+            // Register S3 client with custom config
+            services.AddSingleton<IAmazonS3>(sp => 
+                new Amazon.S3.AmazonS3Client(credentials, s3Config));
         }
-        
-        services.AddAWSService<IAmazonS3>();
+        else
+        {
+            // Fallback to default AWS SDK configuration
+            services.AddAWSService<IAmazonS3>();
+        }
         
         services.AddScoped<IFileUploadService, S3FileUploadService>();
 

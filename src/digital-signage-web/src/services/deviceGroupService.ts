@@ -20,24 +20,24 @@ import type {
  * Handles all HTTP communications with the backend API
  */
 export class DeviceGroupService {
-  private readonly baseUrl = '/device-groups'
+  // The backend controller is routed at api/devicegroup (singular) in the API project
+  private readonly baseUrl = '/api/devicegroup'
 
   /**
    * Get all device groups with optional filtering and sorting
    */
   async getAll(params?: DeviceGroupSearchParams): Promise<DeviceGroup[]> {
     try {
-      const response = await apiClient.get<DeviceGroupListResponse>(this.baseUrl, {
+  // API request: GET /api/devicegroup
+      // Backend returns DeviceGroup[] directly, not wrapped in { success, data }
+      const response = await apiClient.get<DeviceGroup[]>(this.baseUrl, {
         params: this.sanitizeParams(params),
       })
 
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to fetch device groups')
-      }
-
-      return response.data.data
+  // API response returned
+      return response.data
     } catch (error) {
-      console.error('Error fetching device groups:', error)
+      console.error('❌ Error fetching device groups:', error)
       throw this.handleError(error, 'Failed to fetch device groups')
     }
   }
@@ -47,13 +47,9 @@ export class DeviceGroupService {
    */
   async getById(id: number): Promise<DeviceGroup> {
     try {
-      const response = await apiClient.get<DeviceGroupResponse>(`${this.baseUrl}/${id}`)
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Device group not found')
-      }
-
-      return response.data.data
+      // Backend returns DeviceGroup directly
+      const response = await apiClient.get<DeviceGroup>(`${this.baseUrl}/${id}`)
+      return response.data
     } catch (error) {
       console.error(`Error fetching device group ${id}:`, error)
       throw this.handleError(error, 'Failed to fetch device group')
@@ -63,17 +59,13 @@ export class DeviceGroupService {
   /**
    * Get hierarchical tree structure of all device groups
    */
-  async getTree(params?: DeviceGroupSearchParams): Promise<DeviceGroupTree> {
+  async getTree(params?: DeviceGroupSearchParams): Promise<DeviceGroup[]> {
     try {
-      const response = await apiClient.get<DeviceGroupTreeResponse>(`${this.baseUrl}/tree`, {
+      // Backend returns DeviceGroup[] as tree structure
+      const response = await apiClient.get<DeviceGroup[]>(`${this.baseUrl}/tree`, {
         params: this.sanitizeParams(params),
       })
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to fetch device groups tree')
-      }
-
-      return response.data.data
+      return response.data
     } catch (error) {
       console.error('Error fetching device groups tree:', error)
       throw this.handleError(error, 'Failed to fetch device groups tree')
@@ -90,15 +82,11 @@ export class DeviceGroupService {
         ...params,
       }
 
-      const response = await apiClient.get<DeviceGroupListResponse>(`${this.baseUrl}/search`, {
+      // Backend returns DeviceGroup[] directly
+      const response = await apiClient.get<DeviceGroup[]>(`${this.baseUrl}/search`, {
         params: this.sanitizeParams(searchParams),
       })
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to search device groups')
-      }
-
-      return response.data.data
+      return response.data
     } catch (error) {
       console.error('Error searching device groups:', error)
       throw this.handleError(error, 'Failed to search device groups')
@@ -110,13 +98,9 @@ export class DeviceGroupService {
    */
   async create(data: CreateDeviceGroupRequest): Promise<DeviceGroup> {
     try {
-      const response = await apiClient.post<DeviceGroupResponse>(this.baseUrl, data)
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to create device group')
-      }
-
-      return response.data.data
+      // Backend returns DeviceGroup directly
+      const response = await apiClient.post<DeviceGroup>(this.baseUrl, data)
+      return response.data
     } catch (error) {
       console.error('Error creating device group:', error)
       throw this.handleError(error, 'Failed to create device group')
@@ -128,13 +112,9 @@ export class DeviceGroupService {
    */
   async update(id: number, data: UpdateDeviceGroupRequest): Promise<DeviceGroup> {
     try {
-      const response = await apiClient.put<DeviceGroupResponse>(`${this.baseUrl}/${id}`, data)
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to update device group')
-      }
-
-      return response.data.data
+      // Backend returns DeviceGroup directly
+      const response = await apiClient.put<DeviceGroup>(`${this.baseUrl}/${id}`, data)
+      return response.data
     } catch (error) {
       console.error(`Error updating device group ${id}:`, error)
       throw this.handleError(error, 'Failed to update device group')
@@ -162,13 +142,9 @@ export class DeviceGroupService {
    */
   async getAncestors(id: number): Promise<DeviceGroup[]> {
     try {
-      const response = await apiClient.get<DeviceGroupListResponse>(`${this.baseUrl}/${id}/ancestors`)
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to fetch ancestors')
-      }
-
-      return response.data.data
+      // Backend returns DeviceGroup[] directly
+      const response = await apiClient.get<DeviceGroup[]>(`${this.baseUrl}/${id}/ancestors`)
+      return response.data
     } catch (error) {
       console.error(`Error fetching ancestors for group ${id}:`, error)
       throw this.handleError(error, 'Failed to fetch ancestors')
@@ -180,13 +156,9 @@ export class DeviceGroupService {
    */
   async getDescendants(id: number): Promise<DeviceGroup[]> {
     try {
-      const response = await apiClient.get<DeviceGroupListResponse>(`${this.baseUrl}/${id}/descendants`)
-
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to fetch descendants')
-      }
-
-      return response.data.data
+      // Backend returns DeviceGroup[] directly
+      const response = await apiClient.get<DeviceGroup[]>(`${this.baseUrl}/${id}/descendants`)
+      return response.data
     } catch (error) {
       console.error(`Error fetching descendants for group ${id}:`, error)
       throw this.handleError(error, 'Failed to fetch descendants')
@@ -204,14 +176,11 @@ export class DeviceGroupService {
         excludeId,
       }
 
-      const response = await apiClient.get<{ success: boolean; isUnique: boolean; error?: string }>(
+      // Backend returns { isUnique: boolean } directly
+      const response = await apiClient.get<{ isUnique: boolean }>(
         `${this.baseUrl}/validate/name-unique`,
         { params: this.sanitizeParams(params) }
       )
-
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to validate name uniqueness')
-      }
 
       return response.data.isUnique
     } catch (error) {

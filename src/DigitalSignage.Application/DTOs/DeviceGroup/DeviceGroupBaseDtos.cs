@@ -105,7 +105,7 @@ public class UpdateDeviceGroupRequest
     /// <summary>
     /// Updated display name
     /// </summary>
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
     
     /// <summary>
     /// Updated description

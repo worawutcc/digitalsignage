@@ -13,7 +13,7 @@ import type {
 } from '@/types/deviceGroup.types'
 
 interface UseCreateDeviceGroupOptions {
-  onSuccess?: (data: DeviceGroupResponse) => void
+  onSuccess?: (data: DeviceGroup) => void
   onError?: (error: Error) => void
   onSettled?: () => void
   enableOptimisticUpdate?: boolean
@@ -24,7 +24,7 @@ interface UseCreateDeviceGroupOptions {
  */
 export function useCreateDeviceGroup(
   options?: UseCreateDeviceGroupOptions
-): UseMutationResult<DeviceGroupResponse, Error, CreateDeviceGroupRequest> {
+): UseMutationResult<DeviceGroup, Error, CreateDeviceGroupRequest> {
   const queryClient = useQueryClient()
 
   return (useMutation as any)({
@@ -124,44 +124,42 @@ export function useCreateDeviceGroup(
       options?.onError?.(err)
     },
 
-    onSuccess: (data: DeviceGroupResponse, variables: CreateDeviceGroupRequest) => {
+    onSuccess: (data: DeviceGroup, variables: CreateDeviceGroupRequest) => {
       // Update the cache with the real data from the server
-      if (!data.data) return
-      
       queryClient.setQueryData<DeviceGroup[]>(
         deviceGroupKeys.list(),
         old => {
-          if (!old) return [data.data!]
+          if (!old) return [data]
           
           // Replace optimistic update with real data
           const optimisticIndex = old.findIndex(item => item.id === Date.now())
           if (optimisticIndex >= 0) {
             const newList = [...old]
-            newList[optimisticIndex] = data.data!
+            newList[optimisticIndex] = data
             return newList
           }
           
           // Add if not found (fallback)
-          return [...old, data.data!]
+          return [...old, data]
         }
       )
 
       // Update individual cache entry
       queryClient.setQueryData(
-        deviceGroupKeys.detail(data.data.id),
-        data.data
+        deviceGroupKeys.detail(data.id),
+        data
       )
 
       // Update parent's data with real information
-      if (variables.parentGroupId && data.data) {
+      if (variables.parentGroupId && data) {
         queryClient.setQueryData<DeviceGroup>(
           deviceGroupKeys.detail(variables.parentGroupId),
           old => {
             if (!old) return old
             
             const updatedChildren = old.children?.map(child => 
-              child.id === Date.now() ? data.data! : child
-            ).filter((child): child is DeviceGroup => Boolean(child)) || [data.data]
+              child.id === Date.now() ? data : child
+            ).filter((child): child is DeviceGroup => Boolean(child)) || [data]
             
             return {
               ...old,
@@ -172,7 +170,7 @@ export function useCreateDeviceGroup(
         )
       }
 
-      console.log('Device group created successfully:', data.data.name)
+      console.log('Device group created successfully:', data.name)
       options?.onSuccess?.(data)
     },
 
@@ -271,18 +269,16 @@ export function useCreateDeviceGroupWithValidation(
       return deviceGroupService.create(data)
     },
 
-    onSuccess: (data: DeviceGroupResponse, variables: CreateDeviceGroupRequest) => {
-      if (!data.data) return
-
+    onSuccess: (data: DeviceGroup, variables: CreateDeviceGroupRequest) => {
       // Update cache
       queryClient.setQueryData<DeviceGroup[]>(
         deviceGroupKeys.list(),
-        old => old ? [...old, data.data!] : [data.data!]
+        old => old ? [...old, data] : [data]
       )
 
       queryClient.setQueryData(
-        deviceGroupKeys.detail(data.data.id),
-        data.data
+        deviceGroupKeys.detail(data.id),
+        data
       )
 
       // Invalidate related queries
@@ -294,7 +290,7 @@ export function useCreateDeviceGroupWithValidation(
         queryKey: deviceGroupKeys.nameUnique(variables.name, variables.parentGroupId)
       })
 
-      console.log('Device group created with validation:', data.data.name)
+      console.log('Device group created with validation:', data.name)
       options?.onSuccess?.(data)
     },
 

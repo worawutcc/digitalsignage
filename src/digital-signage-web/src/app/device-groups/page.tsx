@@ -29,10 +29,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { DeviceGroupForm } from '@/components/forms/DeviceGroupForm';
-import type { DeviceGroupFormData } from '@/lib/validations/deviceGroup.schema';
 import type { DeviceGroup } from '@/types/deviceGroup.types';
-import { useDeviceGroups } from '@/hooks/useDeviceGroups';
-import { useCreateDeviceGroup } from '@/hooks/useCreateDeviceGroup';
+import { useDeviceGroups, useDeviceGroupsTree } from '@/hooks/useDeviceGroups';
 import { useUpdateDeviceGroup } from '@/hooks/useUpdateDeviceGroup';
 import { useDeleteDeviceGroup } from '@/hooks/useDeleteDeviceGroup';
 
@@ -56,7 +54,11 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove
   const [showActions, setShowActions] = useState(false);
   
   const deviceCount = group.deviceCount || 0;
-  const childCount = group.childGroupCount || 0;
+  // Prefer using actual children length for UI toggles (tree endpoint provides children)
+  const childrenArray = group.children ?? [];
+  const childCount = childrenArray.length || group.childGroupCount || 0;
+  
+  // grouping info for accessibility
 
   // DnD Kit sortable functionality
   const {
@@ -104,18 +106,22 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove
           <GripVertical className="h-4 w-4 text-gray-400" />
         </button>
 
-        {/* Expand/Collapse Button */}
-        <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded mr-2"
-          disabled={childCount === 0}
+        {/* Expand/Collapse Button - make clickable area larger by wrapping icon + label area */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => childCount > 0 && setIsExpanded(prev => !prev)}
+          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && childCount > 0) setIsExpanded(prev => !prev) }}
+          className={`flex items-center mr-2 cursor-pointer select-none ${childCount === 0 ? 'cursor-default opacity-60' : ''}`}
+          aria-expanded={isExpanded}
+          aria-disabled={childCount === 0}
         >
           {childCount > 0 ? (
-            isExpanded ? <FolderOpen className="h-4 w-4 text-blue-600" /> : <Folder className="h-4 w-4 text-blue-600" />
+            isExpanded ? <FolderOpen className="h-4 w-4 text-blue-600 mr-2" /> : <Folder className="h-4 w-4 text-blue-600 mr-2" />
           ) : (
-            <Folder className="h-4 w-4 text-gray-400" />
+            <Folder className="h-4 w-4 text-gray-400 mr-2" />
           )}
-        </button>
+        </div>
 
         {/* Group Info */}
         <div className="flex-1">
@@ -182,12 +188,12 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove
       </div>
 
       {/* Child Groups */}
-      {isExpanded && group.children && group.children.length > 0 && (
+      {isExpanded && childrenArray.length > 0 && (
         <SortableContext 
-          items={group.children.map(child => child.id)} 
+          items={childrenArray.map(child => child.id)} 
           strategy={verticalListSortingStrategy}
         >
-          {group.children.map((childGroup) => (
+          {childrenArray.map((childGroup) => (
             <DeviceGroupNode
               key={childGroup.id}
               group={childGroup}
@@ -215,18 +221,20 @@ export default function DeviceGroupsPage() {
   const [editingGroup, setEditingGroup] = useState<DeviceGroup | null>(null);
   const [parentGroup, setParentGroup] = useState<DeviceGroup | null>(null);
   
-  // Use React Query hook for device groups data
+  // Use React Query hook for device groups tree data (with populated children)
   const { 
     data: deviceGroups = [], 
     isLoading, 
     error, 
     refetch 
-  } = useDeviceGroups();
+  } = useDeviceGroupsTree();
+  
+  // Debug: Log tree structure
+  console.log('🌳 Device Groups Tree:', deviceGroups.length, deviceGroups);
 
-  // React Query mutations for CRUD operations
-  const createDeviceGroupMutation = useCreateDeviceGroup({ enableOptimisticUpdate: true });
-  const updateDeviceGroupMutation = useUpdateDeviceGroup({ enableOptimisticUpdate: true });
+  // React Query mutation for delete operation only (create/update handled in form)
   const deleteDeviceGroupMutation = useDeleteDeviceGroup({ enableOptimisticUpdate: true });
+  const updateDeviceGroupMutation = useUpdateDeviceGroup({ enableOptimisticUpdate: true }); // For drag & drop only
 
   // DnD sensors
   const sensors = useSensors(
@@ -286,44 +294,13 @@ export default function DeviceGroupsPage() {
     });
   };
 
-  const handleFormSubmit = (data: DeviceGroupFormData) => {
-    // Transform form data to API request format
-    const requestData = {
-      name: data.name,
-      ...(data.description && { description: data.description }),
-      ...(data.parentGroupId && { parentGroupId: data.parentGroupId }),
-    };
-
-    if (editingGroup) {
-      // Update existing group
-      updateDeviceGroupMutation.mutate(
-        { id: editingGroup.id, data: requestData as any },
-        {
-          onSuccess: () => {
-            setShowEditModal(false);
-            setEditingGroup(null);
-            setParentGroup(null);
-          },
-          onError: (error) => {
-            console.error('Failed to update device group:', error);
-            alert(`Failed to update device group: ${error instanceof Error ? error.message : 'Unknown error'}`);
-          },
-        }
-      );
-    } else {
-      // Create new group
-      createDeviceGroupMutation.mutate(requestData as any, {
-        onSuccess: () => {
-          setShowCreateModal(false);
-          setParentGroup(null);
-          console.log('Device group created successfully');
-        },
-        onError: (error) => {
-          console.error('Failed to create device group:', error);
-          alert(`Failed to create device group: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        },
-      });
-    }
+  const handleFormSubmit = (result: DeviceGroup) => {
+    // Form already handled the mutation, just close modal
+    console.log('Device group operation completed:', result);
+    setShowCreateModal(false);
+    setShowEditModal(false);
+    setEditingGroup(null);
+    setParentGroup(null);
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -407,7 +384,7 @@ export default function DeviceGroupsPage() {
           <Button
             onClick={handleCreateGroup}
             className="flex items-center space-x-2"
-            disabled={createDeviceGroupMutation.isPending || updateDeviceGroupMutation.isPending || deleteDeviceGroupMutation.isPending}
+            disabled={updateDeviceGroupMutation.isPending || deleteDeviceGroupMutation.isPending}
           >
             <Plus className="h-4 w-4" />
             <span>Create Group</span>
@@ -415,12 +392,11 @@ export default function DeviceGroupsPage() {
         </div>
 
         {/* Operation Status */}
-        {(createDeviceGroupMutation.isPending || updateDeviceGroupMutation.isPending || deleteDeviceGroupMutation.isPending) && (
+        {(updateDeviceGroupMutation.isPending || deleteDeviceGroupMutation.isPending) && (
           <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
             <div className="flex items-center space-x-2">
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
               <span className="text-sm text-blue-800 dark:text-blue-200">
-                {createDeviceGroupMutation.isPending && 'Creating device group...'}
                 {updateDeviceGroupMutation.isPending && 'Updating device group...'}
                 {deleteDeviceGroupMutation.isPending && 'Deleting device group...'}
               </span>
