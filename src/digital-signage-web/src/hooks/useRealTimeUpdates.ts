@@ -11,6 +11,8 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { useToast } from './useToast'
+import { HubConnectionBuilder, HubConnection, HubConnectionState } from '@microsoft/signalr'
+import { TOKEN_STORAGE_KEY } from '@/lib/auth'
 
 export interface UseRealTimeUpdatesOptions {
   /** Enable automatic connection on mount */
@@ -124,7 +126,7 @@ export interface RealTimeConnectionState {
  */
 export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
   const {
-    autoConnect = false,
+    autoConnect = true, // Re-enabled with SignalR Hub
     reconnect = {
       enabled: true,
       maxAttempts: 5,
@@ -149,8 +151,8 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
   const { toast } = useToast()
   const queryClient = useQueryClient()
   
-  // WebSocket connection reference
-  const wsRef = useRef<WebSocket | null>(null)
+  // SignalR connection reference
+  const connectionRef = useRef<HubConnection | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const subscriptionsRef = useRef<Set<string>>(new Set())
 
@@ -167,17 +169,17 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
   const [events, setEvents] = useState<RealTimeEvent[]>([])
   const [eventSubscriptions, setEventSubscriptions] = useState<Map<string, (event: RealTimeEvent) => void>>(new Map())
 
-  // Get WebSocket URL (in real implementation, this would come from config)
-  const getWebSocketUrl = useCallback(() => {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-    const host = window.location.host
-    return `${protocol}//${host}/api/ws/real-time`
+  // Get SignalR Hub URL
+  const getHubUrl = useCallback(() => {
+    const protocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
+    const host = window.location.host.replace(':3001', ':5100') // Use API port
+    return `${protocol}//${host}/ws` // SignalR Hub endpoint
   }, [])
 
-  // Handle incoming WebSocket messages
-  const handleMessage = useCallback((event: MessageEvent) => {
+  // Handle incoming SignalR messages
+  const handleMessage = useCallback((eventData: any) => {
     try {
-      const realTimeEvent: RealTimeEvent = JSON.parse(event.data)
+      const realTimeEvent: RealTimeEvent = eventData
       
       console.log('Real-time event received:', realTimeEvent)
       
@@ -248,13 +250,13 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
       }
       
     } catch (error) {
-      console.error('Error parsing WebSocket message:', error)
+      console.error('Error processing SignalR message:', error)
     }
   }, [queryClient, eventSubscriptions, notifications, toast])
 
-  // Handle WebSocket connection open
-  const handleOpen = useCallback(() => {
-    console.log('WebSocket connection established')
+  // Handle SignalR connection start
+  const handleConnectionStart = useCallback(async () => {
+    console.log('SignalR connection established')
     
     setConnectionState(prev => ({
       ...prev,
@@ -266,35 +268,36 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
       error: null
     }))
 
-    // Send subscription message
-    if (wsRef.current) {
-      const subscriptionMessage = {
-        action: 'subscribe',
-        subscriptions: Object.entries(subscriptions)
-          .filter(([, enabled]) => enabled)
-          .map(([type]) => type),
-        filters: entityFilters
+    // Send subscription message to Hub
+    if (connectionRef.current && connectionRef.current.state === HubConnectionState.Connected) {
+      try {
+        await connectionRef.current.invoke('Subscribe', {
+          subscriptions: Object.entries(subscriptions)
+            .filter(([, enabled]) => enabled)
+            .map(([type]) => type),
+          filters: entityFilters
+        })
+        console.log('Subscriptions sent to SignalR Hub')
+      } catch (error) {
+        console.error('Error sending subscriptions:', error)
       }
-      
-      wsRef.current.send(JSON.stringify(subscriptionMessage))
     }
   }, [subscriptions, entityFilters])
 
-  // Handle WebSocket connection close
-  const handleClose = useCallback((event: CloseEvent) => {
-    console.log('WebSocket connection closed:', event.code, event.reason)
+  // Handle SignalR connection close
+  const handleConnectionClose = useCallback((error?: Error) => {
+    console.log('SignalR connection closed:', error?.message || 'Connection closed')
     
     setConnectionState(prev => ({
       ...prev,
       isConnected: false,
       isConnecting: false,
-      error: event.reason || 'Connection closed'
+      error: error?.message || 'Connection closed'
     }))
 
     // Attempt reconnection if enabled
     if (reconnect.enabled && 
-        connectionState.connectionAttempts < reconnect.maxAttempts &&
-        !event.wasClean) {
+        connectionState.connectionAttempts < reconnect.maxAttempts) {
       
       const delay = reconnect.delay * Math.pow(reconnect.backoffMultiplier, connectionState.connectionAttempts)
       
@@ -306,26 +309,27 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
         connectionAttempts: prev.connectionAttempts + 1
       }))
       
-      reconnectTimeoutRef.current = setTimeout(() => {
-        connect()
+      reconnectTimeoutRef.current = setTimeout(async () => {
+        await connect()
       }, delay)
     }
   }, [reconnect, connectionState.connectionAttempts])
 
-  // Handle WebSocket errors
-  const handleError = useCallback((error: Event) => {
-    console.error('WebSocket error:', error)
+  // Handle SignalR connection errors
+  const handleConnectionError = useCallback((error: Error) => {
+    console.error('SignalR connection error:', error)
     
     setConnectionState(prev => ({
       ...prev,
-      error: 'Connection error occurred'
+      error: error?.message || 'Connection error occurred'
     }))
   }, [])
 
-  // Connect to WebSocket
-  const connect = useCallback(() => {
-    if (wsRef.current?.readyState === WebSocket.CONNECTING || 
-        wsRef.current?.readyState === WebSocket.OPEN) {
+  // Connect to SignalR Hub
+  const connect = useCallback(async () => {
+    if (connectionRef.current && 
+        (connectionRef.current.state === HubConnectionState.Connecting || 
+         connectionRef.current.state === HubConnectionState.Connected)) {
       return
     }
 
@@ -336,36 +340,72 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
         error: null
       }))
 
-      const wsUrl = getWebSocketUrl()
-      console.log('Connecting to WebSocket:', wsUrl)
+      const hubUrl = getHubUrl()
+      console.log('Connecting to SignalR Hub:', hubUrl)
       
-      wsRef.current = new WebSocket(wsUrl)
-      wsRef.current.onopen = handleOpen
-      wsRef.current.onmessage = handleMessage
-      wsRef.current.onclose = handleClose
-      wsRef.current.onerror = handleError
+      // Create new SignalR connection with correct authentication
+      const token = localStorage.getItem(TOKEN_STORAGE_KEY) || 
+                   sessionStorage.getItem(TOKEN_STORAGE_KEY) ||
+                   localStorage.getItem('auth_token') // Legacy fallback
+      
+      const connectionOptions = token ? {
+        accessTokenFactory: () => token,
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      } : {}
+      
+      connectionRef.current = new HubConnectionBuilder()
+        .withUrl(hubUrl, {
+          ...connectionOptions,
+          transport: 1 | 2 | 4, // WebSockets, ServerSentEvents, LongPolling
+          skipNegotiation: false,
+          logMessageContent: true
+        })
+        .configureLogging('Information')
+        .build()
+
+      // Set event handlers - match server event names
+      connectionRef.current.on('ReceiveEvent', handleMessage)
+      connectionRef.current.on('ReceiveMessage', handleMessage) // Keep legacy support
+      connectionRef.current.onclose(handleConnectionClose)
+      connectionRef.current.onreconnected(handleConnectionStart)
+      
+      // Start connection
+      console.log('Starting SignalR connection...')
+      await connectionRef.current.start()
+      console.log('SignalR connection started successfully')
+      
+      // Handle successful connection
+      await handleConnectionStart()
       
     } catch (error) {
-      console.error('Failed to establish WebSocket connection:', error)
+      console.error('Failed to establish SignalR connection:', error)
       
       setConnectionState(prev => ({
         ...prev,
         isConnecting: false,
         error: 'Failed to connect'
       }))
+      
+      handleConnectionError(error as Error)
     }
-  }, [getWebSocketUrl, handleOpen, handleMessage, handleClose, handleError])
+  }, []) // Remove all dependencies to prevent circular re-renders
 
-  // Disconnect from WebSocket
-  const disconnect = useCallback(() => {
+  // Disconnect from SignalR Hub
+  const disconnect = useCallback(async () => {
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current)
       reconnectTimeoutRef.current = null
     }
 
-    if (wsRef.current) {
-      wsRef.current.close(1000, 'Manual disconnect')
-      wsRef.current = null
+    if (connectionRef.current) {
+      try {
+        await connectionRef.current.stop()
+      } catch (error) {
+        console.error('Error stopping SignalR connection:', error)
+      }
+      connectionRef.current = null
     }
 
     setConnectionState(prev => ({
@@ -407,11 +447,16 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
     })
   }, [])
 
-  // Send custom message to WebSocket
-  const sendMessage = useCallback((message: any) => {
-    if (wsRef.current?.readyState === WebSocket.OPEN) {
-      wsRef.current.send(JSON.stringify(message))
-      return true
+  // Send custom message to SignalR Hub
+  const sendMessage = useCallback(async (methodName: string, ...args: any[]) => {
+    if (connectionRef.current?.state === HubConnectionState.Connected) {
+      try {
+        await connectionRef.current.invoke(methodName, ...args)
+        return true
+      } catch (error) {
+        console.error('Error sending SignalR message:', error)
+        return false
+      }
     }
     return false
   }, [])
@@ -425,14 +470,14 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
     return () => {
       disconnect()
     }
-  }, [autoConnect, connect, disconnect])
+  }, [autoConnect]) // Remove connect and disconnect from dependencies
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       disconnect()
     }
-  }, [disconnect])
+  }, []) // Remove disconnect from dependencies
 
   return {
     /** Connection state */
@@ -520,7 +565,7 @@ function getEventDescription(event: RealTimeEvent): string {
  */
 export function useScheduleRealTimeUpdates(scheduleIds?: string[]) {
   const options: UseRealTimeUpdatesOptions = {
-    autoConnect: true,
+    autoConnect: true, // Re-enabled with SignalR Hub
     subscriptions: {
       schedules: true,
       conflicts: true
@@ -543,7 +588,7 @@ export function useScheduleRealTimeUpdates(scheduleIds?: string[]) {
  */
 export function useUserRealTimeUpdates(userIds?: string[]) {
   const options: UseRealTimeUpdatesOptions = {
-    autoConnect: true,
+    autoConnect: true, // Re-enabled with SignalR Hub
     subscriptions: {
       users: true,
       conflicts: true

@@ -23,7 +23,7 @@ const mockTemplates: ScheduleTemplate[] = [
     createdAt: '2025-01-01',
     isDefault: true,
     tags: ['morning', 'daily', 'announcements'],
-    previewUrl: 'https://via.placeholder.com/300x200'
+    previewUrl: '/api/placeholder/template/1/preview'
   },
   {
     id: '2',
@@ -36,7 +36,7 @@ const mockTemplates: ScheduleTemplate[] = [
     createdAt: '2025-01-02',
     isDefault: false,
     tags: ['holiday', 'promotion', 'seasonal'],
-    previewUrl: 'https://via.placeholder.com/300x200'
+    previewUrl: '/api/placeholder/template/2/preview'
   },
   {
     id: '3',
@@ -49,7 +49,7 @@ const mockTemplates: ScheduleTemplate[] = [
     createdAt: '2025-01-03',
     isDefault: false,
     tags: ['emergency', 'critical', 'priority'],
-    previewUrl: 'https://via.placeholder.com/300x200'
+    previewUrl: '/api/placeholder/template/3/preview'
   },
   {
     id: '4',
@@ -62,7 +62,7 @@ const mockTemplates: ScheduleTemplate[] = [
     createdAt: '2025-01-04',
     isDefault: false,
     tags: ['conference', 'speakers', 'agenda'],
-    previewUrl: 'https://via.placeholder.com/300x200'
+    previewUrl: '/api/placeholder/template/4/preview'
   }
 ]
 

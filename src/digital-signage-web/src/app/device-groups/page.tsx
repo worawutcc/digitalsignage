@@ -362,6 +362,8 @@ export default function DeviceGroupsPage() {
           <Modal
             isOpen={showCreateModal}
             onClose={() => setShowCreateModal(false)}
+            size="lg"
+            showCloseButton={false}
           >
             <DeviceGroupForm
               group={editingGroup}

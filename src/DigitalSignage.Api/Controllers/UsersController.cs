@@ -1,6 +1,7 @@
 using DigitalSignage.Application.DTOs.Auth;
 using DigitalSignage.Application.DTOs.User;
 using DigitalSignage.Application.Interfaces;
+using UserDto = DigitalSignage.Application.DTOs.UserDto;
 using DigitalSignage.Domain.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -156,6 +157,8 @@ public class UsersController : ControllerBase
                 new { error = "An unexpected error occurred" });
         }
     }
+
+
 
     /// <summary>
     /// Get all users (Admin only)

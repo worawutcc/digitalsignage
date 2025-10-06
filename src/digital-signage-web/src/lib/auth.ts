@@ -119,11 +119,11 @@ export function shouldRefreshToken(payload: TokenPayload, thresholdMinutes: numb
 }
 
 /**
- * Storage keys for tokens
+ * Storage keys for tokens - Export for consistent usage across the app
  */
-const TOKEN_STORAGE_KEY = 'digital-signage-access-token'
-const REFRESH_TOKEN_STORAGE_KEY = 'digital-signage-refresh-token'
-const TOKEN_EXPIRY_KEY = 'digital-signage-token-expiry'
+export const TOKEN_STORAGE_KEY = 'digital-signage-access-token'
+export const REFRESH_TOKEN_STORAGE_KEY = 'digital-signage-refresh-token'
+export const TOKEN_EXPIRY_KEY = 'digital-signage-token-expiry'
 
 /**
  * Save access token to storage and cookies

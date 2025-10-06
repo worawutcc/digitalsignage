@@ -20,6 +20,8 @@ public static class SignalRServiceExtensions
             options.EnableDetailedErrors = true; // Enable for development, consider disabling in production
             options.KeepAliveInterval = TimeSpan.FromSeconds(15);
             options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+            options.HandshakeTimeout = TimeSpan.FromSeconds(30);
+            options.MaximumReceiveMessageSize = 32 * 1024; // 32KB
         });
         
         // Register broadcaster service

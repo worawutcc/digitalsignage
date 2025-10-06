@@ -6,6 +6,17 @@ export { DeviceService } from './deviceService'
 export { DashboardService } from './dashboardService'
 export { UserService } from './userService'
 
+// New enhanced services
+export { DeviceHealthService, deviceHealthService } from './deviceHealthService'
+export { HardwareDetectionService, hardwareDetectionService } from './hardwareDetectionService'
+export { DeviceHardwareProfileService, deviceHardwareProfileService } from './deviceHardwareProfileService' 
+export { OptimizedContentService, optimizedContentService } from './optimizedContentService'
+
+// Updated API services
+export { userService } from './api/userService'
+export { userPermissionService } from './api/userPermissionService'
+export { authService } from './api/authService'
+
 // Re-export all types
 export type {
   MediaFile,
@@ -44,14 +55,32 @@ export type {
   SearchResult,
 } from './dashboardService'
 
+// Export new API service types
 export type {
   User,
-  UserRole,
-  Permission,
-  CreateUserRequest,
+  UpdateUserProfileRequest,
   UpdateUserRequest,
   ChangePasswordRequest,
+  ResetPasswordRequest,
+  LockUserRequest,
+} from './api/userService'
+
+export type {
+  UserPermissionLevel,
+  DeviceGroupAccessDto,
+  UserPermissionDto,
+} from './api/userPermissionService'
+
+export type {
+  UserDto,
+  DeviceDto,
   LoginRequest,
   LoginResponse,
-  UserSearchParams,
-} from './userService'
+  DeviceLoginRequest,
+  DeviceLoginResponse,
+  RegisterRequest,
+  RegisterResponse,
+  RefreshTokenRequest,
+  RefreshTokenResponse,
+  LogoutRequest,
+} from './api/authService'

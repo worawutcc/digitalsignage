@@ -52,11 +52,15 @@ public class HardwareDetectionAdminController : ControllerBase
     {
         try
         {
+            // Convert DateTime parameters to Unspecified kind for PostgreSQL compatibility
+            var fromDateUnspecified = fromDate.HasValue ? DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Unspecified) : (DateTime?)null;
+            var toDateUnspecified = toDate.HasValue ? DateTime.SpecifyKind(toDate.Value, DateTimeKind.Unspecified) : (DateTime?)null;
+            
             _logger.LogInformation("Getting hardware detection jobs - Status: {Status}, Device: {DeviceId}, Page: {Page}", 
                 status ?? "all", deviceId, page);
 
             // Placeholder response with realistic data structure
-            var jobs = GeneratePlaceholderJobs(status, deviceId, fromDate, toDate);
+            var jobs = GeneratePlaceholderJobs(status, deviceId, fromDateUnspecified, toDateUnspecified);
             var totalCount = jobs.Count;
 
             var paginatedJobs = jobs

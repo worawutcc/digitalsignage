@@ -68,8 +68,9 @@ public class DeviceMonitoringService : IDeviceMonitoringService
             .FirstOrDefaultAsync();
 
         // Calculate uptime percentage for last 30 days
-        var thirtyDaysAgo = DateTime.UtcNow.AddDays(-30);
-        var availabilityStats = await GetDeviceAvailabilityAsync(deviceId, thirtyDaysAgo, DateTime.UtcNow);
+        var thirtyDaysAgo = DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-30), DateTimeKind.Unspecified);
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        var availabilityStats = await GetDeviceAvailabilityAsync(deviceId, thirtyDaysAgo, now);
 
         return new DeviceStatusDto
         {
@@ -138,12 +139,14 @@ public class DeviceMonitoringService : IDeviceMonitoringService
 
         if (fromDate.HasValue)
         {
-            query = query.Where(log => log.Timestamp >= fromDate.Value);
+            var fromDateUnspecified = DateTime.SpecifyKind(fromDate.Value, DateTimeKind.Unspecified);
+            query = query.Where(log => log.Timestamp >= fromDateUnspecified);
         }
 
         if (toDate.HasValue)
         {
-            query = query.Where(log => log.Timestamp <= toDate.Value);
+            var toDateUnspecified = DateTime.SpecifyKind(toDate.Value, DateTimeKind.Unspecified);
+            query = query.Where(log => log.Timestamp <= toDateUnspecified);
         }
 
         if (status.HasValue)
@@ -219,7 +222,7 @@ public class DeviceMonitoringService : IDeviceMonitoringService
     public async Task<List<DeviceHealthIssueDto>> GetDevicesWithIssuesAsync()
     {
         var issues = new List<DeviceHealthIssueDto>();
-        var heartbeatThreshold = DateTime.UtcNow.AddMinutes(-HeartbeatTimeoutMinutes);
+        var heartbeatThreshold = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-HeartbeatTimeoutMinutes), DateTimeKind.Unspecified);
 
         var devicesWithIssues = await _context.Set<Device>()
             .Where(d => d.IsActive && 
@@ -288,7 +291,7 @@ public class DeviceMonitoringService : IDeviceMonitoringService
     /// </summary>
     public async Task CheckDeviceHeartbeatsAsync()
     {
-        var heartbeatThreshold = DateTime.UtcNow.AddMinutes(-HeartbeatTimeoutMinutes);
+        var heartbeatThreshold = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(-HeartbeatTimeoutMinutes), DateTimeKind.Unspecified);
         
         var devicesToTimeout = await _context.Set<Device>()
             .Where(d => d.IsActive &&
@@ -460,7 +463,7 @@ public class DeviceMonitoringService : IDeviceMonitoringService
         {
             UptimeChange24h = 0, // Would calculate from historical data
             UptimeChange7d = 0,
-            NewIssues24h = criticalOnly.Count(i => i.DetectedAt >= DateTime.UtcNow.AddDays(-1)),
+            NewIssues24h = criticalOnly.Count(i => i.DetectedAt >= DateTime.SpecifyKind(DateTime.UtcNow.AddDays(-1), DateTimeKind.Unspecified)),
             ResolvedIssues24h = 0, // Would track resolved issues
             TrendDirection = "stable"
         };
@@ -486,8 +489,8 @@ public class DeviceMonitoringService : IDeviceMonitoringService
     public async Task<DeviceHealthReportDto> GenerateHealthReportAsync(int deviceId, int daysBack = 30)
     {
         var sanitizedDaysBack = Math.Max(1, daysBack);
-        var toDate = DateTime.UtcNow;
-        var fromDate = toDate.AddDays(-sanitizedDaysBack);
+        var toDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        var fromDate = DateTime.SpecifyKind(toDate.AddDays(-sanitizedDaysBack), DateTimeKind.Unspecified);
 
         return await BuildHealthReportAsync(deviceId, fromDate, toDate);
     }
@@ -498,8 +501,8 @@ public class DeviceMonitoringService : IDeviceMonitoringService
     public async Task<DeviceHealthReportDto> GetDeviceHealthMetricsAsync(int deviceId, int hours = 24)
     {
         var sanitizedHours = Math.Max(1, hours);
-        var toDate = DateTime.UtcNow;
-        var fromDate = toDate.AddHours(-sanitizedHours);
+        var toDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        var fromDate = DateTime.SpecifyKind(toDate.AddHours(-sanitizedHours), DateTimeKind.Unspecified);
 
         return await BuildHealthReportAsync(deviceId, fromDate, toDate);
     }
@@ -510,8 +513,8 @@ public class DeviceMonitoringService : IDeviceMonitoringService
     public async Task<DeviceAvailabilityStatsDto> GetDeviceUptimeStatsAsync(int deviceId, int days = 30)
     {
         var sanitizedDays = Math.Max(1, days);
-        var toDate = DateTime.UtcNow;
-        var fromDate = toDate.AddDays(-sanitizedDays);
+        var toDate = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        var fromDate = DateTime.SpecifyKind(toDate.AddDays(-sanitizedDays), DateTimeKind.Unspecified);
 
         return await GetDeviceAvailabilityAsync(deviceId, fromDate, toDate);
     }
@@ -529,9 +532,9 @@ public class DeviceMonitoringService : IDeviceMonitoringService
             throw new InvalidOperationException($"Device {deviceId} not found");
         }
 
-        var now = DateTime.UtcNow;
+        var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         var lastHeartbeat = device.LastHeartbeat;
-        var heartbeatFresh = lastHeartbeat.HasValue && lastHeartbeat.Value >= now.AddMinutes(-HeartbeatTimeoutMinutes);
+        var heartbeatFresh = lastHeartbeat.HasValue && lastHeartbeat.Value >= DateTime.SpecifyKind(now.AddMinutes(-HeartbeatTimeoutMinutes), DateTimeKind.Unspecified);
 
         var response = new DevicePingResponseDto
         {

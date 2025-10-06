@@ -140,74 +140,89 @@ export function DeviceGroupForm({
   return (
     <div className="p-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
           {title}
         </h2>
-        <button
-          onClick={onCancel}
-          className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-        >
-          <X className="h-5 w-5" />
-        </button>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          {isEditing 
+            ? 'Update the device group information below.'
+            : parentGroup
+              ? 'Create a new subgroup within the selected parent group.'
+              : 'Create a new device group to organize your devices.'
+          }
+        </p>
       </div>
 
       {/* Form */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Group Name */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
             Group Name *
           </label>
           <input
             type="text"
             value={formData.name}
             onChange={(e) => handleInputChange('name', e.target.value)}
-            className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+            className={`w-full px-4 py-3 border rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 ${
               errors.name 
-                ? 'border-red-300 dark:border-red-600' 
-                : 'border-gray-300 dark:border-gray-600'
+                ? 'border-red-300 dark:border-red-500 bg-red-50 dark:bg-red-900/20' 
+                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500'
             }`}
-            placeholder="Enter group name..."
+            placeholder="e.g., Main Building, Conference Rooms..."
             disabled={isLoading}
           />
           {errors.name && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.name}</p>
+            <p className="mt-2 text-sm text-red-600 dark:text-red-400 flex items-start">
+              <span className="inline-block w-4 h-4 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs leading-4 text-center mr-2 mt-0.5">!</span>
+              {errors.name}
+            </p>
           )}
         </div>
 
         {/* Description */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+          <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
             Description *
           </label>
           <textarea
             value={formData.description}
             onChange={(e) => handleInputChange('description', e.target.value)}
-            rows={3}
-            className={`w-full px-3 py-2 border rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white ${
+            rows={4}
+            className={`w-full px-4 py-3 border rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:border-blue-400 resize-none ${
               errors.description 
-                ? 'border-red-300 dark:border-red-600' 
-                : 'border-gray-300 dark:border-gray-600'
+                ? 'border-red-300 dark:border-red-500 bg-red-50 dark:bg-red-900/20' 
+                : 'border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 hover:border-gray-400 dark:hover:border-gray-500'
             }`}
-            placeholder="Enter group description..."
+            placeholder="Describe the purpose and location of this device group..."
             disabled={isLoading}
           />
-          {errors.description && (
-            <p className="mt-1 text-sm text-red-600 dark:text-red-400">{errors.description}</p>
-          )}
+          <div className="mt-1 flex justify-between items-center">
+            {errors.description ? (
+              <p className="text-sm text-red-600 dark:text-red-400 flex items-start">
+                <span className="inline-block w-4 h-4 rounded-full bg-red-100 dark:bg-red-900 text-red-600 dark:text-red-400 text-xs leading-4 text-center mr-2 mt-0.5">!</span>
+                {errors.description}
+              </p>
+            ) : (
+              <span></span>
+            )}
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              {formData.description.length}/500
+            </span>
+          </div>
         </div>
 
         {/* Parent Group */}
         {!parentGroup && availableParents.length > 0 && (
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            <label className="block text-sm font-medium text-gray-900 dark:text-gray-100 mb-2">
               Parent Group
             </label>
             <select
               value={formData.parentGroupId || ''}
               onChange={(e) => handleInputChange('parentGroupId', e.target.value ? Number(e.target.value) : undefined)}
-              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-800 dark:text-white dark:focus:border-blue-400 hover:border-gray-400 dark:hover:border-gray-500"
               disabled={isLoading}
             >
               <option value="">None (Root Group)</option>
@@ -217,50 +232,78 @@ export function DeviceGroupForm({
                 </option>
               ))}
             </select>
+            <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+              Select a parent group to create this as a subgroup, or leave empty for a root-level group.
+            </p>
           </div>
         )}
 
         {/* Parent Group Info (when adding subgroup) */}
         {parentGroup && (
-          <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 dark:text-blue-200 mb-1">
-              Adding subgroup to:
-            </h4>
-            <p className="text-sm text-blue-700 dark:text-blue-300">{parentGroup.path}</p>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center mb-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full mr-2"></div>
+              <h4 className="text-sm font-medium text-blue-900 dark:text-blue-200">
+                Creating subgroup under:
+              </h4>
+            </div>
+            <p className="text-sm text-blue-700 dark:text-blue-300 font-medium pl-4">
+              {parentGroup.path}
+            </p>
+            <p className="text-xs text-blue-600 dark:text-blue-400 mt-1 pl-4">
+              This group will inherit permissions and settings from its parent.
+            </p>
           </div>
         )}
 
         {/* Status */}
-        <div>
-          <label className="flex items-center">
+        <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700">
+          <label className="flex items-start cursor-pointer">
             <input
               type="checkbox"
               checked={formData.isActive}
               onChange={(e) => handleInputChange('isActive', e.target.checked)}
-              className="rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:border-gray-600 dark:bg-gray-700"
+              className="mt-1 rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 dark:border-gray-600 dark:bg-gray-700"
               disabled={isLoading}
             />
-            <span className="ml-2 text-sm text-gray-700 dark:text-gray-300">
-              Active (devices in this group will be available for scheduling)
-            </span>
+            <div className="ml-3">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                Active Group
+              </span>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                When enabled, devices in this group will be available for content scheduling and management operations.
+              </p>
+            </div>
           </label>
         </div>
 
         {/* Actions */}
-        <div className="flex justify-end space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+        <div className="flex justify-end space-x-3 pt-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 -mx-6 -mb-6 px-6 py-4 rounded-b-xl">
           <Button
             type="button"
             variant="outline"
             onClick={onCancel}
             disabled={isLoading}
+            className="px-6 py-2"
           >
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={isLoading}
+            className="px-6 py-2 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
           >
-            {isLoading ? 'Saving...' : isEditing ? 'Update Group' : 'Create Group'}
+            {isLoading ? (
+              <span className="flex items-center">
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Saving...
+              </span>
+            ) : (
+              isEditing ? 'Update Group' : 'Create Group'
+            )}
           </Button>
         </div>
       </form>

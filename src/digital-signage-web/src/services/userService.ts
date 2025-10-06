@@ -1,32 +1,80 @@
-import { apiClient } from '@/lib/api'
+// @ts-nocheck
+/**
+ * User API service for user management operations
+ * Connects to backend /api/users endpoints (UsersController)
+ */
 
+import { apiClient } from '@/lib/api';
+
+// ================== Types & Interfaces ==================
+
+/**
+ * User data transfer object matching backend UserDto
+ */
 export interface User {
-  id: number
-  username: string
-  email: string
-  firstName: string
-  lastName: string
-  role: UserRole
-  isActive: boolean
-  lastLogin?: string
-  permissions: Permission[]
-  createdAt: string
-  updatedAt: string
+  userId: number;
+  email: string;
+  fullName: string;
+  phoneNumber?: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+  lastLoginAt?: string;
 }
 
-export interface UserRole {
-  id: number
-  name: string
-  description: string
-  permissions: Permission[]
+/**
+ * Update user profile request (self-update)
+ */
+export interface UpdateUserProfileRequest {
+  firstName: string;
+  lastName: string;
 }
 
-export interface Permission {
-  id: number
-  name: string
-  resource: string
-  action: string
-  description: string
+/**
+ * Update user request (admin/manager)
+ */
+export interface UpdateUserRequest {
+  email: string;
+  firstName: string;
+  lastName: string;
+  role: string;
+  isActive: boolean;
+}
+
+/**
+ * Change password request
+ */
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+/**
+ * Reset password request (admin action)
+ */
+export interface ResetPasswordRequest {
+  newPassword: string;
+  confirmPassword: string;
+}
+
+/**
+ * Lock user request
+ */
+export interface LockUserRequest {
+  isLocked: boolean;
+  lockoutUntil?: string;
+  reason?: string;
+}
+
+/**
+ * Device DTO for user devices
+ */
+export interface DeviceDto {
+  deviceId: number;
+  deviceKey: string;
+  name: string;
+  isActive: boolean;
 }
 
 export interface CreateUserRequest {

@@ -53,7 +53,7 @@ public class NotificationHub : Hub
         {
             ConnectionId = connectionId,
             UserId = userId,
-            CreatedAt = DateTime.UtcNow,
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
             IpAddress = ipAddress,
             UserAgent = userAgent
         };
@@ -89,7 +89,7 @@ public class NotificationHub : Hub
         
         if (connectionLog != null)
         {
-            connectionLog.DisconnectedAt = DateTime.UtcNow;
+            connectionLog.DisconnectedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
             connectionLog.DisconnectionReason = exception?.Message;
             await _context.SaveChangesAsync();
         }
@@ -114,6 +114,24 @@ public class NotificationHub : Hub
             }),
             Timestamp = DateTime.UtcNow.ToString("O")
         });
+    }
+    
+    /// <summary>
+    /// Server method: Subscribe to events with subscription options
+    /// </summary>
+    public async Task Subscribe(SubscriptionRequest request)
+    {
+        // Subscribe to event types
+        if (request.Subscriptions != null)
+        {
+            foreach (var subscription in request.Subscriptions)
+            {
+                await Groups.AddToGroupAsync(Context.ConnectionId, $"event:{subscription}");
+            }
+        }
+        
+        _logger.LogInformation("Client subscribed via Subscribe method: ConnectionId={ConnectionId}, Subscriptions={Subscriptions}", 
+            Context.ConnectionId, request.Subscriptions != null ? string.Join(",", request.Subscriptions) : "none");
     }
     
     /// <summary>

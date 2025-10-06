@@ -252,4 +252,49 @@ public class ScheduleService : IScheduleService
         
         return conflicts;
     }
+
+    /// <summary>
+    /// Get schedules by date range
+    /// </summary>
+    public async Task<IEnumerable<ScheduleDto>> GetSchedulesByDateRangeAsync(DateTime startDate, DateTime endDate)
+    {
+        try
+        {
+            // Convert DateTime to Unspecified kind for PostgreSQL compatibility
+            var startDateUnspecified = DateTime.SpecifyKind(startDate, DateTimeKind.Unspecified);
+            var endDateUnspecified = DateTime.SpecifyKind(endDate, DateTimeKind.Unspecified);
+            
+            _logger.LogInformation("Getting schedules between {StartDate} and {EndDate}", startDateUnspecified, endDateUnspecified);
+
+            var schedules = await _context.Set<Schedule>()
+                .Where(s => s.StartDate.Date <= endDateUnspecified.Date && s.EndDate.Date >= startDateUnspecified.Date)
+                .OrderBy(s => s.StartDate)
+                .ThenBy(s => s.StartTime)
+                .ToListAsync();
+
+            var scheduleDtos = schedules.Select(s => new ScheduleDto
+            {
+                Id = s.Id,
+                Name = s.Name,
+                Description = null, // Add if available in entity
+                StartDate = s.StartDate,
+                EndDate = s.EndDate,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                Status = s.Status.ToString(),
+                IsRecurring = s.IsRecurring,
+                RecurrencePattern = s.RecurrencePattern,
+                CreatedAt = s.CreatedAt,
+                UpdatedAt = s.UpdatedAt
+            }).ToList();
+
+            _logger.LogInformation("Retrieved {Count} schedules for date range", scheduleDtos.Count);
+            return scheduleDtos;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving schedules by date range from {StartDate} to {EndDate}", startDate, endDate);
+            throw;
+        }
+    }
 }
