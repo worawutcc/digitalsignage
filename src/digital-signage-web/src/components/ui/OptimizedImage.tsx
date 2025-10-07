@@ -1,15 +1,7 @@
-import NextImage, { ImageProps as NextImageProps } from 'next/image'
+import NextImage from 'next/image'
 import { useState } from 'react'
 import { cn } from '@/lib/utils'
-
-export interface OptimizedImageProps extends Omit<NextImageProps, 'onLoad' | 'onError'> {
-  fallbackSrc?: string
-  className?: string
-  containerClassName?: string
-  showSpinner?: boolean
-  onLoadComplete?: () => void
-  onError?: () => void
-}
+import { OptimizedImageProps } from './OptimizedImage.types'
 
 /**
  * Optimized image component with loading states and fallbacks

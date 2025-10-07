@@ -231,6 +231,11 @@ export default function DeviceGroupsPage() {
   
   // Debug: Log tree structure
   console.log('🌳 Device Groups Tree:', deviceGroups.length, deviceGroups);
+  console.log('📊 Root Groups (no filter):', deviceGroups);
+  
+  // Get only root groups (parentId is null or undefined)
+  const rootGroups = deviceGroups.filter(group => !group.parentId);
+  console.log('🔝 Filtered Root Groups:', rootGroups.length, rootGroups);
 
   // React Query mutation for delete operation only (create/update handled in form)
   const deleteDeviceGroupMutation = useDeleteDeviceGroup({ enableOptimisticUpdate: true });
@@ -244,15 +249,15 @@ export default function DeviceGroupsPage() {
     })
   );
 
-  // Calculate stats
-  const totalGroups = deviceGroups.reduce((count, group) => {
+  // Calculate stats from root groups
+  const totalGroups = rootGroups.reduce((count, group) => {
     const countChildGroups = (g: DeviceGroup): number => {
       return 1 + (g.children?.reduce((sum: number, child: DeviceGroup) => sum + countChildGroups(child), 0) || 0);
     };
     return count + countChildGroups(group);
   }, 0);
 
-  const totalDevices = deviceGroups.reduce((count, group) => {
+  const totalDevices = rootGroups.reduce((count, group) => {
     const countDevices = (g: DeviceGroup): number => {
       return g.deviceCount + (g.children?.reduce((sum: number, child: DeviceGroup) => sum + countDevices(child), 0) || 0);
     };
@@ -307,9 +312,20 @@ export default function DeviceGroupsPage() {
     const { active, over } = event;
 
     if (active.id !== over?.id && over?.id) {
-      // Get the active group data
-      const activeGroup = deviceGroups.find(g => g.id === active.id);
-      const overGroup = deviceGroups.find(g => g.id === over.id);
+      // Flatten all groups to find the dragged and target groups
+      const flattenGroups = (groups: DeviceGroup[]): DeviceGroup[] => {
+        return groups.reduce((acc, group) => {
+          acc.push(group);
+          if (group.children) {
+            acc.push(...flattenGroups(group.children));
+          }
+          return acc;
+        }, [] as DeviceGroup[]);
+      };
+
+      const allGroups = flattenGroups(rootGroups);
+      const activeGroup = allGroups.find(g => g.id === active.id);
+      const overGroup = allGroups.find(g => g.id === over.id);
       
       if (activeGroup && overGroup) {
         // Move the active group to be a sibling of the over group
@@ -361,7 +377,7 @@ export default function DeviceGroupsPage() {
       }, [] as DeviceGroup[]);
     };
 
-    return flattenGroups(deviceGroups).filter(group => {
+    return flattenGroups(rootGroups).filter(group => {
       // Don't include the group being edited or its children
       if (editingGroup && (group.id === editingGroup.id || group.path.startsWith(editingGroup.path + '/'))) {
         return false;
@@ -438,7 +454,7 @@ export default function DeviceGroupsPage() {
               <div className="ml-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Root Groups</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {deviceGroups.filter(g => !g.parentId).length}
+                  {rootGroups.length}
                 </p>
               </div>
             </div>
@@ -487,7 +503,7 @@ export default function DeviceGroupsPage() {
                 onDragEnd={updateDeviceGroupMutation.isPending ? () => {} : handleDragEnd}
               >
                 <SortableContext 
-                  items={deviceGroups.filter(group => !group.parentId).map(group => group.id)}
+                  items={rootGroups.map(group => group.id)}
                   strategy={verticalListSortingStrategy}
                 >
                   <div className={`space-y-1 ${
@@ -495,7 +511,7 @@ export default function DeviceGroupsPage() {
                       ? 'pointer-events-none opacity-60' 
                       : ''
                   }`}>
-                    {deviceGroups.filter(group => !group.parentId).map((group) => (
+                    {rootGroups.map((group) => (
                       <DeviceGroupNode
                         key={group.id}
                         group={group}

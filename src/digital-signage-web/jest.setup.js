@@ -23,6 +23,64 @@ jest.mock('next/image', () => ({
   },
 }))
 
+// Mock lucide-react icons (ESM) with a simple SVG component to avoid transform/runtime issues
+jest.mock('lucide-react', () => {
+  const React = require('react')
+  const Icon = (props) => React.createElement('svg', props)
+
+  // Return a proxy so any named export yields the Icon component
+  const proxy = new Proxy({ __esModule: true, default: Icon }, {
+    get: (target, prop) => {
+      if (prop in target) return target[prop]
+      return Icon
+    }
+  })
+
+  return proxy
+})
+
+// Mock @/lib/api to prevent apiClient initialization errors during test imports
+jest.mock('@/lib/api', () => {
+  const mockApiClient = {
+    get: jest.fn(),
+    post: jest.fn(),
+    put: jest.fn(),
+    patch: jest.fn(),
+    delete: jest.fn(),
+    interceptors: {
+      request: {
+        use: jest.fn(),
+        eject: jest.fn(),
+      },
+      response: {
+        use: jest.fn(),
+        eject: jest.fn(),
+      },
+    },
+  }
+
+  return {
+    apiClient: mockApiClient,
+    api: {
+      get: jest.fn(),
+      post: jest.fn(),
+      put: jest.fn(),
+      patch: jest.fn(),
+      delete: jest.fn(),
+      upload: jest.fn(),
+    },
+    ApiError: class ApiError extends Error {
+      constructor(status, data, message, code) {
+        super(message)
+        this.status = status
+        this.data = data
+        this.code = code
+        this.name = 'ApiError'
+      }
+    },
+  }
+})
+
 // Mock environment variables
 process.env.NEXT_PUBLIC_API_URL = 'http://localhost:5100'
 process.env.NEXT_PUBLIC_WS_URL = 'ws://localhost:5100/ws'
@@ -62,6 +120,50 @@ global.MessageChannel = MessageChannel
 const { ReadableStream } = require('stream/web')
 Object.assign(global, { ReadableStream })
 
+// Minimal TransformStream stub for environments where it's not available (undici/msw)
+if (typeof global.TransformStream === 'undefined') {
+  class _TransformStream {
+    constructor() {
+      this.readable = new ReadableStream({
+        start() {},
+      })
+      this.writable = {
+        getWriter: () => ({
+          write: async () => {},
+          close: async () => {},
+        }),
+      }
+    }
+  }
+  global.TransformStream = _TransformStream
+}
+
 // Polyfill for fetch API (needed for MSW)
 const { fetch, Request, Response, Headers } = require('undici')
 Object.assign(global, { fetch, Request, Response, Headers })
+
+// Polyfill for BroadcastChannel used by some libraries (msw websocket internals)
+class MockBroadcastChannel {
+  constructor(name) {
+    this.name = name
+    this._listeners = new Set()
+  }
+  postMessage(msg) {
+    // no-op in tests
+  }
+  addEventListener(type, cb) {
+    if (type === 'message') this._listeners.add(cb)
+  }
+  removeEventListener(type, cb) {
+    if (type === 'message') this._listeners.delete(cb)
+  }
+  close() {
+    this._listeners.clear()
+  }
+}
+
+global.BroadcastChannel = global.BroadcastChannel || MockBroadcastChannel
+
+// Stub for performance.markResourceTiming used by undici in JSDOM env
+if (!global.performance) global.performance = {}
+global.performance.markResourceTiming = global.performance.markResourceTiming || function () {}

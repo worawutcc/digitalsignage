@@ -18,7 +18,12 @@ import type {
 } from '../types/deviceRegistration'
 
 /**
- * Query keys for device registration operations
+ * Query key factory for device registration queries
+ * 
+ * Provides consistent cache keys for React Query device registration operations.
+ * Used internally by registration hooks for cache management and invalidation.
+ * 
+ * @see https://tanstack.com/query/latest/docs/react/guides/query-keys
  */
 export const deviceRegistrationQueryKeys = {
   all: ['deviceRegistrations'] as const,
@@ -29,10 +34,32 @@ export const deviceRegistrationQueryKeys = {
 }
 
 /**
- * Hook to fetch pending device registrations
+ * Hook to fetch pending device registration requests
  * 
- * @param options - React Query options
- * @returns Query result with pending registrations data
+ * Retrieves all device registrations awaiting admin approval with automatic
+ * background refetching every 30 seconds. Includes device info, PIN codes,
+ * and registration timestamps.
+ * 
+ * @param options - Query configuration options
+ * @param options.refetchInterval - Auto-refresh interval in ms (default: 30000)
+ * @param options.enabled - Whether query should run (default: true)
+ * @returns React Query result with pending registrations and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data, isLoading } = usePendingRegistrations()
+ * 
+ * if (isLoading) return <LoadingSkeleton variant="table" count={3} />
+ * 
+ * return (
+ *   <RegistrationList 
+ *     registrations={data?.registrations} 
+ *     totalCount={data?.totalCount}
+ *   />
+ * )
+ * ```
+ * 
+ * @see deviceRegistrationService.getPendingRegistrations for API implementation
  */
 export function usePendingRegistrations(options?: {
   refetchInterval?: number
@@ -52,9 +79,40 @@ export function usePendingRegistrations(options?: {
 }
 
 /**
- * Hook to approve a device registration
+ * Hook to approve a device registration request
  * 
- * @returns Mutation for approving device registration
+ * Approves a pending device registration and assigns it to a device group.
+ * Uses optimistic updates for instant UI feedback. Automatically invalidates
+ * related queries on success.
+ * 
+ * @returns React Query mutation with approval function and mutation state
+ * 
+ * @example
+ * ```tsx
+ * const approveMutation = useApproveRegistration()
+ * 
+ * const handleApprove = async (registrationId: string) => {
+ *   await approveMutation.mutateAsync({
+ *     registrationId,
+ *     data: {
+ *       deviceName: 'Lobby Display',
+ *       deviceGroupId: 5,
+ *       location: 'Building A - Main Lobby'
+ *     }
+ *   })
+ * }
+ * 
+ * return (
+ *   <Button 
+ *     onClick={() => handleApprove(reg.id)}
+ *     loading={approveMutation.isPending}
+ *   >
+ *     Approve
+ *   </Button>
+ * )
+ * ```
+ * 
+ * @see deviceRegistrationService.approveRegistration for API implementation
  */
 export function useApproveRegistration() {
   const queryClient = useQueryClient()

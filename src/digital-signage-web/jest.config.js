@@ -12,6 +12,11 @@ const customJestConfig = {
     // Handle module aliases (this will be automatically configured for you based on your tsconfig.json paths)
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  // Transform ESM packages that ship modern syntax (lucide-react icons etc.)
+  // Include msw and related ESM helpers that Jest otherwise skips
+  transformIgnorePatterns: [
+    'node_modules/(?!(lucide-react|@mswjs/interceptors|msw|until-async)/)'
+  ],
   testEnvironment: 'jest-environment-jsdom',
   testMatch: [
     '<rootDir>/tests/**/*.test.{js,jsx,ts,tsx}',

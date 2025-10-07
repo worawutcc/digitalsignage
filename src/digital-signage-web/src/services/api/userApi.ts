@@ -5,9 +5,7 @@
  * Following copilot-instructions-ui.instructions.md patterns.
  */
 
-import axios from 'axios'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+import { apiClient } from '@/lib/api'
 
 /**
  * User DTO from backend
@@ -33,12 +31,7 @@ export const userApi = {
    * @returns Promise with array of users
    */
   getAll: async (): Promise<User[]> => {
-    const response = await axios.get<User[]>(`${API_BASE_URL}/api/users`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    const response = await apiClient.get<User[]>('/api/users')
     return response.data
   },
 
@@ -48,12 +41,7 @@ export const userApi = {
    * @returns Promise with user details
    */
   getById: async (id: number): Promise<User> => {
-    const response = await axios.get<User>(`${API_BASE_URL}/api/users/${id}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    const response = await apiClient.get<User>(`/api/users/${id}`)
     return response.data
   },
 
@@ -62,12 +50,7 @@ export const userApi = {
    * @returns Promise with current user details
    */
   getProfile: async (): Promise<User> => {
-    const response = await axios.get<User>(`${API_BASE_URL}/api/users/profile`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    const response = await apiClient.get<User>('/api/users/profile')
     return response.data
   },
 }

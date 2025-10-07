@@ -5,23 +5,7 @@ import { Search, Filter, X, MapPin, Monitor, Wifi } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { cn } from '@/lib/utils'
-
-export interface DeviceFilters {
-  search: string
-  status: string[]
-  location: string[]
-  deviceGroup: string[]
-  resolution: string[]
-}
-
-export interface DeviceFiltersProps {
-  filters: DeviceFilters
-  onFiltersChange: (filters: DeviceFilters) => void
-  availableLocations?: string[]
-  availableDeviceGroups?: string[]
-  availableResolutions?: string[]
-  className?: string
-}
+import type { DeviceFilters, DeviceFiltersProps, StatusOption } from './DeviceFilters.types'
 
 const statusOptions = [
   { value: 'online', label: 'Online', color: 'bg-green-500' },

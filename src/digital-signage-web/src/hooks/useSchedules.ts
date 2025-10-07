@@ -2,7 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ScheduleService, Schedule, CreateScheduleRequest, ScheduleSearchParams, ScheduleTemplate } from '@/services'
 import { useToast } from '@/hooks/useToast'
 
-// Query keys for React Query cache management
+/**
+ * Query key factory for schedule-related queries
+ * 
+ * Provides consistent cache keys for React Query schedule operations.
+ * Used internally by schedule hooks for cache management and invalidation.
+ * 
+ * @see https://tanstack.com/query/latest/docs/react/guides/query-keys
+ */
 export const scheduleKeys = {
   all: ['schedules'] as const,
   lists: () => [...scheduleKeys.all, 'list'] as const,
@@ -19,7 +26,25 @@ export const scheduleKeys = {
 }
 
 /**
- * Hook for fetching all schedules
+ * Hook to fetch all schedules
+ * 
+ * Retrieves complete list of content schedules for the digital signage system.
+ * Includes schedule metadata, assigned media, devices, and time slots.
+ * Results are cached for 5 minutes.
+ * 
+ * @returns React Query result with schedules array and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: schedules, isLoading, error } = useSchedules()
+ * 
+ * if (isLoading) return <LoadingSkeleton variant="table" count={5} />
+ * if (error) return <ErrorState error={error} />
+ * 
+ * return <ScheduleList schedules={schedules} />
+ * ```
+ * 
+ * @see ScheduleService.getAll for API implementation
  */
 export function useSchedules() {
   return useQuery({
@@ -30,7 +55,27 @@ export function useSchedules() {
 }
 
 /**
- * Hook for fetching schedule by ID
+ * Hook to fetch a single schedule by ID
+ * 
+ * Retrieves detailed schedule information including all assigned media files,
+ * target devices, time slots, recurrence patterns, and priority settings.
+ * Data is cached for 10 minutes.
+ * 
+ * @param id - Schedule ID to fetch
+ * @param enabled - Whether the query should run (default: true)
+ * @returns React Query result with schedule details and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: schedule, isLoading } = useScheduleById(scheduleId)
+ * 
+ * if (isLoading) return <LoadingSkeleton variant="card" />
+ * if (!schedule) return <EmptyState message="Schedule not found" />
+ * 
+ * return <ScheduleDetail schedule={schedule} />
+ * ```
+ * 
+ * @see ScheduleService.getById for API implementation
  */
 export function useScheduleById(id: number, enabled = true) {
   return useQuery({
@@ -42,7 +87,22 @@ export function useScheduleById(id: number, enabled = true) {
 }
 
 /**
- * Hook for searching schedules
+ * Hook to search schedules with filters
+ * 
+ * Performs search across schedules with support for text search, device filtering,
+ * date range filtering, and status filtering. Query only runs when parameters provided.
+ * 
+ * @param params - Search parameters (searchTerm, deviceId, startDate, endDate, status)
+ * @returns React Query result with matching schedules and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: schedules } = useScheduleSearch({
+ *   deviceId: 123,
+ *   startDate: '2025-01-01',
+ *   endDate: '2025-01-31'
+ * })
+ * ```
  */
 export function useScheduleSearch(params: ScheduleSearchParams) {
   return useQuery({

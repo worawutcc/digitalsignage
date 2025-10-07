@@ -15,31 +15,7 @@ import { AlertTriangle, RefreshCw, UserX, Calendar, Database, Wifi, Shield, Aler
 import { ErrorBoundary, FeatureErrorBoundary } from './ErrorBoundary'
 import { Button } from './Button'
 import type { ErrorInfo } from 'react'
-
-export interface EnhancedErrorBoundaryProps {
-  children: ReactNode
-  featureName: string
-  onError?: (error: Error, errorInfo: ErrorInfo) => void
-  
-  // Enhanced props
-  /** Enable enhanced error recovery suggestions */
-  showRecoverySuggestions?: boolean
-  /** Show error reporting option */
-  enableErrorReporting?: boolean
-  /** Custom recovery actions */
-  recoveryActions?: Array<{
-    label: string
-    action: () => void
-    icon?: React.ComponentType<{ className?: string }>
-  }>
-  /** Context about what the user was doing */
-  userContext?: {
-    action?: string
-    userId?: string
-    scheduleId?: string
-    bulkOperationId?: string
-  }
-}
+import { EnhancedErrorBoundaryProps, ErrorCategory } from './EnhancedErrorBoundary.types'
 
 /**
  * Enhanced Error Boundary for User Schedule Assignment

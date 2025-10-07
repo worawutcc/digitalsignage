@@ -353,3 +353,17 @@ C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Arch
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->
+
+<!-- ZONES: API / UI -->
+<!-- The following section summarizes the two instruction zones so reviewers and the Copilot agent can reference them without needing to specify which file to use. -->
+## Zones: API / UI
+
+- API Zone (backend): Applies to `src/DigitalSignage.Api/**`, `src/DigitalSignage.Application/**`, `src/DigitalSignage.Domain/**`, `src/DigitalSignage.Infrastructure/**`.
+    - Use this file for backend rules, EF Core configuration, DateTime patterns, DTOs, services, controllers, migrations, and testing patterns.
+    - Key topics: .NET 8 WebAPI patterns, EF Core/PostgreSQL date/time config, JWT auth, S3 integration, health checks, logging, layered project layout, and migration commands.
+
+- UI Zone (frontend): Applies to `src/digital-signage-web/**` — see `.github/instructions/copilot-instructions-ui.instructions.md` for the full frontend guidance.
+    - Use this zone for Next.js 15 (App Router), React 18 + TypeScript, Tailwind CSS 4, React Query (TanStack), React Hook Form + Zod, Axios, and UI component conventions.
+    - Key frontend rules: Server components by default; TypeScript strict mode; React Query for server state; Redux Toolkit for app state; typed Axios client; Zod schemas for forms; Tailwind styling conventions; accessibility and performance guidance.
+
+If you need the full UI guidance, open `.github/instructions/copilot-instructions-ui.instructions.md` in the repo — it's the authoritative source for frontend rules and examples.

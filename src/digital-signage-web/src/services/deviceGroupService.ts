@@ -61,13 +61,27 @@ export class DeviceGroupService {
    */
   async getTree(params?: DeviceGroupSearchParams): Promise<DeviceGroup[]> {
     try {
-      // Backend returns DeviceGroup[] as tree structure
-      const response = await apiClient.get<DeviceGroup[]>(`${this.baseUrl}/tree`, {
+      // Backend returns DeviceGroup[] as tree structure directly
+      const response = await apiClient.get(`${this.baseUrl}/tree`, {
         params: this.sanitizeParams(params),
       })
-      return response.data
+
+      console.log('📡 Device Groups Tree API Response:', response.data)
+
+      // API returns { data: DeviceGroup[] } structure
+      const responseData = response.data?.data || response.data
+      
+      if (!Array.isArray(responseData)) {
+        console.error('Invalid response format, expected array:', responseData)
+        throw new Error('Invalid device group tree response from server')
+      }
+
+      console.log('✅ Parsed Device Groups Tree:', responseData)
+
+      // Return the array of root groups (with children already populated by backend)
+      return responseData
     } catch (error) {
-      console.error('Error fetching device groups tree:', error)
+      console.error('❌ Error fetching device groups tree:', error)
       throw this.handleError(error, 'Failed to fetch device groups tree')
     }
   }
@@ -126,11 +140,8 @@ export class DeviceGroupService {
    */
   async delete(id: number): Promise<void> {
     try {
-      const response = await apiClient.delete<{ success: boolean; error?: string }>(`${this.baseUrl}/${id}`)
-
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to delete device group')
-      }
+      // Backend returns 204 NoContent on success, or a ProblemDetails/HTTP error on failure
+      await apiClient.delete(`${this.baseUrl}/${id}`)
     } catch (error) {
       console.error(`Error deleting device group ${id}:`, error)
       throw this.handleError(error, 'Failed to delete device group')
@@ -194,26 +205,17 @@ export class DeviceGroupService {
    */
   async canDelete(id: number): Promise<{ canDelete: boolean; reason?: string }> {
     try {
-      const response = await apiClient.get<{
-        success: boolean
-        canDelete: boolean
-        reason?: string
-        error?: string
-      }>(`${this.baseUrl}/${id}/can-delete`)
+      // Backend does not expose a dedicated can-delete endpoint.
+      // Derive deleteability from the group's counts: no child groups and no devices.
+      const group = await this.getById(id)
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to check delete permission')
-      }
+  const canDelete = (group.childGroupCount ?? 0) === 0 && (group.deviceCount ?? 0) === 0
+  const reasonText = canDelete ? undefined : 'Group has child groups or devices'
 
-      const result: { canDelete: boolean; reason?: string } = {
-        canDelete: response.data.canDelete,
-      }
-      
-      if (response.data.reason) {
-        result.reason = response.data.reason
-      }
-      
-      return result
+  const result: { canDelete: boolean; reason?: string } = { canDelete }
+  if (reasonText) result.reason = reasonText
+
+  return result
     } catch (error) {
       console.error(`Error checking delete permission for group ${id}:`, error)
       throw this.handleError(error, 'Failed to check delete permission')
@@ -228,29 +230,16 @@ export class DeviceGroupService {
       const params = {
         newParentId,
       }
+      // Backend exposes: GET /api/devicegroup/{id}/can-move-to/{parentId?}
+      const path = typeof newParentId === 'number'
+        ? `${this.baseUrl}/${id}/can-move-to/${newParentId}`
+        : `${this.baseUrl}/${id}/can-move-to`
 
-      const response = await apiClient.get<{
-        success: boolean
-        canMove: boolean
-        reason?: string
-        error?: string
-      }>(`${this.baseUrl}/${id}/can-move`, {
-        params: this.sanitizeParams(params),
-      })
+      const response = await apiClient.get<{ canMove: boolean; reason?: string }>(path)
 
-      if (!response.data.success) {
-        throw new Error(response.data.error || 'Failed to check move permission')
-      }
-
-      const result: { canMove: boolean; reason?: string } = {
-        canMove: response.data.canMove,
-      }
-      
-      if (response.data.reason) {
-        result.reason = response.data.reason
-      }
-      
-      return result
+      const moveResult: { canMove: boolean; reason?: string } = { canMove: response.data.canMove }
+      if (response.data.reason) moveResult.reason = response.data.reason
+      return moveResult
     } catch (error) {
       console.error(`Error checking move permission for group ${id}:`, error)
       throw this.handleError(error, 'Failed to check move permission')
@@ -267,22 +256,15 @@ export class DeviceGroupService {
     totalDevices: number
   }> {
     try {
+      // Backend exposes content-distribution-stats which returns the stats DTO directly
       const response = await apiClient.get<{
-        success: boolean
-        data?: {
-          totalGroups: number
-          maxDepth: number
-          rootGroups: number
-          totalDevices: number
-        }
-        error?: string
-      }>(`${this.baseUrl}/statistics`)
+        totalGroups: number
+        maxDepth: number
+        rootGroups: number
+        totalDevices: number
+      }>(`${this.baseUrl}/content-distribution-stats`)
 
-      if (!response.data.success || !response.data.data) {
-        throw new Error(response.data.error || 'Failed to fetch statistics')
-      }
-
-      return response.data.data
+      return response.data
     } catch (error) {
       console.error('Error fetching device group statistics:', error)
       throw this.handleError(error, 'Failed to fetch statistics')

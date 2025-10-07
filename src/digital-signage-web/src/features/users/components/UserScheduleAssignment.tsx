@@ -79,7 +79,11 @@ function UserScheduleAssignmentContent({
   const [isProcessingBulkOperation, setIsProcessingBulkOperation] = useState(false);
   
   // Use enhanced hooks
-  const realTimeUpdates = useRealTimeUpdates();
+  const realTimeUpdates = useRealTimeUpdates({
+    autoConnect: false, // Manual connection to prevent race conditions
+    connectionId: 'user-schedule-assignment',
+    preventMultipleConnections: true,
+  });
   
   // Real-time connection for schedule updates
   useEffect(() => {

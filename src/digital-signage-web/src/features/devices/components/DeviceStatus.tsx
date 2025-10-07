@@ -2,14 +2,7 @@
 
 import { cn } from '@/lib/utils'
 import { Wifi, WifiOff, AlertTriangle, Wrench } from 'lucide-react'
-
-export interface DeviceStatusProps {
-  status: 'Online' | 'Offline' | 'Error' | 'Maintenance'
-  showText?: boolean
-  showIcon?: boolean
-  size?: 'sm' | 'md' | 'lg'
-  className?: string
-}
+import { DeviceStatusProps, DeviceStatusType, StatusConfig, SizeConfig } from './DeviceStatus.types'
 
 const statusConfig = {
   Online: {

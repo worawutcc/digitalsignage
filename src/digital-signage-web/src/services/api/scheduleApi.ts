@@ -5,9 +5,7 @@
  * Following copilot-instructions-ui.instructions.md patterns.
  */
 
-import axios from 'axios'
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'
+import { apiClient } from '@/lib/api'
 
 /**
  * Schedule DTO from backend
@@ -32,12 +30,7 @@ export const scheduleApi = {
    * @returns Promise with array of schedules
    */
   getAll: async (): Promise<Schedule[]> => {
-    const response = await axios.get<Schedule[]>(`${API_BASE_URL}/api/schedules`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    const response = await apiClient.get<Schedule[]>('/api/schedules')
     return response.data
   },
 
@@ -47,12 +40,7 @@ export const scheduleApi = {
    * @returns Promise with schedule details
    */
   getById: async (id: number): Promise<Schedule> => {
-    const response = await axios.get<Schedule>(`${API_BASE_URL}/api/schedules/${id}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    const response = await apiClient.get<Schedule>(`/api/schedules/${id}`)
     return response.data
   },
 
@@ -62,12 +50,7 @@ export const scheduleApi = {
    * @returns Promise with created schedule
    */
   create: async (data: Omit<Schedule, 'id' | 'createdAt' | 'updatedAt'>): Promise<Schedule> => {
-    const response = await axios.post<Schedule>(`${API_BASE_URL}/api/schedules`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    const response = await apiClient.post<Schedule>('/api/schedules', data)
     return response.data
   },
 
@@ -78,12 +61,7 @@ export const scheduleApi = {
    * @returns Promise with updated schedule
    */
   update: async (id: number, data: Partial<Schedule>): Promise<Schedule> => {
-    const response = await axios.put<Schedule>(`${API_BASE_URL}/api/schedules/${id}`, data, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    const response = await apiClient.put<Schedule>(`/api/schedules/${id}`, data)
     return response.data
   },
 
@@ -93,11 +71,6 @@ export const scheduleApi = {
    * @returns Promise
    */
   delete: async (id: number): Promise<void> => {
-    await axios.delete(`${API_BASE_URL}/api/schedules/${id}`, {
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      withCredentials: true,
-    })
+    await apiClient.delete(`/api/schedules/${id}`)
   },
 }

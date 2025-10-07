@@ -7,18 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { DeviceStatus } from './DeviceStatus'
 import { cn } from '@/lib/utils'
 import { Device } from '@/types/api'
-
-export interface DeviceListProps {
-  devices: Device[]
-  loading?: boolean
-  onDeviceSelect?: (device: Device) => void
-  onDeviceEdit?: (device: Device) => void
-  onDeviceDelete?: (device: Device) => void
-  onDeviceRestart?: (device: Device) => void
-  selectedDevices?: string[]
-  onSelectionChange?: (selectedIds: string[]) => void
-  className?: string
-}
+import type { DeviceListProps } from './DeviceList.types'
 
 /**
  * Device list component with table view, filtering, and actions

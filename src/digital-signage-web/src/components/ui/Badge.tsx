@@ -10,14 +10,7 @@
 
 import React from 'react'
 import { cn } from '@/lib/utils'
-
-export interface BadgeProps {
-  children: React.ReactNode
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info'
-  size?: 'sm' | 'md' | 'lg'
-  className?: string
-  'data-testid'?: string
-}
+import { BadgeProps } from './Badge.types'
 
 export function Badge({
   children,

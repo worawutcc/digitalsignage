@@ -94,7 +94,11 @@ export function PermissionMatrix({
   const [changedPermissions, setChangedPermissions] = useState<Set<string>>(new Set());
 
   // Real-time updates
-  const realTimeUpdates = useRealTimeUpdates();
+  const realTimeUpdates = useRealTimeUpdates({
+    autoConnect: false, // Manual connection to prevent race conditions
+    connectionId: 'permission-matrix',
+    preventMultipleConnections: true,
+  });
   
   useEffect(() => {
     if (enableRealTimeUpdates) {

@@ -439,6 +439,51 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
+    /// Get all available user roles in the system
+    /// </summary>
+    /// <returns>List of available roles</returns>
+    /// <remarks>
+    /// Returns all UserRole enum values with metadata.
+    /// This is a simple enum lookup, not a database query.
+    /// </remarks>
+    [HttpGet("roles")]
+    [ProducesResponseType(typeof(RoleListResponse), StatusCodes.Status200OK)]
+    public ActionResult<RoleListResponse> GetRoles()
+    {
+        try
+        {
+            var roles = Enum.GetValues<UserRole>()
+                .Select(role => new RoleDto
+                {
+                    Id = ((int)role).ToString(),
+                    Name = role.ToString(),
+                    Description = GetRoleDescription(role),
+                    Level = (int)role,
+                    Permissions = GetRolePermissions(role),
+                    UserCount = 0, // Could be populated from database if needed
+                    CreatedAt = DateTime.UtcNow.ToString("O"),
+                    UpdatedAt = DateTime.UtcNow.ToString("O")
+                })
+                .ToList();
+
+            _logger.LogInformation("Retrieved {Count} roles", roles.Count);
+
+            return Ok(new RoleListResponse
+            {
+                Success = true,
+                Data = roles,
+                Message = "Roles retrieved successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error retrieving roles");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { error = "An unexpected error occurred" });
+        }
+    }
+
+    /// <summary>
     /// Get devices associated with a user
     /// </summary>
     /// <param name="userId">User ID</param>
@@ -453,5 +498,42 @@ public class UsersController : ControllerBase
         var devices = new List<DeviceDto>();
         // ...fetch devices by deviceIds...
         return Ok(devices);
+    }
+
+    // Helper methods for role metadata
+    private static string GetRoleDescription(UserRole role)
+    {
+        return role switch
+        {
+            UserRole.User => "Regular user with basic access to view content and manage assigned devices",
+            UserRole.Manager => "Manager with permissions to manage content, schedules, and device groups",
+            UserRole.Admin => "System administrator with full access to all features and user management",
+            _ => "Unknown role"
+        };
+    }
+
+    private static List<RolePermissionDto> GetRolePermissions(UserRole role)
+    {
+        return role switch
+        {
+            UserRole.User => new List<RolePermissionDto>
+            {
+                new() { Resource = "devices", Action = "view" },
+                new() { Resource = "content", Action = "view" },
+                new() { Resource = "schedules", Action = "view" }
+            },
+            UserRole.Manager => new List<RolePermissionDto>
+            {
+                new() { Resource = "devices", Action = "manage" },
+                new() { Resource = "content", Action = "manage" },
+                new() { Resource = "schedules", Action = "manage" },
+                new() { Resource = "users", Action = "view" }
+            },
+            UserRole.Admin => new List<RolePermissionDto>
+            {
+                new() { Resource = "*", Action = "*" }
+            },
+            _ => new List<RolePermissionDto>()
+        };
     }
 }

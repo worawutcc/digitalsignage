@@ -9,19 +9,7 @@
  */
 
 import { cn } from '@/lib/utils'
-
-export interface SkeletonProps {
-  /**
-   * CSS class name for styling
-   */
-  className?: string
-  
-  /**
-   * Number of skeleton items to render
-   * @default 1
-   */
-  count?: number
-}
+import { SkeletonProps, SkeletonTextProps, SkeletonCardProps, SkeletonTableProps } from './Skeleton.types'
 
 /**
  * Base Skeleton Component

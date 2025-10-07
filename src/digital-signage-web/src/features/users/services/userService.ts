@@ -31,7 +31,6 @@ import type { ScheduleConflict } from '@/types/schedule-conflicts';
  */
 class UserService {
   private readonly basePath = '/api/users';
-  private readonly rolesPath = '/api/roles';
 
   /**
    * Get paginated list of users with filters
@@ -137,47 +136,43 @@ class UserService {
    * Get all available roles
    */
   async getRoles(): Promise<UserRole[]> {
-    const response = await apiClient.get<RoleListResponse>(this.rolesPath);
+    const response = await apiClient.get<RoleListResponse>(`${this.basePath}/roles`);
     return response.data.data;
   }
 
   /**
    * Get single role by ID
+   * Note: Roles are enum-based, not database entities
+   * This method filters the result from getRoles()
    */
-  async getRoleById(id: string): Promise<UserRole> {
-    const response = await apiClient.get<{ success: boolean; data: UserRole }>(
-      `${this.rolesPath}/${id}`
-    );
-    return response.data.data;
+  async getRoleById(id: string): Promise<UserRole | null> {
+    const roles = await this.getRoles();
+    const role = roles.find(r => r.id === id);
+    return role || null;
   }
 
   /**
    * Create new role
+   * Note: Not implemented - Roles are system-defined enums, not user-creatable
    */
   async createRole(data: CreateRoleRequest): Promise<UserRole> {
-    const response = await apiClient.post<{ success: boolean; data: UserRole }>(
-      this.rolesPath,
-      data
-    );
-    return response.data.data;
+    throw new Error('Role creation is not supported. Roles are system-defined.');
   }
 
   /**
    * Update existing role
+   * Note: Not implemented - Roles are system-defined enums, not editable
    */
   async updateRole(id: string, data: UpdateRoleRequest): Promise<UserRole> {
-    const response = await apiClient.put<{ success: boolean; data: UserRole }>(
-      `${this.rolesPath}/${id}`,
-      data
-    );
-    return response.data.data;
+    throw new Error('Role update is not supported. Roles are system-defined.');
   }
 
   /**
-   * Delete role (only if no users assigned)
+   * Delete role
+   * Note: Not implemented - Roles are system-defined enums, cannot be deleted
    */
   async deleteRole(id: string): Promise<void> {
-    await apiClient.delete(`${this.rolesPath}/${id}`);
+    throw new Error('Role deletion is not supported. Roles are system-defined.');
   }
 
   /**
