@@ -376,7 +376,81 @@ public class MediaController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Quick assign media to users/devices after upload
+    /// </summary>
+    [HttpPost("{id}/quick-assign")]
+    [ProducesResponseType(typeof(Application.DTOs.Media.QuickAssignResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<Application.DTOs.Media.QuickAssignResponseDto>> QuickAssignMedia(
+        int id, 
+        [FromBody] Application.DTOs.Media.QuickAssignRequestDto request)
+    {
+        try
+        {
+            // Validate media exists
+            var media = await _mediaService.GetByIdAsync(id);
+            if (media == null)
+                return NotFound($"Media with ID {id} not found");
+
+            // Validate request
+            if (request.AssignmentType == "new-schedule" && string.IsNullOrWhiteSpace(request.ScheduleName))
+                return BadRequest("Schedule name is required for new schedule");
+
+            if (request.AssignmentType == "existing-schedule" && !request.ScheduleId.HasValue)
+                return BadRequest("Schedule ID is required for existing schedule");
+
+            // Get admin user ID from JWT claims
+            var adminUserId = GetCurrentUserId();
+            if (!adminUserId.HasValue)
+            {
+                _logger.LogWarning("Unable to determine current user ID for quick assignment");
+                return Unauthorized("User ID not found in token");
+            }
+
+            // Execute quick assignment
+            var result = await _mediaService.QuickAssignAsync(id, request, adminUserId.Value);
+
+            _logger.LogInformation(
+                "Quick assigned media {MediaId} to schedule {ScheduleId} with {UserCount} users",
+                id, result.ScheduleId, result.UsersAssignedCount);
+
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation during quick assign for media {MediaId}", id);
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during quick assign for media {MediaId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
     // Private helper methods
+    
+    /// <summary>
+    /// Get current user ID from JWT claims
+    /// </summary>
+    /// <returns>User ID as integer or null if not found</returns>
+    private int? GetCurrentUserId()
+    {
+        var userIdString = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+                          User.FindFirst("sub")?.Value ??
+                          User.FindFirst("userId")?.Value;
+
+        if (int.TryParse(userIdString, out var userId))
+        {
+            return userId;
+        }
+
+        return null;
+    }
+    
     private static string FormatFileSize(long bytes)
     {
         string[] suffixes = { "B", "KB", "MB", "GB", "TB" };

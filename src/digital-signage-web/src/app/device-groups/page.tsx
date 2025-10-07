@@ -5,63 +5,36 @@ export const dynamic = 'force-dynamic';
 
 import React from 'react';
 import { useState } from 'react';
-import { Plus, Folder, FolderOpen, Edit, Trash2, MoreVertical, Users } from 'lucide-react';
+import { Plus, Folder, FolderOpen, Edit, Trash2, MoreVertical, Users, GripVertical } from 'lucide-react';
 import AdminLayout from '@/components/layouts/AdminLayout';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
-import { DeviceGroupForm, type DeviceGroupFormData } from '@/components/forms/DeviceGroupForm';
-import type { DeviceGroup } from '@/types/api';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import {
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { DeviceGroupForm } from '@/components/forms/DeviceGroupForm';
+import type { DeviceGroup } from '@/types/deviceGroup.types';
+import { useDeviceGroups, useDeviceGroupsTree } from '@/hooks/useDeviceGroups';
+import { useUpdateDeviceGroup } from '@/hooks/useUpdateDeviceGroup';
+import { useDeleteDeviceGroup } from '@/hooks/useDeleteDeviceGroup';
 
-// Mock data for development - matching API schema
-const mockDeviceGroups: DeviceGroup[] = [
-  {
-    id: 1,
-    name: 'Main Building',
-    description: 'Devices in the main building',
-    isActive: true,
-    path: '/Main Building',
-    level: 0,
-    createdAt: new Date().toISOString(),
-    devices: [],
-    childGroups: [
-      {
-        id: 2,
-        name: 'Lobby',
-        description: 'Lobby displays',
-        isActive: true,
-        parentGroupId: 1,
-        path: '/Main Building/Lobby',
-        level: 1,
-        createdAt: new Date().toISOString(),
-        devices: [],
-        childGroups: []
-      },
-      {
-        id: 3,
-        name: 'Meeting Rooms',
-        description: 'Conference room displays',
-        isActive: true,
-        parentGroupId: 1,
-        path: '/Main Building/Meeting Rooms',
-        level: 1,
-        createdAt: new Date().toISOString(),
-        devices: [],
-        childGroups: []
-      }
-    ]
-  },
-  {
-    id: 4,
-    name: 'Cafeteria',
-    description: 'Food court and dining area displays',
-    isActive: true,
-    path: '/Cafeteria',
-    level: 0,
-    createdAt: new Date().toISOString(),
-    devices: [],
-    childGroups: []
-  }
-];
+
 
 interface DeviceGroupNodeProps {
   group: DeviceGroup;
@@ -69,38 +42,86 @@ interface DeviceGroupNodeProps {
   onEdit: (group: DeviceGroup) => void;
   onDelete: (group: DeviceGroup) => void;
   onAddSubGroup: (parentGroup: DeviceGroup) => void;
+  onMove: (groupId: number, newParentId?: number) => void;
 }
 
 /**
- * Device Group Tree Node Component  
- * Displays individual group with expand/collapse and actions
+ * Sortable Device Group Tree Node Component  
+ * Displays individual group with expand/collapse, drag-and-drop, and actions
  */
-function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup }: DeviceGroupNodeProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
+function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove }: DeviceGroupNodeProps) {
+  const [isExpanded, setIsExpanded] = useState(group.isExpanded ?? true);
   const [showActions, setShowActions] = useState(false);
   
-  const deviceCount = group.devices?.length || 0;
-  const childCount = group.childGroups?.length || 0;
+  const deviceCount = group.deviceCount || 0;
+  // Prefer using actual children length for UI toggles (tree endpoint provides children)
+  const childrenArray = group.children ?? [];
+  const childCount = childrenArray.length || group.childGroupCount || 0;
+  
+  // grouping info for accessibility
+
+  // DnD Kit sortable functionality
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
+    id: group.id,
+    data: {
+      type: 'DeviceGroup',
+      group,
+    },
+  });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
 
   return (
-    <div className="relative">
+    <div 
+      ref={setNodeRef}
+      style={style}
+      className="relative"
+    >
       {/* Group Row */}
       <div 
-        className="flex items-center py-3 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 group rounded-lg"
+        className={`flex items-center py-3 px-4 hover:bg-gray-50 dark:hover:bg-gray-800 group rounded-lg border transition-colors ${
+          isDragging 
+            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' 
+            : 'border-transparent'
+        }`}
         style={{ marginLeft: `${level * 24}px` }}
       >
-        {/* Expand/Collapse Button */}
+        {/* Drag Handle */}
         <button
-          onClick={() => setIsExpanded(!isExpanded)}
-          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded mr-2"
-          disabled={childCount === 0}
+          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded mr-2 cursor-grab active:cursor-grabbing opacity-0 group-hover:opacity-100 transition-opacity"
+          {...attributes}
+          {...listeners}
+        >
+          <GripVertical className="h-4 w-4 text-gray-400" />
+        </button>
+
+        {/* Expand/Collapse Button - make clickable area larger by wrapping icon + label area */}
+        <div
+          role="button"
+          tabIndex={0}
+          onClick={() => childCount > 0 && setIsExpanded(prev => !prev)}
+          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && childCount > 0) setIsExpanded(prev => !prev) }}
+          className={`flex items-center mr-2 cursor-pointer select-none ${childCount === 0 ? 'cursor-default opacity-60' : ''}`}
+          aria-expanded={isExpanded}
+          aria-disabled={childCount === 0}
         >
           {childCount > 0 ? (
-            isExpanded ? <FolderOpen className="h-4 w-4 text-blue-600" /> : <Folder className="h-4 w-4 text-blue-600" />
+            isExpanded ? <FolderOpen className="h-4 w-4 text-blue-600 mr-2" /> : <Folder className="h-4 w-4 text-blue-600 mr-2" />
           ) : (
-            <Folder className="h-4 w-4 text-gray-400" />
+            <Folder className="h-4 w-4 text-gray-400 mr-2" />
           )}
-        </button>
+        </div>
 
         {/* Group Info */}
         <div className="flex-1">
@@ -114,12 +135,8 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup }: Devi
         </div>
 
         {/* Status Badge */}
-        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-3 ${
-          group.isActive 
-            ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
-            : 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
-        }`}>
-          {group.isActive ? 'Active' : 'Inactive'}
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mr-3 bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">
+          Active
         </span>
 
         {/* Actions Menu */}
@@ -171,16 +188,24 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup }: Devi
       </div>
 
       {/* Child Groups */}
-      {isExpanded && group.childGroups && group.childGroups.map((childGroup) => (
-        <DeviceGroupNode
-          key={childGroup.id}
-          group={childGroup}
-          level={level + 1}
-          onEdit={onEdit}
-          onDelete={onDelete}
-          onAddSubGroup={onAddSubGroup}
-        />
-      ))}
+      {isExpanded && childrenArray.length > 0 && (
+        <SortableContext 
+          items={childrenArray.map(child => child.id)} 
+          strategy={verticalListSortingStrategy}
+        >
+          {childrenArray.map((childGroup) => (
+            <DeviceGroupNode
+              key={childGroup.id}
+              group={childGroup}
+              level={level + 1}
+              onEdit={onEdit}
+              onDelete={onDelete}
+              onAddSubGroup={onAddSubGroup}
+              onMove={onMove}
+            />
+          ))}
+        </SortableContext>
+      )}
     </div>
   );
 }
@@ -191,22 +216,50 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup }: Devi
  * Following copilot-instructions-ui.instructions.md guidelines
  */
 export default function DeviceGroupsPage() {
-  const [deviceGroups, setDeviceGroups] = useState<DeviceGroup[]>(mockDeviceGroups);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<DeviceGroup | null>(null);
   const [parentGroup, setParentGroup] = useState<DeviceGroup | null>(null);
+  
+  // Use React Query hook for device groups tree data (with populated children)
+  const { 
+    data: deviceGroups = [], 
+    isLoading, 
+    error, 
+    refetch 
+  } = useDeviceGroupsTree();
+  
+  // Debug: Log tree structure
+  console.log('🌳 Device Groups Tree:', deviceGroups.length, deviceGroups);
+  console.log('📊 Root Groups (no filter):', deviceGroups);
+  
+  // Get only root groups (parentId is null or undefined)
+  const rootGroups = deviceGroups.filter(group => !group.parentId);
+  console.log('🔝 Filtered Root Groups:', rootGroups.length, rootGroups);
 
-  // Calculate stats
-  const totalGroups = deviceGroups.reduce((count, group) => {
+  // React Query mutation for delete operation only (create/update handled in form)
+  const deleteDeviceGroupMutation = useDeleteDeviceGroup({ enableOptimisticUpdate: true });
+  const updateDeviceGroupMutation = useUpdateDeviceGroup({ enableOptimisticUpdate: true }); // For drag & drop only
+
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
+  // Calculate stats from root groups
+  const totalGroups = rootGroups.reduce((count, group) => {
     const countChildGroups = (g: DeviceGroup): number => {
-      return 1 + (g.childGroups?.reduce((sum, child) => sum + countChildGroups(child), 0) || 0);
+      return 1 + (g.children?.reduce((sum: number, child: DeviceGroup) => sum + countChildGroups(child), 0) || 0);
     };
     return count + countChildGroups(group);
   }, 0);
 
-  const totalDevices = deviceGroups.reduce((count, group) => {
+  const totalDevices = rootGroups.reduce((count, group) => {
     const countDevices = (g: DeviceGroup): number => {
-      return (g.devices?.length || 0) + (g.childGroups?.reduce((sum, child) => sum + countDevices(child), 0) || 0);
+      return g.deviceCount + (g.children?.reduce((sum: number, child: DeviceGroup) => sum + countDevices(child), 0) || 0);
     };
     return count + countDevices(group);
   }, 0);
@@ -233,14 +286,83 @@ export default function DeviceGroupsPage() {
     if (!confirm(`Are you sure you want to delete "${group.name}"? This action cannot be undone.`)) {
       return;
     }
-    // TODO: Implement delete logic
-    console.log('Delete group:', group);
+    
+    deleteDeviceGroupMutation.mutate(group.id, {
+      onSuccess: () => {
+        console.log('Device group deleted successfully');
+        // TODO: Show success toast notification
+      },
+      onError: (error) => {
+        console.error('Failed to delete device group:', error);
+        alert(`Failed to delete device group: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      },
+    });
   };
 
-  const handleFormSubmit = (data: DeviceGroupFormData) => {
-    console.log('Form submitted:', data);
-    // TODO: Implement API call
+  const handleFormSubmit = (result: DeviceGroup) => {
+    // Form already handled the mutation, just close modal
+    console.log('Device group operation completed:', result);
     setShowCreateModal(false);
+    setShowEditModal(false);
+    setEditingGroup(null);
+    setParentGroup(null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+
+    if (active.id !== over?.id && over?.id) {
+      // Flatten all groups to find the dragged and target groups
+      const flattenGroups = (groups: DeviceGroup[]): DeviceGroup[] => {
+        return groups.reduce((acc, group) => {
+          acc.push(group);
+          if (group.children) {
+            acc.push(...flattenGroups(group.children));
+          }
+          return acc;
+        }, [] as DeviceGroup[]);
+      };
+
+      const allGroups = flattenGroups(rootGroups);
+      const activeGroup = allGroups.find(g => g.id === active.id);
+      const overGroup = allGroups.find(g => g.id === over.id);
+      
+      if (activeGroup && overGroup) {
+        // Move the active group to be a sibling of the over group
+        // or as a child if it's dropped on a parent
+        const newParentId = overGroup.parentId;
+        
+        console.log(`Moving group "${activeGroup.name}" to be sibling of "${overGroup.name}"`);
+        handleMoveGroup(activeGroup.id, newParentId);
+      }
+    }
+  };
+
+  const handleMoveGroup = (groupId: number, newParentId?: number) => {
+    const moveData = {
+      ...(newParentId && { parentGroupId: newParentId }),
+    };
+
+    updateDeviceGroupMutation.mutate(
+      { id: groupId, data: moveData as any },
+      {
+        onSuccess: () => {
+          console.log('Device group moved successfully');
+          // TODO: Show success toast notification
+        },
+        onError: (error) => {
+          console.error('Failed to move device group:', error);
+          alert(`Failed to move device group: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        },
+      }
+    );
+  };
+
+  // Toggle expand/collapse for a specific group
+  const toggleGroupExpansion = (groupId: number) => {
+    // TODO: Implement local state management for expanded groups
+    // This could be stored in localStorage or component state
+    console.log('Toggle expansion for group:', groupId);
   };
 
   // Get all groups for parent selection (excluding editing group and its children)
@@ -248,14 +370,14 @@ export default function DeviceGroupsPage() {
     const flattenGroups = (groups: DeviceGroup[]): DeviceGroup[] => {
       return groups.reduce((acc, group) => {
         acc.push(group);
-        if (group.childGroups) {
-          acc.push(...flattenGroups(group.childGroups));
+        if (group.children) {
+          acc.push(...flattenGroups(group.children));
         }
         return acc;
       }, [] as DeviceGroup[]);
     };
 
-    return flattenGroups(deviceGroups).filter(group => {
+    return flattenGroups(rootGroups).filter(group => {
       // Don't include the group being edited or its children
       if (editingGroup && (group.id === editingGroup.id || group.path.startsWith(editingGroup.path + '/'))) {
         return false;
@@ -278,11 +400,25 @@ export default function DeviceGroupsPage() {
           <Button
             onClick={handleCreateGroup}
             className="flex items-center space-x-2"
+            disabled={updateDeviceGroupMutation.isPending || deleteDeviceGroupMutation.isPending}
           >
             <Plus className="h-4 w-4" />
             <span>Create Group</span>
           </Button>
         </div>
+
+        {/* Operation Status */}
+        {(updateDeviceGroupMutation.isPending || deleteDeviceGroupMutation.isPending) && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+              <span className="text-sm text-blue-800 dark:text-blue-200">
+                {updateDeviceGroupMutation.isPending && 'Updating device group...'}
+                {deleteDeviceGroupMutation.isPending && 'Deleting device group...'}
+              </span>
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -318,7 +454,7 @@ export default function DeviceGroupsPage() {
               <div className="ml-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">Root Groups</p>
                 <p className="text-2xl font-semibold text-gray-900 dark:text-white">
-                  {deviceGroups.filter(g => !g.parentGroupId).length}
+                  {rootGroups.length}
                 </p>
               </div>
             </div>
@@ -332,7 +468,27 @@ export default function DeviceGroupsPage() {
           </div>
           
           <div className="p-6">
-            {deviceGroups.length === 0 ? (
+            {isLoading ? (
+              <div className="text-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-500 dark:text-gray-400">Loading device groups...</p>
+              </div>
+            ) : error ? (
+              <div className="text-center py-12">
+                <div className="text-red-500 mb-4">
+                  <svg className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                </div>
+                <p className="text-red-600 dark:text-red-400 mb-2">Failed to load device groups</p>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                  {error instanceof Error ? error.message : 'An unexpected error occurred'}
+                </p>
+                <Button onClick={() => refetch()} variant="outline" size="sm">
+                  Try Again
+                </Button>
+              </div>
+            ) : deviceGroups.length === 0 ? (
               <div className="text-center py-12">
                 <Folder className="h-12 w-12 text-gray-400 mx-auto mb-4" />
                 <p className="text-gray-500 dark:text-gray-400">No device groups created yet</p>
@@ -341,36 +497,62 @@ export default function DeviceGroupsPage() {
                 </p>
               </div>
             ) : (
-              <div className="space-y-1">
-                {deviceGroups.filter(group => !group.parentGroupId).map((group) => (
-                  <DeviceGroupNode
-                    key={group.id}
-                    group={group}
-                    level={0}
-                    onEdit={handleEditGroup}
-                    onDelete={handleDeleteGroup}
-                    onAddSubGroup={handleAddSubGroup}
-                  />
-                ))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={updateDeviceGroupMutation.isPending ? () => {} : handleDragEnd}
+              >
+                <SortableContext 
+                  items={rootGroups.map(group => group.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className={`space-y-1 ${
+                    (updateDeviceGroupMutation.isPending || deleteDeviceGroupMutation.isPending) 
+                      ? 'pointer-events-none opacity-60' 
+                      : ''
+                  }`}>
+                    {rootGroups.map((group) => (
+                      <DeviceGroupNode
+                        key={group.id}
+                        group={group}
+                        level={0}
+                        onEdit={handleEditGroup}
+                        onDelete={handleDeleteGroup}
+                        onAddSubGroup={handleAddSubGroup}
+                        onMove={handleMoveGroup}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             )}
           </div>
         </div>
 
         {/* Create/Edit Modal */}
-        {showCreateModal && (
+        {(showCreateModal || showEditModal) && (
           <Modal
-            isOpen={showCreateModal}
-            onClose={() => setShowCreateModal(false)}
+            isOpen={showCreateModal || showEditModal}
+            onClose={() => {
+              setShowCreateModal(false);
+              setShowEditModal(false);
+              setEditingGroup(null);
+              setParentGroup(null);
+            }}
             size="lg"
             showCloseButton={false}
           >
             <DeviceGroupForm
               group={editingGroup}
               parentGroup={parentGroup}
-              availableParents={getAvailableParents()}
               onSubmit={handleFormSubmit}
-              onCancel={() => setShowCreateModal(false)}
+              onCancel={() => {
+                setShowCreateModal(false);
+                setShowEditModal(false);  
+                setEditingGroup(null);
+                setParentGroup(null);
+              }}
+              mode={editingGroup ? 'edit' : 'create'}
             />
           </Modal>
         )}

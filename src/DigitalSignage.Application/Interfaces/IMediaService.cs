@@ -34,4 +34,7 @@ public interface IMediaService
     public Task<List<string>> GetValidationErrorsAsync(int id);
     public Task<bool> IsMediaUsedInPlaylistsAsync(int id);
     public Task<bool> IsMediaUsedInScenesAsync(int id);
+    
+    // Quick assignment operations
+    public Task<DTOs.Media.QuickAssignResponseDto> QuickAssignAsync(int mediaId, DTOs.Media.QuickAssignRequestDto request, int adminUserId);
 }

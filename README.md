@@ -8,6 +8,40 @@ A comprehensive digital signage management system built with **Clean Architectur
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
+## ✨ New Feature: Post-Upload Assignment (Oct 2025)
+
+A quick assignment workflow was added to the admin UI to let content managers assign uploaded media to users or schedules immediately after upload. This improves authoring speed and reduces follow-up steps.
+
+Key points:
+- Shows a Post-Upload Actions dialog after a successful upload with four actions: Assign to Users, Add to Schedule, Upload More, Done.
+- Provides a Quick Assign dialog (React Hook Form + Zod) to create a schedule or select an existing schedule and pick users.
+- Backend endpoint: `POST /api/media/{id}/quick-assign` performs schedule creation (optional) and user assignments atomically.
+
+Files added/changed for this feature:
+- Frontend:
+  - `src/digital-signage-web/src/components/media/PostUploadActionsDialog.tsx` (NEW)
+  - `src/digital-signage-web/src/components/media/QuickAssignDialog.tsx` (NEW)
+  - `src/digital-signage-web/src/hooks/useQuickAssign.ts` (UPDATED)
+  - `src/digital-signage-web/src/services/api/userApi.ts` (NEW)
+  - `src/digital-signage-web/src/services/api/scheduleApi.ts` (NEW)
+  - `src/digital-signage-web/src/types/quickAssign.ts` (NEW)
+  - `src/digital-signage-web/src/app/media/components/UploadMediaModal.tsx` (UPDATED - integrated dialogs)
+- Backend:
+  - `src/DigitalSignage.Application/DTOs/Media/QuickAssignRequestDto.cs` (NEW)
+  - `src/DigitalSignage.Application/DTOs/Media/QuickAssignResponseDto.cs` (NEW)
+  - `src/DigitalSignage.Application/Services/MediaService.cs` (UPDATED - QuickAssignAsync)
+  - `src/DigitalSignage.Api/Controllers/MediaController.cs` (UPDATED - POST /api/media/{id}/quick-assign)
+
+Quick test (local):
+1. Start backend API and frontend (see Quick Start below).
+2. Upload a media file via Admin UI (Media → Upload).
+3. After upload completes, confirm Post-Upload Actions dialog appears.
+4. Choose "Assign to Users" → confirm Quick Assign dialog loads real users and schedules.
+5. Submit assignment and verify success toast and that media appears in media list.
+
+Environment note:
+- Ensure `NEXT_PUBLIC_API_URL` points to your running backend (e.g. `http://localhost:5100`). See Frontend Setup below.
+
 ## 🏗️ Architecture
 
 This project follows **Clean Architecture** principles with separate backend and frontend applications:

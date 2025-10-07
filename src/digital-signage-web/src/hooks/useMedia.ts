@@ -2,7 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { MediaService, MediaFile, MediaUploadRequest, MediaSearchParams } from '@/services'
 import { useToast } from '@/hooks/useToast'
 
-// Query keys for React Query cache management
+/**
+ * Query key factory for media-related queries
+ * 
+ * Provides consistent cache keys for React Query media operations.
+ * Used internally by media hooks for cache management and invalidation.
+ * 
+ * @see https://tanstack.com/query/latest/docs/react/guides/query-keys
+ */
 export const mediaKeys = {
   all: ['media'] as const,
   lists: () => [...mediaKeys.all, 'list'] as const,
@@ -15,7 +22,30 @@ export const mediaKeys = {
 }
 
 /**
- * Hook for fetching all media files
+ * Hook to fetch all media files
+ * 
+ * Retrieves complete media library including images, videos, and documents.
+ * Results are cached for 5 minutes with automatic background refetching.
+ * 
+ * @returns React Query result with media files array and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: mediaFiles, isLoading, error } = useMedia()
+ * 
+ * if (isLoading) return <LoadingSkeleton variant="card" count={6} />
+ * if (error) return <ErrorState error={error} />
+ * 
+ * return (
+ *   <MediaGrid>
+ *     {mediaFiles?.map(media => (
+ *       <MediaCard key={media.id} media={media} />
+ *     ))}
+ *   </MediaGrid>
+ * )
+ * ```
+ * 
+ * @see MediaService.getAll for API implementation
  */
 export function useMedia() {
   return useQuery({
@@ -26,7 +56,27 @@ export function useMedia() {
 }
 
 /**
- * Hook for fetching media by ID
+ * Hook to fetch a single media file by ID
+ * 
+ * Retrieves detailed information for a specific media file including
+ * metadata, file size, dimensions, duration (for videos), and usage statistics.
+ * Data is cached for 10 minutes.
+ * 
+ * @param id - Media file ID to fetch
+ * @param enabled - Whether the query should run (default: true)
+ * @returns React Query result with media file details and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: media, isLoading } = useMediaById(mediaId)
+ * 
+ * if (isLoading) return <LoadingSkeleton variant="image" />
+ * if (!media) return <EmptyState message="Media not found" />
+ * 
+ * return <MediaPreview media={media} />
+ * ```
+ * 
+ * @see MediaService.getById for API implementation
  */
 export function useMediaById(id: number, enabled = true) {
   return useQuery({
@@ -38,7 +88,25 @@ export function useMediaById(id: number, enabled = true) {
 }
 
 /**
- * Hook for searching media files
+ * Hook to search media files with filters
+ * 
+ * Performs search across media library with support for text search,
+ * type filtering, tag filtering, and date range filtering.
+ * Only runs when search parameters are provided.
+ * 
+ * @param params - Search parameters (searchTerm, mediaType, tags, dateRange)
+ * @returns React Query result with matching media files and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: results, isLoading } = useMediaSearch({
+ *   searchTerm: 'banner',
+ *   mediaType: 'image',
+ *   tags: ['promotion', 'seasonal']
+ * })
+ * 
+ * return <MediaSearchResults results={results} loading={isLoading} />
+ * ```
  */
 export function useMediaSearch(params: MediaSearchParams) {
   return useQuery({

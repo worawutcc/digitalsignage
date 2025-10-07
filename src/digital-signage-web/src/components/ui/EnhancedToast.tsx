@@ -10,7 +10,7 @@
 
 'use client'
 
-import React, { useState, useEffect, useCallback, createContext, useContext, ReactNode } from 'react'
+import React, { useState, useEffect, useCallback, createContext, useContext } from 'react'
 import { 
   CheckCircle, 
   XCircle, 
@@ -27,50 +27,14 @@ import {
   ChevronRight
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-// Toast types and interfaces
-export type ToastType = 'success' | 'error' | 'warning' | 'info' | 'loading' | 'progress'
-export type ToastPosition = 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center'
-
-export interface ToastAction {
-  label: string
-  action: () => void
-  variant?: 'primary' | 'secondary' | 'danger'
-}
-
-export interface Toast {
-  id: string
-  type: ToastType
-  title: string
-  message?: string
-  duration?: number | 'persistent'
-  actions?: ToastAction[]
-  progress?: {
-    value: number
-    max: number
-    showPercentage?: boolean
-  }
-  context?: {
-    feature?: string
-    userId?: string
-    scheduleId?: string
-    bulkOperationId?: string
-  }
-  onDismiss?: () => void
-  dismissible?: boolean
-  showProgress?: boolean
-  animate?: boolean
-}
-
-export interface ToastContextType {
-  toasts: Toast[]
-  addToast: (toast: Omit<Toast, 'id'>) => string
-  removeToast: (id: string) => void
-  updateToast: (id: string, updates: Partial<Toast>) => void
-  clearAllToasts: () => void
-  clearToastsByType: (type: ToastType) => void
-  clearToastsByContext: (context: Partial<Toast['context']>) => void
-}
+import {
+  Toast,
+  ToastType,
+  ToastPosition,
+  ToastContextType,
+  ToastProviderProps,
+  ToastItemProps,
+} from './EnhancedToast.types'
 
 // Toast Context
 const ToastContext = createContext<ToastContextType | undefined>(undefined)
@@ -84,13 +48,6 @@ export function useToast() {
 }
 
 // Toast Provider Component
-export interface ToastProviderProps {
-  children: ReactNode
-  position?: ToastPosition
-  maxToasts?: number
-  defaultDuration?: number
-}
-
 export function ToastProvider({ 
   children, 
   position = 'top-right',

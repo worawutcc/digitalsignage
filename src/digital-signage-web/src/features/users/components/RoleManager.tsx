@@ -83,11 +83,15 @@ export function RoleManager({
   const [showBulkActions, setShowBulkActions] = useState(false);
   
   // Real-time updates
-  const realTimeUpdates = useRealTimeUpdates();
+  const { subscribe } = useRealTimeUpdates({
+    autoConnect: false, // Manual connection to prevent race conditions
+    connectionId: 'role-manager',
+    preventMultipleConnections: true,
+  });
   
   useEffect(() => {
     if (enableRealTimeUpdates) {
-      const unsubscribe = realTimeUpdates.subscribe(['user_updated', 'user_created', 'user_deleted'], (event: any) => {
+      const unsubscribe = subscribe(['user_updated', 'user_created', 'user_deleted'], (event: any) => {
         // In a real implementation, this would refresh role data
         console.log('Role-related real-time update:', event);
       });
@@ -95,7 +99,7 @@ export function RoleManager({
       return unsubscribe;
     }
     return undefined;
-  }, [enableRealTimeUpdates, realTimeUpdates]);
+  }, [enableRealTimeUpdates, subscribe]);
 
   // Debounced search
   const debouncedSearchQuery = useDebounce(searchQuery, 300);

@@ -7,14 +7,15 @@
 
 import React from 'react'
 import { cn } from '@/lib/utils'
+import {
+  SpinnerProps,
+  LoadingCardProps,
+  LoadingTableProps,
+} from './LoadingStates.types'
 
 /**
  * Base Spinner Component
  */
-export interface SpinnerProps {
-  size?: 'sm' | 'md' | 'lg' | 'xl'
-  className?: string
-}
 
 export function Spinner({ size = 'md', className }: SpinnerProps) {
   const sizeClasses = {

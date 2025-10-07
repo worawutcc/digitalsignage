@@ -15,7 +15,7 @@ import { HubConnectionBuilder, HubConnection, HubConnectionState } from '@micros
 import { TOKEN_STORAGE_KEY } from '@/lib/auth'
 
 export interface UseRealTimeUpdatesOptions {
-  /** Enable automatic connection on mount */
+  /** Enable automatic connection on mount - default false to prevent race conditions */
   autoConnect?: boolean
   /** Reconnection configuration */
   reconnect?: {
@@ -45,6 +45,9 @@ export interface UseRealTimeUpdatesOptions {
     critical?: boolean
     events?: RealTimeEventType[]
   }
+  /** Connection management */
+  connectionId?: string // Unique identifier for connection sharing
+  preventMultipleConnections?: boolean // Prevent multiple connections from same source
 }
 
 export type RealTimeEventType = 
@@ -86,7 +89,23 @@ export interface RealTimeConnectionState {
   lastConnected: Date | null
   connectionAttempts: number
   error: string | null
+  connectionId?: string
+  isShared?: boolean
 }
+
+// Global connection management
+let globalConnection: HubConnection | null = null
+let globalConnectionState: RealTimeConnectionState = {
+  isConnected: false,
+  isConnecting: false,
+  isReconnecting: false,
+  lastConnected: null,
+  connectionAttempts: 0,
+  error: null,
+  isShared: true
+}
+let globalConnectionPromise: Promise<HubConnection> | null = null
+let connectionSubscribers: Set<string> = new Set()
 
 /**
  * Main real-time updates hook
@@ -126,7 +145,7 @@ export interface RealTimeConnectionState {
  */
 export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
   const {
-    autoConnect = true, // Re-enabled with SignalR Hub
+    autoConnect = false, // Changed default to false to prevent race conditions
     reconnect = {
       enabled: true,
       maxAttempts: 5,
@@ -145,26 +164,36 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
       showToasts: false,
       critical: true,
       events: []
-    }
+    },
+    connectionId = 'default',
+    preventMultipleConnections = true
   } = options
 
   const { toast } = useToast()
   const queryClient = useQueryClient()
   
-  // SignalR connection reference
+  // Use shared connection by default
+  const useSharedConnection = preventMultipleConnections
+  
+  // Local connection reference (for non-shared connections)
   const connectionRef = useRef<HubConnection | null>(null)
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const subscriptionsRef = useRef<Set<string>>(new Set())
+  const hookIdRef = useRef<string>(`hook-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`)
 
   // State
-  const [connectionState, setConnectionState] = useState<RealTimeConnectionState>({
-    isConnected: false,
-    isConnecting: false,
-    isReconnecting: false,
-    lastConnected: null,
-    connectionAttempts: 0,
-    error: null
-  })
+  const [connectionState, setConnectionState] = useState<RealTimeConnectionState>(() => 
+    useSharedConnection ? globalConnectionState : {
+      isConnected: false,
+      isConnecting: false,
+      isReconnecting: false,
+      lastConnected: null,
+      connectionAttempts: 0,
+      error: null,
+      connectionId,
+      isShared: useSharedConnection
+    }
+  )
 
   const [events, setEvents] = useState<RealTimeEvent[]>([])
   const [eventSubscriptions, setEventSubscriptions] = useState<Map<string, (event: RealTimeEvent) => void>>(new Map())
@@ -325,72 +354,212 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
     }))
   }, [])
 
+  // Create shared connection
+  const createSharedConnection = useCallback(async (): Promise<HubConnection> => {
+    if (globalConnectionPromise) {
+      console.log('Waiting for existing connection promise...')
+      return globalConnectionPromise
+    }
+
+    console.log('Creating new shared SignalR connection...')
+    
+    globalConnectionPromise = (async () => {
+      try {
+        const hubUrl = getHubUrl()
+        console.log('Connecting to SignalR Hub:', hubUrl)
+        
+        // Create new SignalR connection with correct authentication
+        const token = localStorage.getItem(TOKEN_STORAGE_KEY) || 
+                     sessionStorage.getItem(TOKEN_STORAGE_KEY) ||
+                     localStorage.getItem('auth_token') // Legacy fallback
+        
+        const connectionOptions = token ? {
+          accessTokenFactory: () => token,
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        } : {}
+        
+        const connection = new HubConnectionBuilder()
+          .withUrl(hubUrl, {
+            ...connectionOptions,
+            transport: 1 | 2 | 4, // WebSockets, ServerSentEvents, LongPolling
+            skipNegotiation: false,
+            logMessageContent: true
+          })
+          .configureLogging('Information')
+          .build()
+
+        // Set global event handlers
+        connection.on('ReceiveEvent', handleMessage)
+        connection.on('ReceiveMessage', handleMessage) // Keep legacy support
+        
+        connection.onclose(async (error?: Error) => {
+          console.log('Shared SignalR connection closed:', error?.message || 'Connection closed')
+          globalConnection = null
+          globalConnectionPromise = null
+          globalConnectionState = {
+            ...globalConnectionState,
+            isConnected: false,
+            isConnecting: false,
+            error: error?.message || 'Connection closed'
+          }
+          
+          // Notify all subscribers
+          connectionSubscribers.forEach(subscriberId => {
+            // Trigger re-render for all hooks using this connection
+          })
+        })
+        
+        connection.onreconnected(async () => {
+          console.log('Shared SignalR connection reconnected')
+          globalConnectionState = {
+            ...globalConnectionState,
+            isConnected: true,
+            isReconnecting: false,
+            lastConnected: new Date(),
+            connectionAttempts: 0,
+            error: null
+          }
+        })
+        
+        // Start connection
+        console.log('Starting shared SignalR connection...')
+        await connection.start()
+        console.log('Shared SignalR connection started successfully')
+        
+        globalConnection = connection
+        globalConnectionState = {
+          ...globalConnectionState,
+          isConnected: true,
+          isConnecting: false,
+          isReconnecting: false,
+          lastConnected: new Date(),
+          connectionAttempts: 0,
+          error: null
+        }
+        
+        return connection
+        
+      } catch (error) {
+        console.error('Failed to establish shared SignalR connection:', error)
+        globalConnectionPromise = null
+        globalConnectionState = {
+          ...globalConnectionState,
+          isConnecting: false,
+          error: 'Failed to connect'
+        }
+        throw error
+      }
+    })()
+
+    return globalConnectionPromise
+  }, [getHubUrl, handleMessage])
+
   // Connect to SignalR Hub
   const connect = useCallback(async () => {
-    if (connectionRef.current && 
-        (connectionRef.current.state === HubConnectionState.Connecting || 
-         connectionRef.current.state === HubConnectionState.Connected)) {
-      return
-    }
-
-    try {
-      setConnectionState(prev => ({
-        ...prev,
-        isConnecting: true,
-        error: null
-      }))
-
-      const hubUrl = getHubUrl()
-      console.log('Connecting to SignalR Hub:', hubUrl)
+    if (useSharedConnection) {
+      // Use shared connection
+      if (globalConnection?.state === HubConnectionState.Connected) {
+        console.log('Using existing shared connection')
+        setConnectionState(globalConnectionState)
+        connectionSubscribers.add(hookIdRef.current)
+        return
+      }
       
-      // Create new SignalR connection with correct authentication
-      const token = localStorage.getItem(TOKEN_STORAGE_KEY) || 
-                   sessionStorage.getItem(TOKEN_STORAGE_KEY) ||
-                   localStorage.getItem('auth_token') // Legacy fallback
-      
-      const connectionOptions = token ? {
-        accessTokenFactory: () => token,
-        headers: {
-          'Authorization': `Bearer ${token}`
+      if (globalConnection?.state === HubConnectionState.Connecting || globalConnectionPromise) {
+        console.log('Waiting for shared connection...')
+        try {
+          await createSharedConnection()
+          setConnectionState(globalConnectionState)
+          connectionSubscribers.add(hookIdRef.current)
+          return
+        } catch (error) {
+          console.error('Failed to connect to shared connection:', error)
+          return
         }
-      } : {}
-      
-      connectionRef.current = new HubConnectionBuilder()
-        .withUrl(hubUrl, {
-          ...connectionOptions,
-          transport: 1 | 2 | 4, // WebSockets, ServerSentEvents, LongPolling
-          skipNegotiation: false,
-          logMessageContent: true
-        })
-        .configureLogging('Information')
-        .build()
+      }
 
-      // Set event handlers - match server event names
-      connectionRef.current.on('ReceiveEvent', handleMessage)
-      connectionRef.current.on('ReceiveMessage', handleMessage) // Keep legacy support
-      connectionRef.current.onclose(handleConnectionClose)
-      connectionRef.current.onreconnected(handleConnectionStart)
-      
-      // Start connection
-      console.log('Starting SignalR connection...')
-      await connectionRef.current.start()
-      console.log('SignalR connection started successfully')
-      
-      // Handle successful connection
-      await handleConnectionStart()
-      
-    } catch (error) {
-      console.error('Failed to establish SignalR connection:', error)
-      
-      setConnectionState(prev => ({
-        ...prev,
-        isConnecting: false,
-        error: 'Failed to connect'
-      }))
-      
-      handleConnectionError(error as Error)
+      // Create new shared connection
+      try {
+        setConnectionState(prev => ({ ...prev, isConnecting: true, error: null }))
+        await createSharedConnection()
+        setConnectionState(globalConnectionState)
+        connectionSubscribers.add(hookIdRef.current)
+      } catch (error) {
+        setConnectionState(prev => ({ 
+          ...prev, 
+          isConnecting: false, 
+          error: 'Failed to connect' 
+        }))
+      }
+    } else {
+      // Use individual connection
+      if (connectionRef.current && 
+          (connectionRef.current.state === HubConnectionState.Connecting || 
+           connectionRef.current.state === HubConnectionState.Connected)) {
+        return
+      }
+
+      try {
+        setConnectionState(prev => ({
+          ...prev,
+          isConnecting: true,
+          error: null
+        }))
+
+        const hubUrl = getHubUrl()
+        console.log('Connecting to individual SignalR Hub:', hubUrl)
+        
+        // Create new SignalR connection with correct authentication
+        const token = localStorage.getItem(TOKEN_STORAGE_KEY) || 
+                     sessionStorage.getItem(TOKEN_STORAGE_KEY) ||
+                     localStorage.getItem('auth_token') // Legacy fallback
+        
+        const connectionOptions = token ? {
+          accessTokenFactory: () => token,
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        } : {}
+        
+        connectionRef.current = new HubConnectionBuilder()
+          .withUrl(hubUrl, {
+            ...connectionOptions,
+            transport: 1 | 2 | 4, // WebSockets, ServerSentEvents, LongPolling
+            skipNegotiation: false,
+            logMessageContent: true
+          })
+          .configureLogging('Information')
+          .build()
+
+        // Set event handlers - match server event names
+        connectionRef.current.on('ReceiveEvent', handleMessage)
+        connectionRef.current.on('ReceiveMessage', handleMessage) // Keep legacy support
+        connectionRef.current.onclose(handleConnectionClose)
+        connectionRef.current.onreconnected(handleConnectionStart)
+        
+        // Start connection
+        console.log('Starting individual SignalR connection...')
+        await connectionRef.current.start()
+        console.log('Individual SignalR connection started successfully')
+        
+        // Handle successful connection
+        await handleConnectionStart()
+        
+      } catch (error) {
+        console.error('Failed to establish individual SignalR connection:', error)
+        
+        setConnectionState(prev => ({
+          ...prev,
+          isConnecting: false,
+          error: 'Failed to connect'
+        }))
+        
+        handleConnectionError(error as Error)
+      }
     }
-  }, []) // Remove all dependencies to prevent circular re-renders
+  }, [useSharedConnection, createSharedConnection, getHubUrl, handleMessage, handleConnectionClose, handleConnectionStart, handleConnectionError])
 
   // Disconnect from SignalR Hub
   const disconnect = useCallback(async () => {
@@ -399,23 +568,58 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
       reconnectTimeoutRef.current = null
     }
 
-    if (connectionRef.current) {
-      try {
-        await connectionRef.current.stop()
-      } catch (error) {
-        console.error('Error stopping SignalR connection:', error)
+    if (useSharedConnection) {
+      // Remove from subscribers
+      connectionSubscribers.delete(hookIdRef.current)
+      
+      // Only disconnect if no more subscribers
+      if (connectionSubscribers.size === 0 && globalConnection) {
+        try {
+          console.log('Stopping shared SignalR connection (no more subscribers)')
+          await globalConnection.stop()
+        } catch (error) {
+          console.error('Error stopping shared SignalR connection:', error)
+        }
+        globalConnection = null
+        globalConnectionPromise = null
+        globalConnectionState = {
+          isConnected: false,
+          isConnecting: false,
+          isReconnecting: false,
+          lastConnected: null,
+          connectionAttempts: 0,
+          error: null,
+          isShared: true
+        }
       }
-      connectionRef.current = null
-    }
+      
+      setConnectionState(prev => ({
+        ...prev,
+        isConnected: false,
+        isConnecting: false,
+        isReconnecting: false,
+        connectionAttempts: 0
+      }))
+    } else {
+      // Individual connection
+      if (connectionRef.current) {
+        try {
+          await connectionRef.current.stop()
+        } catch (error) {
+          console.error('Error stopping individual SignalR connection:', error)
+        }
+        connectionRef.current = null
+      }
 
-    setConnectionState(prev => ({
-      ...prev,
-      isConnected: false,
-      isConnecting: false,
-      isReconnecting: false,
-      connectionAttempts: 0
-    }))
-  }, [])
+      setConnectionState(prev => ({
+        ...prev,
+        isConnected: false,
+        isConnecting: false,
+        isReconnecting: false,
+        connectionAttempts: 0
+      }))
+    }
+  }, [useSharedConnection])
 
   // Subscribe to specific events
   const subscribe = useCallback((eventTypes: RealTimeEventType[], callback: (event: RealTimeEvent) => void) => {
@@ -449,9 +653,11 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
 
   // Send custom message to SignalR Hub
   const sendMessage = useCallback(async (methodName: string, ...args: any[]) => {
-    if (connectionRef.current?.state === HubConnectionState.Connected) {
+    const connection = useSharedConnection ? globalConnection : connectionRef.current
+    
+    if (connection?.state === HubConnectionState.Connected) {
       try {
-        await connectionRef.current.invoke(methodName, ...args)
+        await connection.invoke(methodName, ...args)
         return true
       } catch (error) {
         console.error('Error sending SignalR message:', error)
@@ -459,25 +665,43 @@ export function useRealTimeUpdates(options: UseRealTimeUpdatesOptions = {}) {
       }
     }
     return false
-  }, [])
+  }, [useSharedConnection])
+
+  // Track connection state updates for shared connections
+  useEffect(() => {
+    if (useSharedConnection) {
+      const updateInterval = setInterval(() => {
+        if (globalConnectionState !== connectionState) {
+          setConnectionState({ ...globalConnectionState })
+        }
+      }, 1000) // Check every second
+
+      return () => clearInterval(updateInterval)
+    }
+    return () => {} // Return empty cleanup function when not using shared connection
+  }, [useSharedConnection, connectionState])
 
   // Auto-connect on mount if enabled
   useEffect(() => {
     if (autoConnect) {
-      connect()
-    }
+      // Add delay to prevent race conditions
+      const connectTimeout = setTimeout(() => {
+        connect()
+      }, 100) // Small delay to let other components mount first
 
-    return () => {
-      disconnect()
+      return () => {
+        clearTimeout(connectTimeout)
+      }
     }
-  }, [autoConnect]) // Remove connect and disconnect from dependencies
+    return () => {} // Return empty cleanup function when autoConnect is false
+  }, [autoConnect, connect])
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       disconnect()
     }
-  }, []) // Remove disconnect from dependencies
+  }, [disconnect])
 
   return {
     /** Connection state */
@@ -565,7 +789,7 @@ function getEventDescription(event: RealTimeEvent): string {
  */
 export function useScheduleRealTimeUpdates(scheduleIds?: string[]) {
   const options: UseRealTimeUpdatesOptions = {
-    autoConnect: true, // Re-enabled with SignalR Hub
+    autoConnect: false, // Changed to prevent race conditions - manually connect when needed
     subscriptions: {
       schedules: true,
       conflicts: true
@@ -573,7 +797,9 @@ export function useScheduleRealTimeUpdates(scheduleIds?: string[]) {
     notifications: {
       showToasts: true,
       critical: true
-    }
+    },
+    connectionId: 'schedules',
+    preventMultipleConnections: true
   }
   
   if (scheduleIds) {
@@ -588,14 +814,16 @@ export function useScheduleRealTimeUpdates(scheduleIds?: string[]) {
  */
 export function useUserRealTimeUpdates(userIds?: string[]) {
   const options: UseRealTimeUpdatesOptions = {
-    autoConnect: true, // Re-enabled with SignalR Hub
+    autoConnect: false, // Changed to prevent race conditions - manually connect when needed
     subscriptions: {
       users: true,
       conflicts: true
     },
     notifications: {
       showToasts: false
-    }
+    },
+    connectionId: 'users',
+    preventMultipleConnections: true
   }
   
   if (userIds) {

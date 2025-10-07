@@ -1,39 +1,8 @@
 'use client'
 
-import { LucideIcon } from 'lucide-react'
 import { Button } from './Button'
 import { cn } from '@/lib/utils'
-
-export interface EmptyStateProps {
-  /**
-   * Icon component to display
-   */
-  icon: LucideIcon
-  
-  /**
-   * Title text
-   */
-  title: string
-  
-  /**
-   * Optional description text
-   */
-  description?: string
-  
-  /**
-   * Optional action button
-   */
-  action?: {
-    label: string
-    onClick: () => void
-    variant?: 'default' | 'outline' | 'secondary'
-  }
-  
-  /**
-   * Additional CSS classes
-   */
-  className?: string
-}
+import { EmptyStateProps } from './EmptyState.types'
 
 /**
  * EmptyState Component

@@ -930,4 +930,40 @@ public class DeviceGroupController : ControllerBase
     }
 
     #endregion
+
+    #region Validation Operations
+
+    /// <summary>
+    /// Validate if a device group name is unique at the given level
+    /// </summary>
+    [HttpGet("validate/name-unique")]
+    [ProducesResponseType(typeof(object), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult> ValidateNameUnique(
+        [FromQuery] string name,
+        [FromQuery] int? parentId = null,
+        [FromQuery] int? excludeId = null)
+    {
+        try
+        {
+            _logger.LogInformation("Validating name uniqueness: {Name} under parent {ParentId}", name, parentId);
+            
+            var isUnique = await _deviceGroupService.IsNameUniqueAsync(name, parentId, excludeId);
+            
+            return Ok(new { isUnique });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error validating name uniqueness for {Name}", name);
+            return StatusCode(500, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while validating name uniqueness",
+                Status = 500,
+                Instance = HttpContext.Request.Path
+            });
+        }
+    }
+
+    #endregion
 }

@@ -398,4 +398,181 @@ public class MediaService : IMediaService
             _ => MediaType.Document
         };
     }
+
+    /// <summary>
+    /// Quick assign media to users/devices after upload
+    /// Creates new schedule or adds to existing schedule, then assigns to users/groups
+    /// </summary>
+    public async Task<DTOs.Media.QuickAssignResponseDto> QuickAssignAsync(
+        int mediaId, 
+        DTOs.Media.QuickAssignRequestDto request, 
+        int adminUserId)
+    {
+        // Validate media exists
+        var media = await _context.Set<Media>().FindAsync(mediaId);
+        if (media == null)
+        {
+            throw new InvalidOperationException($"Media with ID {mediaId} not found");
+        }
+
+        Schedule schedule;
+        bool newScheduleCreated = false;
+
+        if (request.AssignmentType == "new-schedule")
+        {
+            // Create new schedule with media
+            if (string.IsNullOrWhiteSpace(request.ScheduleName))
+            {
+                throw new InvalidOperationException("Schedule name is required for new schedule");
+            }
+
+            schedule = new Schedule
+            {
+                Name = request.ScheduleName,
+                StartDate = DateTime.SpecifyKind(
+                    request.StartDate ?? DateTime.UtcNow,
+                    DateTimeKind.Unspecified),
+                EndDate = DateTime.SpecifyKind(
+                    request.EndDate ?? DateTime.UtcNow.AddDays(30),
+                    DateTimeKind.Unspecified),
+                StartTime = TimeSpan.Zero,
+                EndTime = new TimeSpan(23, 59, 59),
+                Status = ScheduleStatus.Active,
+                IsRecurring = false,
+                IsDefault = false,
+                DeviceId = 0, // Temporary, will be updated when assigned to device groups
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            };
+
+            _context.Set<Schedule>().Add(schedule);
+            await _context.SaveChangesAsync();
+            
+            newScheduleCreated = true;
+            _logger.LogInformation("Created new schedule {ScheduleId} for quick assignment", schedule.Id);
+        }
+        else if (request.AssignmentType == "existing-schedule")
+        {
+            // Use existing schedule
+            if (!request.ScheduleId.HasValue)
+            {
+                throw new InvalidOperationException("Schedule ID is required for existing schedule");
+            }
+
+            var existingSchedule = await _context.Set<Schedule>().FindAsync(request.ScheduleId.Value);
+            if (existingSchedule == null)
+            {
+                throw new InvalidOperationException($"Schedule with ID {request.ScheduleId.Value} not found");
+            }
+            schedule = existingSchedule;
+        }
+        else
+        {
+            throw new InvalidOperationException($"Invalid assignment type: {request.AssignmentType}");
+        }
+
+        // Add media to schedule if not already present
+        var existingScheduleMedia = await _context.Set<ScheduleMedia>()
+            .FirstOrDefaultAsync(sm => sm.ScheduleId == schedule.Id && sm.MediaId == mediaId);
+
+        if (existingScheduleMedia == null)
+        {
+            var maxOrder = await _context.Set<ScheduleMedia>()
+                .Where(sm => sm.ScheduleId == schedule.Id)
+                .MaxAsync(sm => (int?)sm.Order) ?? 0;
+
+            var scheduleMedia = new ScheduleMedia
+            {
+                ScheduleId = schedule.Id,
+                MediaId = mediaId,
+                Order = maxOrder + 1,
+                DurationSeconds = request.DurationSeconds ?? (media.DurationSeconds > 0 ? media.DurationSeconds : 10),
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            };
+
+            _context.Set<ScheduleMedia>().Add(scheduleMedia);
+            await _context.SaveChangesAsync();
+            
+            _logger.LogInformation("Added media {MediaId} to schedule {ScheduleId}", mediaId, schedule.Id);
+        }
+
+        // Assign schedule to users
+        int usersAssignedCount = 0;
+        if (request.UserIds != null && request.UserIds.Length > 0)
+        {
+            foreach (var userId in request.UserIds)
+            {
+                // Check if assignment already exists
+                var existingAssignment = await _context.Set<UserSchedule>()
+                    .FirstOrDefaultAsync(us => us.UserId == userId && us.ScheduleId == schedule.Id);
+
+                if (existingAssignment == null)
+                {
+                    var userSchedule = new UserSchedule
+                    {
+                        UserId = userId,
+                        ScheduleId = schedule.Id,
+                        AssignedByUserId = adminUserId,
+                        CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                        UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+                    };
+
+                    _context.Set<UserSchedule>().Add(userSchedule);
+                    usersAssignedCount++;
+                }
+            }
+            
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Assigned schedule {ScheduleId} to {Count} users", schedule.Id, usersAssignedCount);
+        }
+
+        // Note: Device group assignment requires further schema design
+        // Current Schedule entity has DeviceId (single device), not DeviceGroupId
+        // For MVP, we skip device group assignment and focus on user assignment
+        int deviceGroupsAssignedCount = 0;
+        if (request.DeviceGroupIds != null && request.DeviceGroupIds.Length > 0)
+        {
+            _logger.LogWarning("Device group assignment not yet implemented in current schema");
+            // TODO: Implement device group assignment when schema is updated
+        }
+
+        // Broadcast real-time event (if broadcaster is available)
+        try
+        {
+            await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
+            {
+                Type = "media_assigned",
+                Payload = SerializePayload(new
+                {
+                    mediaId,
+                    scheduleId = schedule.Id,
+                    newScheduleCreated,
+                    usersAssigned = usersAssignedCount,
+                    deviceGroupsAssigned = deviceGroupsAssignedCount
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to broadcast media_assigned event");
+        }
+
+        return new DTOs.Media.QuickAssignResponseDto
+        {
+            MediaId = mediaId,
+            MediaName = media.Name,
+            ScheduleId = schedule.Id,
+            ScheduleName = schedule.Name,
+            NewScheduleCreated = newScheduleCreated,
+            UsersAssignedCount = usersAssignedCount,
+            DeviceGroupsAssignedCount = deviceGroupsAssignedCount,
+            AssignedUserIds = request.UserIds ?? Array.Empty<int>(),
+            AssignedDeviceGroupIds = request.DeviceGroupIds ?? Array.Empty<int>(),
+            AssignedAt = DateTime.UtcNow,
+            Message = newScheduleCreated 
+                ? $"Created schedule '{schedule.Name}' and assigned media to {usersAssignedCount} users and {deviceGroupsAssignedCount} device groups"
+                : $"Added media to schedule '{schedule.Name}' and assigned to {usersAssignedCount} users and {deviceGroupsAssignedCount} device groups"
+        };
+    }
 }

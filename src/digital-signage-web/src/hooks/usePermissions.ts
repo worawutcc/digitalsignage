@@ -217,7 +217,46 @@ export function useRoles(roles: Array<'admin' | 'manager' | 'user'>): Permission
 }
 
 /**
- * Hook to check if user is authenticated
+ * Hook to check user authentication status
+ * 
+ * Provides current authentication state from Redux store including user details,
+ * loading state, and authentication status. Use this for protecting routes and
+ * conditionally rendering authenticated content.
+ * 
+ * @returns Authentication state object
+ * @returns returns.isAuthenticated - Whether user is logged in
+ * @returns returns.isLoading - Whether auth state is being determined
+ * @returns returns.user - Current user object or null
+ * 
+ * @example
+ * ```tsx
+ * function ProtectedPage() {
+ *   const { isAuthenticated, isLoading, user } = useAuth()
+ * 
+ *   if (isLoading) return <LoadingSkeleton />
+ *   if (!isAuthenticated) return <Navigate to="/login" />
+ * 
+ *   return <div>Welcome, {user?.name}</div>
+ * }
+ * ```
+ * 
+ * @example
+ * ```tsx
+ * // Conditional rendering
+ * const { isAuthenticated } = useAuth()
+ * 
+ * return (
+ *   <>
+ *     {isAuthenticated ? (
+ *       <UserMenu />
+ *     ) : (
+ *       <LoginButton />
+ *     )}
+ *   </>
+ * )
+ * ```
+ * 
+ * @see authSlice for Redux state structure
  */
 export function useAuth(): {
   isAuthenticated: boolean

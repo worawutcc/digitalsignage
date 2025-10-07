@@ -15,6 +15,7 @@ import { UserList } from '@/features/users/components/UserList';
 import { RoleManager } from '@/features/users/components/RoleManager';
 import { UserScheduleAssignment } from '@/features/users/components/UserScheduleAssignment';
 import { CreateUserModal } from '@/features/users/components/CreateUserModal';
+import RealTimeProvider, { ConnectionStatusIndicator } from '@/components/providers/RealTimeProvider';
 import { useQuery } from '@tanstack/react-query';
 import { userService, userPermissionService } from '@/services';
 import type { User, UserRole } from '@/features/users/types';
@@ -58,8 +59,17 @@ export default function UsersPage() {
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <RealTimeProvider 
+      autoConnect={true}
+      showConnectionToasts={false}
+      retryConfig={{
+        enabled: true,
+        maxAttempts: 3,
+        delayMs: 2000
+      }}
+    >
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header with Enhanced Features Info */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -72,16 +82,23 @@ export default function UsersPage() {
               </p>
             </div>
             
-            {enhancedFeaturesEnabled && (
-              <div className="flex items-center space-x-4">
-                <div className="text-right">
-                  <div className="text-sm font-medium text-gray-900 dark:text-white">
-                    Enhanced UI Active
+            <div className="flex items-center space-x-4">
+              {/* Real-time Connection Status */}
+              <ConnectionStatusIndicator showText={true} className="text-sm" />
+              
+              {enhancedFeaturesEnabled && (
+                <>
+                  <div className="h-4 w-px bg-gray-300 dark:bg-gray-600" />
+                  <div className="text-right">
+                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      Enhanced UI Active
+                    </div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                      Bulk ops • Virtual scroll • Optimistic updates
+                    </div>
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400">
-                    Bulk ops • Virtual scroll • Optimistic updates
-                  </div>
-                </div>
+                </>
+              )}
                 <button
                   onClick={() => setEnhancedFeaturesEnabled(false)}
                   className="inline-flex items-center px-3 py-1 border border-gray-300 shadow-sm text-xs font-medium rounded text-gray-700 bg-white hover:bg-gray-50 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-600"
@@ -90,8 +107,7 @@ export default function UsersPage() {
                   Disable
                 </button>
               </div>
-            )}
-          </div>
+            </div>
 
           {/* Performance Metrics Dashboard (when enhanced features are active) */}
           {/* Enhanced Performance Dashboard */}
@@ -600,8 +616,9 @@ export default function UsersPage() {
             }}
           />
         )}
+        </div>
       </div>
-    </div>
+    </RealTimeProvider>
   );
 }
 

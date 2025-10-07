@@ -11,17 +11,7 @@
 import React from 'react'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-
-export interface CheckboxProps {
-  checked?: boolean
-  onChange?: (checked: boolean) => void
-  disabled?: boolean
-  indeterminate?: boolean
-  className?: string
-  id?: string
-  'aria-label'?: string
-  'data-testid'?: string
-}
+import { CheckboxProps } from './Checkbox.types'
 
 export function Checkbox({
   checked = false,

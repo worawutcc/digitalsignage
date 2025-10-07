@@ -12,7 +12,14 @@ import {
 } from '@/types/api'
 import { toast } from 'react-hot-toast'
 
-// Query Keys
+/**
+ * Query key factory for device-related queries
+ * 
+ * Provides consistent cache keys for React Query device operations.
+ * Used internally by device hooks for cache management and invalidation.
+ * 
+ * @see https://tanstack.com/query/latest/docs/react/guides/query-keys
+ */
 export const deviceQueryKeys = {
   all: ['devices'] as const,
   lists: () => [...deviceQueryKeys.all, 'list'] as const,
@@ -32,7 +39,31 @@ export const deviceQueryKeys = {
 // ========================
 
 /**
- * Get all devices with optional filtering
+ * Hook to fetch all devices with optional filtering
+ * 
+ * Retrieves device list from the API with automatic caching and background refetching.
+ * Supports filtering by status, location, group, and search query.
+ * 
+ * @param filters - Optional filters for device list (status, location, deviceGroupId, search)
+ * @returns React Query result with devices array and query state
+ * 
+ * @example
+ * ```tsx
+ * // Fetch all devices
+ * const { data: devices, isLoading, error } = useDevices()
+ * 
+ * // Fetch with filters
+ * const { data } = useDevices({ 
+ *   status: 'online', 
+ *   deviceGroupId: 5 
+ * })
+ * 
+ * // Handle loading and error states
+ * if (isLoading) return <LoadingSkeleton variant="table" count={5} />
+ * if (error) return <ErrorState error={error} />
+ * ```
+ * 
+ * @see deviceApi.getDevices for API implementation
  */
 export const useDevices = (filters?: DeviceFilters) => {
   return useQuery({
@@ -44,7 +75,26 @@ export const useDevices = (filters?: DeviceFilters) => {
 }
 
 /**
- * Get single device by ID
+ * Hook to fetch a single device by ID
+ * 
+ * Retrieves detailed information for a specific device including status,
+ * configuration, and last heartbeat. Data is cached for 5 minutes.
+ * 
+ * @param id - Device ID to fetch
+ * @param enabled - Whether the query should run (default: true)
+ * @returns React Query result with device details and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: device, isLoading } = useDevice(deviceId)
+ * 
+ * if (isLoading) return <LoadingSkeleton variant="card" />
+ * if (!device) return <EmptyState message="Device not found" />
+ * 
+ * return <DeviceCard device={device} />
+ * ```
+ * 
+ * @see deviceApi.getDevice for API implementation
  */
 export const useDevice = (id: number, enabled = true) => {
   return useQuery({
@@ -57,7 +107,26 @@ export const useDevice = (id: number, enabled = true) => {
 }
 
 /**
- * Get device configuration
+ * Hook to fetch device configuration settings
+ * 
+ * Retrieves configuration parameters for a specific device including
+ * resolution, orientation, refresh rate, and other display settings.
+ * 
+ * @param deviceId - Device ID to fetch configuration for
+ * @param enabled - Whether the query should run (default: true)
+ * @returns React Query result with device configuration and query state
+ * 
+ * @example
+ * ```tsx
+ * const { data: config } = useDeviceConfiguration(deviceId)
+ * 
+ * return (
+ *   <ConfigPanel 
+ *     resolution={config?.resolution}
+ *     orientation={config?.orientation}
+ *   />
+ * )
+ * ```
  */
 export const useDeviceConfiguration = (deviceId: number, enabled = true) => {
   return useQuery({

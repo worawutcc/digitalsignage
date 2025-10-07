@@ -115,12 +115,14 @@ export function UserList({
   const bulkRemoveAssignments = useBulkRemoveScheduleAssignments();
 
   // Real-time updates
-  const { connect, disconnect, events } = useRealTimeUpdates({
-    autoConnect: enableRealTimeUpdates,
+  const { connect, disconnect, events, connectionState } = useRealTimeUpdates({
+    autoConnect: false, // Manual connection to prevent race conditions
     subscriptions: {
       users: true,
       conflicts: enableConflictDetection,
     },
+    connectionId: 'user-list',
+    preventMultipleConnections: true,
   });
 
   // Conflict detection
@@ -138,6 +140,19 @@ export function UserList({
   useEffect(() => {
     updateFilters({ search: debouncedSearchQuery, page: 1 });
   }, [debouncedSearchQuery, updateFilters]);
+
+  // Manual connection management to prevent race conditions
+  useEffect(() => {
+    if (enableRealTimeUpdates && !connectionState.isConnected && !connectionState.isConnecting) {
+      console.log('UserList: Initiating SignalR connection...')
+      const connectTimer = setTimeout(() => {
+        connect()
+      }, 500) // Delay to let other components mount first
+      
+      return () => clearTimeout(connectTimer)
+    }
+    return () => {} // Return empty cleanup when condition is not met
+  }, [enableRealTimeUpdates, connectionState.isConnected, connectionState.isConnecting, connect]);
 
   // Bulk selection handlers
   const handleSelectAll = useCallback(() => {

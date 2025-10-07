@@ -5,74 +5,7 @@ import { AlertTriangle, CheckCircle, Info, XCircle } from 'lucide-react'
 import { Modal } from './Modal'
 import { Button } from './Button'
 import { cn } from '@/lib/utils'
-
-export interface ConfirmationModalProps {
-  /**
-   * Whether the modal is visible
-   */
-  isOpen: boolean
-  
-  /**
-   * Function to call when modal should be closed
-   */
-  onClose: () => void
-  
-  /**
-   * Function to call when user confirms action
-   */
-  onConfirm: () => void
-  
-  /**
-   * Modal title
-   */
-  title: string
-  
-  /**
-   * Modal message/description
-   */
-  message: string
-  
-  /**
-   * Confirmation button text
-   * @default "Confirm"
-   */
-  confirmText?: string
-  
-  /**
-   * Cancel button text
-   * @default "Cancel"
-   */
-  cancelText?: string
-  
-  /**
-   * Whether to require checkbox confirmation before enabling confirm button
-   * @default false
-   */
-  requireConfirm?: boolean
-  
-  /**
-   * Checkbox label text when requireConfirm is true
-   * @default "I understand the consequences"
-   */
-  confirmCheckboxLabel?: string
-  
-  /**
-   * Variant determines color scheme
-   * @default "warning"
-   */
-  variant?: 'warning' | 'danger' | 'info' | 'success'
-  
-  /**
-   * Whether the confirm action is loading
-   * @default false
-   */
-  isLoading?: boolean
-  
-  /**
-   * Additional CSS classes
-   */
-  className?: string
-}
+import { ConfirmationModalProps } from './ConfirmationModal.types'
 
 const variantConfig = {
   warning: {

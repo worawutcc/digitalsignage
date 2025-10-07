@@ -2,19 +2,9 @@ import React, { useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { ModalProps, ModalSize } from './Modal.types'
 
-export interface ModalProps {
-  isOpen: boolean
-  onClose: () => void
-  title?: string
-  children: React.ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
-  showCloseButton?: boolean
-  closeOnOverlayClick?: boolean
-  className?: string
-}
-
-const sizeClasses = {
+const sizeClasses: Record<ModalSize, string> = {
   sm: 'max-w-md',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
