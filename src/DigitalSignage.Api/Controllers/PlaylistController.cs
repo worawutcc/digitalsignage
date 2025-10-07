@@ -181,4 +181,26 @@ public class PlaylistController : ControllerBase
             return StatusCode(500, "Internal server error");
         }
     }
+    /// <summary>
+    /// Get assignment summary for a playlist
+    /// </summary>
+    [HttpGet("{id}/assignment-summary")]
+    [ProducesResponseType(typeof(PlaylistAssignmentSummaryDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistAssignmentSummaryDto>> GetAssignmentSummary(int id)
+    {
+        try
+        {
+            var summary = await _playlistService.GetAssignmentSummaryAsync(id);
+            if (summary == null || summary.PlaylistId == 0)
+                return NotFound($"Playlist with ID {id} not found");
+            return Ok(summary);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting assignment summary for playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
 }

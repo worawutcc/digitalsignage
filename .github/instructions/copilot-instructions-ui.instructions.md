@@ -156,12 +156,6 @@ export function Button({
 ```
 
 ### API Integration Rules
-- **Axios**: Use axios for all API calls (not fetch)
-- **React Query**: For client-side data fetching (preferred over SWR)
-- **Redux Toolkit**: For all state management
-- **Typed API Client**: Full TypeScript API client
-- **Error Boundaries**: Graceful error handling
-- **Loading States**: Proper loading indicators
 
 ```typescript
 // lib/api.ts - Axios configuration
@@ -198,6 +192,26 @@ export function useDevices() {
   })
 }
 ```
+
+#### Service Layer API Calls
+**Always use the configured `apiClient` from `/lib/api.ts` for all API calls in service files.**
+- Do NOT use direct `axios` imports in any service file.
+- The `apiClient` handles authentication token injection, error handling, and global interceptors.
+- Example pattern:
+  ```ts
+  import { apiClient } from '@/lib/api';
+  // ...existing code...
+  export const getAllPlaylists = async () => {
+    const response = await apiClient.get('/api/playlists');
+    return response.data;
+  };
+  // ...existing code...
+  ```
+- All service methods (CRUD, fetch, etc.) must use `apiClient` for compliance and security.
+
+**Do not import or use `axios` directly in any service file.**
+
+Refer to migration report `/docs/SERVICES-APICLIENT-MIGRATION.md` for audit history and compliance status.
 
 ### State Management Rules
 - **Redux Toolkit**: For all state management (global state)

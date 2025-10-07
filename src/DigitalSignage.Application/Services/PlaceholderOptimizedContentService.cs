@@ -25,7 +25,7 @@ public class PlaceholderOptimizedContentService : IOptimizedContentService
         return new OptimizedContentResponseDto 
         {
             DeviceId = deviceId,
-            OptimizedMedia = new List<OptimizedMediaItemDto>()
+            OptimizedMedia = new List<DeviceOptimalMediaDto>()
         };
     }
 

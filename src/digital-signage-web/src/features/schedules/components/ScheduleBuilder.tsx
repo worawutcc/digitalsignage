@@ -239,7 +239,7 @@ export function ScheduleBuilder({
               <input
                 type="text"
                 {...register('name')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 placeholder="Enter schedule name"
               />
               {errors.name && (
@@ -254,7 +254,7 @@ export function ScheduleBuilder({
               <textarea
                 {...register('description')}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 placeholder="Enter schedule description"
               />
             </div>
@@ -269,7 +269,7 @@ export function ScheduleBuilder({
                   {...register('priority', { valueAsNumber: true })}
                   min={1}
                   max={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 />
                 {errors.priority && (
                   <p className="mt-1 text-sm text-red-600">{errors.priority.message}</p>
@@ -283,7 +283,7 @@ export function ScheduleBuilder({
                 <input
                   type="date"
                   {...register('startDate')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 />
                 {errors.startDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.startDate.message}</p>
@@ -297,7 +297,7 @@ export function ScheduleBuilder({
                 <input
                   type="date"
                   {...register('endDate')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 />
                 {errors.endDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.endDate.message}</p>
@@ -311,7 +311,7 @@ export function ScheduleBuilder({
               </label>
               <select
                 {...register('recurrence.type')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
               >
                 <option value="never">No Recurrence</option>
                 <option value="daily">Daily</option>
@@ -445,11 +445,11 @@ export function ScheduleBuilder({
                   type="text"
                   {...register(`targetDevices.${index}.name`)}
                   placeholder="Device or group name"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="flex-1 px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm"
                 />
                 <select
                   {...register(`targetDevices.${index}.type`)}
-                  className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+                  className="px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm"
                 >
                   <option value="specific">Specific Device</option>
                   <option value="group">Device Group</option>
@@ -516,7 +516,7 @@ export function ScheduleBuilder({
                       type="text"
                       {...register(`content.${index}.mediaName`)}
                       placeholder="Enter media name"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm"
                     />
                   </div>
                   <div>

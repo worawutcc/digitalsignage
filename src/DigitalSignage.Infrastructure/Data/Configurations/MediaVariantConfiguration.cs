@@ -30,12 +30,27 @@ public class MediaVariantConfiguration : IEntityTypeConfiguration<MediaVariant>
         builder.Property(e => e.Height)
             .IsRequired();
 
+        builder.Property(e => e.VariantType)
+            .IsRequired()
+            .HasMaxLength(20);
+
         builder.Property(e => e.Quality)
             .IsRequired()
             .HasMaxLength(20);
 
         builder.Property(e => e.FileSize)
             .IsRequired();
+
+        builder.Property(e => e.Bitrate);
+
+        builder.Property(e => e.ContentType)
+            .IsRequired()
+            .HasMaxLength(100);
+
+        builder.Property(e => e.ETag)
+            .HasMaxLength(100);
+
+        builder.Property(e => e.QualityScore);
 
         builder.Property(e => e.Format)
             .IsRequired()
@@ -65,6 +80,9 @@ public class MediaVariantConfiguration : IEntityTypeConfiguration<MediaVariant>
         // Indexes for performance
         builder.HasIndex(e => e.MediaId)
             .HasDatabaseName("IX_MediaVariants_MediaId");
+
+        builder.HasIndex(e => new { e.MediaId, e.VariantType })
+            .HasDatabaseName("IX_MediaVariants_MediaId_VariantType");
 
         builder.HasIndex(e => new { e.MediaId, e.TargetResolution })
             .HasDatabaseName("IX_MediaVariants_MediaId_TargetResolution");

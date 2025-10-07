@@ -40,8 +40,34 @@ public class MediaConfiguration : IEntityTypeConfiguration<Media>
         builder.Property(m => m.DurationSeconds)
             .IsRequired();
 
-        // Indexes for better query performance
+        // Enhanced properties for variant processing
+        builder.Property(m => m.Status)
+            .IsRequired()
+            .HasConversion<string>();
+
+        builder.Property(m => m.OriginalKey)
+            .HasMaxLength(500);
+
+        builder.Property(m => m.ProcessingError)
+            .HasMaxLength(1000);
+
+        builder.Property(m => m.ProcessedAt)
+            .HasColumnType("timestamp without time zone");
+
+        builder.Property(m => m.OriginalWidth);
+        builder.Property(m => m.OriginalHeight);
+        builder.Property(m => m.OriginalBitrate);
+
+        // Relationship with variants
+        builder.HasMany(m => m.Variants)
+            .WithOne(v => v.Media)
+            .HasForeignKey(v => v.MediaId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        // Indexes for better query performance  
         builder.HasIndex(m => m.Type);
         builder.HasIndex(m => m.S3Key).IsUnique();
+        builder.HasIndex(m => m.Status);
+        builder.HasIndex(m => m.OriginalKey);
     }
 }

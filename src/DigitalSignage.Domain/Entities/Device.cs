@@ -62,4 +62,9 @@ public class Device : BaseEntity
     /// Hardware profile for this device (one-to-one relationship)
     /// </summary>
     public DeviceHardwareProfile? HardwareProfile { get; set; }
+    
+    /// <summary>
+    /// Device capabilities for optimal media variant selection (one-to-one relationship)
+    /// </summary>
+    public DeviceCapability? Capability { get; set; }
 }

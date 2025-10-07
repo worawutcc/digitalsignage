@@ -1,5 +1,6 @@
 using DigitalSignage.Application.Interfaces;
 using DigitalSignage.Application.Services;
+using DigitalSignage.Application.Extensions;
 using DigitalSignage.Domain.Interfaces;
 using DigitalSignage.Infrastructure.Data;
 using DigitalSignage.Infrastructure.Extensions;
@@ -80,6 +81,9 @@ public static class ApplicationServiceExtensions
         // Background Services
         services.AddHostedService<DeviceHeartbeatService>();
         services.AddHostedService<WebSocketHeartbeatService>();
+        
+        // Enhanced Media Upload Services (Phase 6)
+        services.AddEnhancedMediaUploadServices();
 
         return services;
     }

@@ -32,4 +32,6 @@ public interface IPlaylistService
     // Validation
     Task<bool> ValidatePlaylistAsync(int id);
     Task<List<string>> GetValidationErrorsAsync(int id);
+    // Assignment summary for playlist
+    Task<PlaylistAssignmentSummaryDto> GetAssignmentSummaryAsync(int playlistId);
 }
