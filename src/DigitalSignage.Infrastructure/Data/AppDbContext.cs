@@ -45,6 +45,7 @@ public class AppDbContext : DbContext
     public DbSet<DeviceHardwareProfile> DeviceHardwareProfiles { get; set; }
     public DbSet<MediaVariant> MediaVariants { get; set; }
     public DbSet<HardwareDetectionJob> HardwareDetectionJobs { get; set; }
+    public DbSet<DeviceCapability> DeviceCapabilities { get; set; }
     
     // Permission Management entities
     public DbSet<UserDeviceGroupPermission> UserDeviceGroupPermissions { get; set; }
@@ -97,6 +98,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new DeviceHardwareProfileConfiguration());
         modelBuilder.ApplyConfiguration(new MediaVariantConfiguration());
         modelBuilder.ApplyConfiguration(new HardwareDetectionJobConfiguration());
+        modelBuilder.ApplyConfiguration(new DeviceCapabilityConfiguration());
         
         // Permission Management configurations
         modelBuilder.ApplyConfiguration(new UserDeviceGroupPermissionConfiguration());

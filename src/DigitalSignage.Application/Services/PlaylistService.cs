@@ -509,4 +509,58 @@ public class PlaylistService : IPlaylistService
             EndTime = item.EndTime
         };
     }
+    public async Task<PlaylistAssignmentSummaryDto> GetAssignmentSummaryAsync(int playlistId)
+    {
+        var playlist = await _context.Set<Playlist>()
+            .Include(p => p.PlaylistAssignments)
+                .ThenInclude(a => a.Device)
+            .Include(p => p.PlaylistAssignments)
+                .ThenInclude(a => a.DeviceGroup)
+            .FirstOrDefaultAsync(p => p.Id == playlistId);
+
+        if (playlist == null)
+        {
+            return new PlaylistAssignmentSummaryDto
+            {
+                PlaylistId = playlistId,
+                PlaylistName = "",
+                TotalAssignments = 0,
+                ActiveAssignments = 0,
+                DeviceCount = 0,
+                DeviceGroupCount = 0,
+                Assignments = new List<PlaylistAssignmentDto>()
+            };
+        }
+
+        var assignments = playlist.PlaylistAssignments;
+        var activeAssignments = assignments.Count(a => a.IsActive);
+        var deviceCount = assignments.Count(a => a.DeviceId != null);
+        var deviceGroupCount = assignments.Count(a => a.DeviceGroupId != null);
+
+        var assignmentDtos = assignments.Select(a => new PlaylistAssignmentDto
+        {
+            Id = a.Id,
+            PlaylistId = a.PlaylistId,
+            PlaylistName = playlist.Name,
+            DeviceId = a.DeviceId ?? 0,
+            DeviceName = a.Device?.Name ?? "",
+            Priority = a.Priority,
+            StartTime = a.StartDate,
+            EndTime = a.EndDate,
+            CreatedAt = a.CreatedAt,
+            CreatedById = a.AssignedByUserId ?? 0,
+            CreatedByName = a.AssignedByUser?.Username ?? ""
+        }).ToList();
+
+        return new PlaylistAssignmentSummaryDto
+        {
+            PlaylistId = playlist.Id,
+            PlaylistName = playlist.Name,
+            TotalAssignments = assignments.Count,
+            ActiveAssignments = activeAssignments,
+            DeviceCount = deviceCount,
+            DeviceGroupCount = deviceGroupCount,
+            Assignments = assignmentDtos
+        };
+    }
 }

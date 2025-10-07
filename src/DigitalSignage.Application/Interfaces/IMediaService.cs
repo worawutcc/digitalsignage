@@ -1,4 +1,6 @@
 using DigitalSignage.Application.DTOs;
+using DigitalSignage.Application.DTOs.Media;
+using DigitalSignage.Application.DTOs.Device;
 
 namespace DigitalSignage.Application.Interfaces;
 
@@ -37,4 +39,16 @@ public interface IMediaService
     
     // Quick assignment operations
     public Task<DTOs.Media.QuickAssignResponseDto> QuickAssignAsync(int mediaId, DTOs.Media.QuickAssignRequestDto request, int adminUserId);
+    
+    // Enhanced Media Upload with Variants operations
+    Task<UploadRequestResponseDto> CreateUploadRequestAsync(CreateUploadRequestDto request);
+    Task<UploadStatusDto> CompleteUploadAsync(CompleteUploadDto request);
+    Task<UploadStatusDto> GetUploadStatusAsync(string uploadRequestId);
+    Task<DeviceOptimalMediaDto> GetOptimalMediaForDeviceAsync(int mediaId, int deviceId);
+    Task<List<MediaVariantDto>> GetMediaVariantsAsync(int mediaId);
+    
+    // Device capability operations
+    Task<DeviceCapabilityDto?> GetDeviceCapabilityAsync(int deviceId);
+    Task<DeviceCapabilityDto> UpdateDeviceCapabilityAsync(int deviceId, UpdateDeviceCapabilityDto request);
+    Task<List<DeviceCapabilityDto>> GetAllDeviceCapabilitiesAsync();
 }

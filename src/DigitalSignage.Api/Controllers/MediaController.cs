@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DigitalSignage.Application.DTOs;
+using DigitalSignage.Application.DTOs.Media;
+using DigitalSignage.Application.DTOs.Device;
 using DigitalSignage.Application.Interfaces;
 using DigitalSignage.Domain.Enums;
 using DigitalSignage.Api.DTOs;
@@ -185,7 +187,149 @@ public class MediaController : ControllerBase
     }
 
     /// <summary>
-    /// Create a presigned upload URL for large files
+    /// Create an upload request with device-optimized variant generation
+    /// </summary>
+    [HttpPost("upload-request")]
+    [ProducesResponseType(typeof(UploadRequestResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UploadRequestResponseDto>> CreateUploadRequest([FromBody] CreateUploadRequestDto request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var response = await _mediaService.CreateUploadRequestAsync(request);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid upload request");
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating upload request");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Complete upload process and start variant generation
+    /// </summary>
+    [HttpPost("complete-upload")]
+    [ProducesResponseType(typeof(UploadStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UploadStatusDto>> CompleteUpload([FromBody] CompleteUploadDto request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var status = await _mediaService.CompleteUploadAsync(request);
+            return Ok(status);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid complete upload request");
+            return BadRequest(ex.Message);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Upload request not found");
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing upload");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get upload status and processing progress
+    /// </summary>
+    [HttpGet("upload-status/{uploadRequestId}")]
+    [ProducesResponseType(typeof(UploadStatusDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<UploadStatusDto>> GetUploadStatus(string uploadRequestId)
+    {
+        try
+        {
+            var status = await _mediaService.GetUploadStatusAsync(uploadRequestId);
+            return Ok(status);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Upload request not found: {UploadRequestId}", uploadRequestId);
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting upload status for {UploadRequestId}", uploadRequestId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get optimal media variant for a specific device
+    /// </summary>
+    [HttpGet("{mediaId}/optimal-for-device/{deviceId}")]
+    [ProducesResponseType(typeof(DeviceOptimalMediaDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceOptimalMediaDto>> GetOptimalMediaForDevice(int mediaId, int deviceId)
+    {
+        try
+        {
+            var result = await _mediaService.GetOptimalMediaForDeviceAsync(mediaId, deviceId);
+            return Ok(result);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Media or device not found - MediaId: {MediaId}, DeviceId: {DeviceId}", mediaId, deviceId);
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting optimal media for device - MediaId: {MediaId}, DeviceId: {DeviceId}", mediaId, deviceId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get all variants for a media item
+    /// </summary>
+    [HttpGet("{mediaId}/variants")]
+    [ProducesResponseType(typeof(List<MediaVariantDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<MediaVariantDto>>> GetMediaVariants(int mediaId)
+    {
+        try
+        {
+            var variants = await _mediaService.GetMediaVariantsAsync(mediaId);
+            return Ok(variants);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Media not found: {MediaId}", mediaId);
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting media variants for {MediaId}", mediaId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Create a presigned upload URL for large files (Legacy - use upload-request instead)
     /// </summary>
     [HttpPost("upload-url")]
     [ProducesResponseType(typeof(MediaUploadResponse), StatusCodes.Status200OK)]
@@ -433,6 +577,85 @@ public class MediaController : ControllerBase
 
     // Private helper methods
     
+    /// <summary>
+    /// Get device capability information
+    /// </summary>
+    [HttpGet("device/{deviceId}/capability")]
+    [ProducesResponseType(typeof(DeviceCapabilityDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceCapabilityDto>> GetDeviceCapability(int deviceId)
+    {
+        try
+        {
+            var capability = await _mediaService.GetDeviceCapabilityAsync(deviceId);
+            if (capability == null)
+                return NotFound($"Device capability not found for device {deviceId}");
+
+            return Ok(capability);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting device capability for device {DeviceId}", deviceId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Update device capability information
+    /// </summary>
+    [HttpPut("device/{deviceId}/capability")]
+    [ProducesResponseType(typeof(DeviceCapabilityDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceCapabilityDto>> UpdateDeviceCapability(int deviceId, [FromBody] UpdateDeviceCapabilityDto request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var capability = await _mediaService.UpdateDeviceCapabilityAsync(deviceId, request);
+            return Ok(capability);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Device not found: {DeviceId}", deviceId);
+            return NotFound(ex.Message);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid device capability update request for device {DeviceId}", deviceId);
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating device capability for device {DeviceId}", deviceId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get all device capabilities
+    /// </summary>
+    [HttpGet("device-capabilities")]
+    [ProducesResponseType(typeof(List<DeviceCapabilityDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<DeviceCapabilityDto>>> GetAllDeviceCapabilities()
+    {
+        try
+        {
+            var capabilities = await _mediaService.GetAllDeviceCapabilitiesAsync();
+            return Ok(capabilities);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting all device capabilities");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
     /// <summary>
     /// Get current user ID from JWT claims
     /// </summary>

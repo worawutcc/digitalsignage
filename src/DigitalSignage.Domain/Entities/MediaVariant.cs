@@ -32,11 +32,42 @@ public class MediaVariant : BaseEntity
     public int Height { get; set; }
 
     /// <summary>
+    /// Variant type: "thumbnail", "mobile", "hd", "4k"
+    /// </summary>
+    [Required]
+    [StringLength(20)]
+    public string VariantType { get; set; } = string.Empty;
+
+    /// <summary>
     /// Quality level: "high", "medium", "low", "original"
     /// </summary>
     [Required]
     [StringLength(20)]
     public string Quality { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bitrate in kbps (for video variants)
+    /// </summary>
+    public int? Bitrate { get; set; }
+
+    /// <summary>
+    /// Content type/MIME type of the variant
+    /// </summary>
+    [Required]
+    [StringLength(100)]
+    public string ContentType { get; set; } = string.Empty;
+
+    /// <summary>
+    /// S3 ETag for caching and validation
+    /// </summary>
+    [StringLength(100)]
+    public string? ETag { get; set; }
+
+    /// <summary>
+    /// Quality score for variant selection (0.0-1.0)
+    /// </summary>
+    [Range(0.0, 1.0, ErrorMessage = "Quality score must be between 0.0 and 1.0")]
+    public double? QualityScore { get; set; }
 
     /// <summary>
     /// File size in bytes
