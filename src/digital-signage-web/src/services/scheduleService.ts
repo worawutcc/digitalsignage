@@ -187,7 +187,7 @@ export class ScheduleService {
    * Get all schedules
    */
   static async getAll(): Promise<Schedule[]> {
-    const response = await apiClient.get('/api/schedules')
+    const response = await apiClient.get('/api/admin/schedules')
     return response.data
   }
 
@@ -195,7 +195,7 @@ export class ScheduleService {
    * Get schedule by ID
    */
   static async getById(id: number): Promise<Schedule> {
-    const response = await apiClient.get(`/api/schedules/${id}`)
+    const response = await apiClient.get(`/api/admin/schedules/${id}`)
     return response.data
   }
 
@@ -203,7 +203,7 @@ export class ScheduleService {
    * Search schedules
    */
   static async search(params: ScheduleSearchParams): Promise<Schedule[]> {
-    const response = await apiClient.get('/api/schedules/search', { params })
+    const response = await apiClient.get('/api/admin/schedules/search', { params })
     return response.data
   }
 
@@ -211,15 +211,16 @@ export class ScheduleService {
    * Get active schedules
    */
   static async getActive(): Promise<Schedule[]> {
-    const response = await apiClient.get('/api/schedules/active')
-    return response.data
+    // Active now determined via search with isActive true
+    const response = await apiClient.get('/api/admin/schedules/search', { params: { isActive: true } })
+    return response.data as Schedule[]
   }
 
   /**
    * Get schedules by date range
    */
   static async getByDateRange(startDate: string, endDate: string): Promise<Schedule[]> {
-    const response = await apiClient.get('/api/schedules/date-range', {
+    const response = await apiClient.get('/api/admin/schedules/date-range', {
       params: { startDate, endDate }
     })
     return response.data
@@ -229,7 +230,7 @@ export class ScheduleService {
    * Get schedules by device
    */
   static async getByDevice(deviceId: number): Promise<Schedule[]> {
-    const response = await apiClient.get(`/api/schedules/device/${deviceId}`)
+    const response = await apiClient.get(`/api/admin/schedules/device/${deviceId}`)
     return response.data
   }
 
@@ -237,7 +238,7 @@ export class ScheduleService {
    * Create new schedule
    */
   static async create(scheduleData: CreateScheduleRequest): Promise<Schedule> {
-    const response = await apiClient.post('/api/schedules', scheduleData)
+    const response = await apiClient.post('/api/admin/schedules', scheduleData)
     return response.data
   }
 
@@ -253,7 +254,7 @@ export class ScheduleService {
    * Update schedule
    */
   static async update(id: number, updates: Partial<Schedule>): Promise<Schedule> {
-    const response = await apiClient.put(`/api/schedules/${id}`, updates)
+    const response = await apiClient.put(`/api/admin/schedules/${id}`, updates)
     return response.data
   }
 
@@ -261,7 +262,7 @@ export class ScheduleService {
    * Delete schedule
    */
   static async delete(id: number): Promise<void> {
-    await apiClient.delete(`/api/schedules/${id}`)
+    await apiClient.delete(`/api/admin/schedules/${id}`)
   }
 
   /**
@@ -269,13 +270,14 @@ export class ScheduleService {
    */
   static async bulkDelete(ids: number[]): Promise<void> {
     await apiClient.post('/api/schedules/bulk-delete', { ids })
+    // Not implemented in backend yet
   }
 
   /**
    * Activate/Deactivate schedule
    */
   static async toggleActive(id: number, isActive: boolean): Promise<Schedule> {
-    const response = await apiClient.patch(`/api/schedules/${id}/toggle-active`, { isActive })
+    const response = await apiClient.patch(`/api/admin/schedules/${id}/toggle-active`)
     return response.data
   }
 
@@ -283,7 +285,12 @@ export class ScheduleService {
    * Add media to schedule
    */
   static async addMedia(id: number, mediaFileIds: number[]): Promise<Schedule> {
-    const response = await apiClient.post(`/api/schedules/${id}/media`, { mediaFileIds })
+    // Map to backend AddMediaRequestDto structure
+    const mediaItems = mediaFileIds.map((mediaId, index) => ({ mediaId, order: index, durationSeconds: 10 }))
+    const response = await apiClient.post(`/api/admin/schedules/${id}/media`, { mediaItems })
+    // Backend returns { affected }; we need refreshed schedule
+    // Fetch updated schedule after association
+    await this.getById(id)
     return response.data
   }
 
@@ -291,8 +298,11 @@ export class ScheduleService {
    * Remove media from schedule
    */
   static async removeMedia(id: number, mediaFileIds: number[]): Promise<Schedule> {
-    const response = await apiClient.delete(`/api/schedules/${id}/media`, { data: { mediaFileIds } })
-    return response.data
+    // Backend supports single removal; iterate
+    for (const mediaId of mediaFileIds) {
+      await apiClient.delete(`/api/admin/schedules/${id}/media/${mediaId}`)
+    }
+    return this.getById(id)
   }
 
   /**
@@ -300,6 +310,7 @@ export class ScheduleService {
    */
   static async addDevices(id: number, deviceIds: number[]): Promise<Schedule> {
     const response = await apiClient.post(`/api/schedules/${id}/devices`, { deviceIds })
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -308,6 +319,7 @@ export class ScheduleService {
    */
   static async removeDevices(id: number, deviceIds: number[]): Promise<Schedule> {
     const response = await apiClient.delete(`/api/schedules/${id}/devices`, { data: { deviceIds } })
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -316,6 +328,7 @@ export class ScheduleService {
    */
   static async getTemplates(): Promise<ScheduleTemplate[]> {
     const response = await apiClient.get('/api/schedules/templates')
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -324,6 +337,7 @@ export class ScheduleService {
    */
   static async getTemplateById(id: number): Promise<ScheduleTemplate> {
     const response = await apiClient.get(`/api/schedules/templates/${id}`)
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -332,6 +346,7 @@ export class ScheduleService {
    */
   static async createTemplate(templateData: Omit<ScheduleTemplate, 'id' | 'usageCount' | 'createdAt'>): Promise<ScheduleTemplate> {
     const response = await apiClient.post('/api/schedules/templates', templateData)
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -340,6 +355,7 @@ export class ScheduleService {
    */
   static async updateTemplate(id: number, updates: Partial<ScheduleTemplate>): Promise<ScheduleTemplate> {
     const response = await apiClient.put(`/api/schedules/templates/${id}`, updates)
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -348,6 +364,7 @@ export class ScheduleService {
    */
   static async deleteTemplate(id: number): Promise<void> {
     await apiClient.delete(`/api/schedules/templates/${id}`)
+    // Not implemented; placeholder
   }
 
   /**
@@ -359,6 +376,7 @@ export class ScheduleService {
     warnings: string[]
   }> {
     const response = await apiClient.post('/api/schedules/check-conflicts', scheduleData)
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -377,6 +395,7 @@ export class ScheduleService {
     estimatedDuration: number
   }> {
     const response = await apiClient.post('/api/schedules/preview', scheduleData)
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -389,6 +408,7 @@ export class ScheduleService {
    */
   static async getWithUserAssignments(id: number): Promise<Schedule> {
     const response = await apiClient.get(`/api/schedules/${id}?includeUserAssignments=true`)
+    // Updated to admin route
     return response.data
   }
 
@@ -432,6 +452,7 @@ export class ScheduleService {
       `/api/schedules/${scheduleId}/assign-users`,
       request
     )
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -442,6 +463,7 @@ export class ScheduleService {
     await apiClient.delete(`/api/schedules/${scheduleId}/assigned-users`, {
       data: { userIds }
     })
+    // Not implemented; placeholder
   }
 
   /**
@@ -460,6 +482,7 @@ export class ScheduleService {
       `/api/schedules/${scheduleId}/assignments/${assignmentId}`,
       updates
     )
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -471,6 +494,7 @@ export class ScheduleService {
       '/api/schedules/bulk-assign-users',
       request
     )
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -578,6 +602,7 @@ export class ScheduleService {
       `/api/schedules/${scheduleId}/detect-user-conflicts`,
       { userIds }
     )
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -601,6 +626,7 @@ export class ScheduleService {
       `/api/schedule-conflicts/${conflictId}/resolve`,
       resolution
     )
+    // Not implemented; placeholder
     return response.data
   }
 
@@ -711,6 +737,7 @@ export class ScheduleService {
       `/api/schedules/${scheduleId}/validate-assignment`,
       { userIds }
     )
+    // Not implemented; placeholder
     return response.data
   }
 }

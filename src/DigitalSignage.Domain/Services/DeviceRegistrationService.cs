@@ -217,8 +217,9 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             Model = model,
             DisplayResolution = displayResolution ?? "1920x1080",
             
-            CreatedAt = DateTime.UtcNow,
-            UpdatedAt = DateTime.UtcNow
+            // Use unspecified kind for PostgreSQL 'timestamp without time zone'
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
     }
 
@@ -239,7 +240,8 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             Details = $"PIN: {registrationPin}",
             IpAddress = ipAddress ?? "Unknown",
             UserAgent = userAgent,
-            Timestamp = DateTime.UtcNow
+            // Store as unspecified to avoid timezone issues
+            Timestamp = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
     }
 
@@ -266,7 +268,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
     public Device ApproveDevice(Device device, int approvedByUserId, string? notes = null)
     {
         device.Status = DeviceStatus.Registered;
-        device.UpdatedAt = DateTime.UtcNow;
+    device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         device.ManagedByUserId = approvedByUserId;
         
         return device;
@@ -276,8 +278,8 @@ public class DeviceRegistrationService : IDeviceRegistrationService
     {
         device.Status = DeviceStatus.Inactive;
         device.IsActive = false;
-        device.UpdatedAt = DateTime.UtcNow;
-        device.DeactivatedAt = DateTime.UtcNow;
+    device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+    device.DeactivatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         device.DeactivatedBy = rejectedByUserId;
         
         return device;
@@ -303,7 +305,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
     {
         device.Status = DeviceStatus.Registered;
         device.IsActive = true;
-        device.UpdatedAt = DateTime.UtcNow;
+    device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         device.ManagedByUserId = reactivatedByUserId;
         device.DeactivatedAt = null;
         device.DeactivatedBy = null;
@@ -315,8 +317,8 @@ public class DeviceRegistrationService : IDeviceRegistrationService
     {
         device.Status = DeviceStatus.Inactive;
         device.IsActive = false;
-        device.UpdatedAt = DateTime.UtcNow;
-        device.DeactivatedAt = DateTime.UtcNow;
+    device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+    device.DeactivatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
         device.DeactivatedBy = deactivatedByUserId;
         
         return device;

@@ -136,24 +136,29 @@ public class PlaylistService : IPlaylistService
         return result;
     }
 
-    public async Task<bool> DuplicateAsync(int id, string newName)
+    public async Task<PlaylistDto?> DuplicateAsync(int id, string? newName = null)
     {
         var originalPlaylist = await _context.Set<Playlist>()
             .Include(p => p.PlaylistItems)
             .FirstOrDefaultAsync(p => p.Id == id);
 
-        if (originalPlaylist == null) return false;
+        if (originalPlaylist == null) return null;
+
+        // Generate name if not provided
+        var duplicateName = string.IsNullOrWhiteSpace(newName) 
+            ? $"{originalPlaylist.Name} (Copy)" 
+            : newName;
 
         var duplicatedPlaylist = new Playlist
         {
-            Name = newName,
+            Name = duplicateName,
             Description = originalPlaylist.Description,
             Status = PlaylistStatus.Draft,
             IsLooped = originalPlaylist.IsLooped,
             LoopCount = originalPlaylist.LoopCount,
             Priority = originalPlaylist.Priority,
             CreatedByUserId = originalPlaylist.CreatedByUserId,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
         };
 
         _context.Set<Playlist>().Add(duplicatedPlaylist);
@@ -174,21 +179,19 @@ public class PlaylistService : IPlaylistService
                 IsConditional = originalItem.IsConditional,
                 StartTime = originalItem.StartTime,
                 EndTime = originalItem.EndTime,
-                CreatedAt = DateTime.UtcNow
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };
 
             _context.Set<PlaylistItem>().Add(duplicatedItem);
         }
 
-        var result = await _context.SaveChangesAsync() > 0;
+        await _context.SaveChangesAsync();
 
-        if (result)
-        {
-            _logger.LogInformation("Duplicated playlist {OriginalId} as {NewId} with name {NewName}", 
-                id, duplicatedPlaylist.Id, newName);
-        }
+        _logger.LogInformation("Duplicated playlist {OriginalId} as {NewId} with name {NewName}", 
+            id, duplicatedPlaylist.Id, duplicateName);
 
-        return result;
+        // Return the duplicated playlist as DTO
+        return await GetByIdAsync(duplicatedPlaylist.Id);
     }
 
     public async Task<PlaylistItemDto?> AddItemAsync(int playlistId, CreatePlaylistItemRequest request)
@@ -562,5 +565,40 @@ public class PlaylistService : IPlaylistService
             DeviceGroupCount = deviceGroupCount,
             Assignments = assignmentDtos
         };
+    }
+
+    public async Task<PlaylistStatisticsDto> GetStatisticsAsync()
+    {
+        var playlists = await _context.Set<Playlist>()
+            .Include(p => p.PlaylistItems)
+            .ToListAsync();
+        
+        // Get unique assigned devices count across all playlists
+        var assignedDevices = await _context.Set<PlaylistAssignment>()
+            .Where(a => a.DeviceId != null)
+            .Select(a => a.DeviceId!.Value)
+            .Distinct()
+            .CountAsync();
+
+        // Calculate average duration from playlist items
+        var playlistsWithDuration = playlists
+            .Select(p => p.PlaylistItems.Sum(i => i.DurationSeconds))
+            .Where(d => d > 0)
+            .ToList();
+
+        var statistics = new PlaylistStatisticsDto
+        {
+            TotalPlaylists = playlists.Count,
+            ActivePlaylists = playlists.Count(p => p.Status == PlaylistStatus.Active),
+            DraftPlaylists = playlists.Count(p => p.Status == PlaylistStatus.Draft),
+            ScheduledPlaylists = playlists.Count(p => p.Status == PlaylistStatus.Scheduled),
+            ArchivedPlaylists = playlists.Count(p => p.Status == PlaylistStatus.Inactive || p.Status == PlaylistStatus.Expired),
+            AverageDuration = playlistsWithDuration.Any() 
+                ? (int)Math.Round(playlistsWithDuration.Average())
+                : 0,
+            TotalAssignedDevices = assignedDevices
+        };
+
+        return statistics;
     }
 }

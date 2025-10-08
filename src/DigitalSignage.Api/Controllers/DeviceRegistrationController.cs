@@ -28,17 +28,17 @@ public class DeviceRegistrationController : ControllerBase
     }
 
     /// <summary>
-    /// Enhanced device registration with optional hardware information
-    /// Supports both legacy registration (no hardware info) and enhanced registration (with hardware)
+    /// Initiate device registration with hardware specifications
+    /// Primary endpoint for Android TV self-registration with QR code
     /// </summary>
-    /// <param name="request">Enhanced device registration request with optional hardware info</param>
-    /// <returns>Registration response with hardware detection job info if applicable</returns>
-    [HttpPost("enhanced-register")]
+    /// <param name="request">Device registration request with hardware info</param>
+    /// <returns>Registration response with PIN and QR code for admin approval</returns>
+    [HttpPost("register")]
     [ProducesResponseType(typeof(EnhancedDeviceRegistrationResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<EnhancedDeviceRegistrationResponseDto>> EnhancedRegister([FromBody] EnhancedDeviceRegistrationRequestDto request)
+    public async Task<ActionResult<EnhancedDeviceRegistrationResponseDto>> Register([FromBody] EnhancedDeviceRegistrationRequestDto request)
     {
         if (!ModelState.IsValid)
         {
@@ -48,7 +48,7 @@ public class DeviceRegistrationController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Processing enhanced device registration for MAC: {MacAddress}, Hardware Info: {HasHardware}",
+            _logger.LogInformation("Processing device registration for MAC: {MacAddress}, Hardware Info: {HasHardware}",
                 request.MacAddress, request.HardwareInfo != null);
             
             var response = await _enhancedDeviceRegistrationService.RegisterDeviceAsync(request);
@@ -56,7 +56,7 @@ public class DeviceRegistrationController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            _logger.LogWarning(ex, "Invalid operation during enhanced registration for MAC: {MacAddress}", request.MacAddress);
+            _logger.LogWarning(ex, "Invalid operation during device registration for MAC: {MacAddress}", request.MacAddress);
             return Conflict(new ProblemDetails
             {
                 Title = "Registration Conflict",
@@ -66,22 +66,21 @@ public class DeviceRegistrationController : ControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error processing enhanced device registration for MAC: {MacAddress}", request.MacAddress);
+            _logger.LogError(ex, "Error processing device registration for MAC: {MacAddress}", request.MacAddress);
             return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
             {
                 Title = "Internal Server Error",
-                Detail = "An error occurred while processing the enhanced registration request",
+                Detail = "An error occurred while processing the registration request",
                 Status = StatusCodes.Status500InternalServerError
             });
         }
     }
 
     /// <summary>
-    /// Initiate device registration process (legacy endpoint - maintained for backward compatibility)
+    /// [DEPRECATED] Legacy device registration - use /register instead
     /// </summary>
-    /// <param name="request">Device registration request</param>
-    /// <returns>Registration details with PIN for admin approval</returns>
     [HttpPost("initiate")]
+    [Obsolete("Use POST /register endpoint instead")]
     [ProducesResponseType(typeof(InitiateRegistrationResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
@@ -123,11 +122,10 @@ public class DeviceRegistrationController : ControllerBase
     }
 
     /// <summary>
-    /// Verify PIN code for device registration
+    /// [DEPRECATED] Legacy PIN verification - use polling /status/{registrationId} instead
     /// </summary>
-    /// <param name="request">PIN verification request</param>
-    /// <returns>PIN verification result with device key if approved</returns>
     [HttpPost("verify-pin")]
+    [Obsolete("Use GET /status/{registrationId} polling instead")]
     [ProducesResponseType(typeof(VerifyPinResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
@@ -169,147 +167,10 @@ public class DeviceRegistrationController : ControllerBase
     }
 
     /// <summary>
-    /// Initiate QR Code-based device registration
-    /// </summary>
-    /// <param name="request">QR Code registration request</param>
-    /// <returns>Registration details with QR Code for admin scanning</returns>
-    [HttpPost("initiate-qr")]
-    [ProducesResponseType(typeof(InitiateQrRegistrationResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status409Conflict)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<InitiateQrRegistrationResponseDto>> InitiateQrRegistration([FromBody] InitiateQrRegistrationRequestDto request)
-    {
-        if (!ModelState.IsValid)
-        {
-            _logger.LogWarning("Invalid model state for QR code registration initiation");
-            return BadRequest(ModelState);
-        }
-
-        try
-        {
-            _logger.LogInformation("Initiating QR code registration for MAC: {MacAddress}", request.MacAddress);
-            var response = await _deviceRegistrationService.InitiateQrRegistrationAsync(request);
-            return Ok(response);
-        }
-        catch (InvalidOperationException ex)
-        {
-            _logger.LogWarning(ex, "Invalid operation during QR registration initiation for MAC: {MacAddress}", request.MacAddress);
-            return Conflict(new ProblemDetails
-            {
-                Title = "Registration Conflict",
-                Detail = ex.Message,
-                Status = StatusCodes.Status409Conflict
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error initiating QR code registration for MAC: {MacAddress}", request.MacAddress);
-            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
-            {
-                Title = "Internal Server Error",
-                Detail = "An error occurred while processing the QR registration request",
-                Status = StatusCodes.Status500InternalServerError
-            });
-        }
-    }
-
-    /// <summary>
-    /// Approve device registration via QR Code scan
-    /// </summary>
-    /// <param name="request">QR Code approval request</param>
-    /// <returns>Approval result with device credentials</returns>
-    [HttpPost("approve-qr")]
-    [Authorize(Roles = "Admin")]
-    [ProducesResponseType(typeof(ApproveQrRegistrationResponseDto), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
-    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<ApproveQrRegistrationResponseDto>> ApproveQrRegistration([FromBody] ApproveQrRegistrationRequestDto request)
-    {
-        if (!ModelState.IsValid)
-        {
-            _logger.LogWarning("Invalid model state for QR code approval");
-            return BadRequest(ModelState);
-        }
-
-        try
-        {
-            _logger.LogInformation("Approving QR code registration: {RegistrationId} by Admin: {AdminUserId}", 
-                request.RegistrationId, request.AdminUserId);
-            var response = await _deviceRegistrationService.ApproveQrRegistrationAsync(request);
-            return Ok(response);
-        }
-        catch (ArgumentException ex)
-        {
-            _logger.LogWarning(ex, "Registration not found for QR approval: {RegistrationId}", request.RegistrationId);
-            return NotFound(new ProblemDetails
-            {
-                Title = "Registration Not Found",
-                Detail = ex.Message,
-                Status = StatusCodes.Status404NotFound
-            });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error approving QR code registration: {RegistrationId}", request.RegistrationId);
-            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
-            {
-                Title = "Internal Server Error",
-                Detail = "An error occurred while approving the QR registration",
-                Status = StatusCodes.Status500InternalServerError
-            });
-        }
-    }
-
-
-
-    /// <summary>
-    /// Check if device supports enhanced hardware information collection
-    /// Used by clients to determine whether to show hardware info form
-    /// </summary>
-    /// <param name="macAddress">Device MAC address</param>
-    /// <returns>True if device supports hardware information collection</returns>
-    [HttpGet("hardware-support/{macAddress}")]
-    [ProducesResponseType(typeof(bool), StatusCodes.Status200OK)]
-    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-    public async Task<ActionResult<bool>> SupportsHardwareInfo(string macAddress)
-    {
-        if (string.IsNullOrWhiteSpace(macAddress))
-        {
-            _logger.LogWarning("Invalid MAC address provided for hardware support check");
-            return BadRequest(new ValidationProblemDetails
-            {
-                Title = "Invalid MAC Address",
-                Detail = "MAC address is required and cannot be empty"
-            });
-        }
-
-        try
-        {
-            _logger.LogInformation("Checking hardware support for MAC: {MacAddress}", macAddress);
-            var supportsHardware = await _enhancedDeviceRegistrationService.SupportsHardwareInfoAsync(macAddress);
-            return Ok(supportsHardware);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error checking hardware support for MAC: {MacAddress}", macAddress);
-            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
-            {
-                Title = "Internal Server Error",
-                Detail = "An error occurred while checking hardware support",
-                Status = StatusCodes.Status500InternalServerError
-            });
-        }
-    }
-
-    /// <summary>
-    /// Check registration status (legacy endpoint - maintained for backward compatibility)
+    /// Check registration status and get device credentials when approved
     /// </summary>
     /// <param name="registrationId">Registration ID to check</param>
-    /// <returns>Current registration status and details</returns>
+    /// <returns>Current registration status and device key if approved</returns>
     [HttpGet("{registrationId}/status")]
     [ProducesResponseType(typeof(CheckStatusResponseDto), StatusCodes.Status200OK)]
     [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]

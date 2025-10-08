@@ -140,7 +140,8 @@ public class RegistrationAuditLog : BaseEntity
     /// </summary>
     public void SetCreationTimestamp()
     {
-        CreatedAt = DateTime.UtcNow;
+        // Use unspecified kind for PostgreSQL 'timestamp without time zone'
+        CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
     }
 
     /// <summary>

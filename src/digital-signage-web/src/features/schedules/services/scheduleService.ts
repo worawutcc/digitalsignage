@@ -47,7 +47,7 @@ export class ScheduleService {
     }
 
     const response = await apiClient.get<{ success: boolean; data: Schedule[] }>(
-      `/api/schedules?${params.toString()}`
+      `/api/admin/schedules?${params.toString()}`
     )
     return response.data.data
   }
@@ -62,7 +62,7 @@ export class ScheduleService {
     }
 
     const response = await apiClient.get<{ success: boolean; data: Schedule }>(
-      `/api/schedules/${id}`
+      `/api/admin/schedules/${id}`
     )
     return response.data.data
   }
@@ -72,7 +72,7 @@ export class ScheduleService {
    */
   async create(schedule: CreateScheduleRequest): Promise<Schedule> {
     const response = await apiClient.post<{ success: boolean; data: Schedule }>(
-      '/api/schedules',
+      '/api/admin/schedules',
       schedule
     )
     return response.data.data
@@ -83,7 +83,7 @@ export class ScheduleService {
    */
   async update(id: string, updates: UpdateScheduleRequest): Promise<Schedule> {
     const response = await apiClient.put<{ success: boolean; data: Schedule }>(
-      `/api/schedules/${id}`,
+      `/api/admin/schedules/${id}`,
       updates
     )
     return response.data.data
@@ -93,7 +93,7 @@ export class ScheduleService {
    * Delete schedule
    */
   async delete(id: string): Promise<void> {
-    await apiClient.delete(`/api/schedules/${id}`)
+  await apiClient.delete(`/api/admin/schedules/${id}`)
   }
 
   /**
@@ -105,7 +105,7 @@ export class ScheduleService {
     const response = await apiClient.post<{
       success: boolean
       data: ScheduleValidationResponse
-    }>('/api/schedules/validate', validation)
+    }>('/api/admin/schedules/validate', validation)
     return response.data.data
   }
 
@@ -134,7 +134,7 @@ export class ScheduleService {
     }
 
     const response = await apiClient.get<{ success: boolean; data: CalendarData }>(
-      `/api/schedules/calendar?${params.toString()}`
+      `/api/admin/schedules/calendar?${params.toString()}`
     )
     return response.data.data
   }
@@ -149,7 +149,7 @@ export class ScheduleService {
     }
 
     const response = await apiClient.get<{ success: boolean; data: ScheduleStats }>(
-      '/api/schedules/stats'
+      '/api/admin/schedules/stats'
     )
     return response.data.data
   }
@@ -159,7 +159,7 @@ export class ScheduleService {
    */
   async activate(id: string): Promise<Schedule> {
     const response = await apiClient.post<{ success: boolean; data: Schedule }>(
-      `/api/schedules/${id}/activate`
+      `/api/admin/schedules/${id}/activate`
     )
     return response.data.data
   }
@@ -169,7 +169,7 @@ export class ScheduleService {
    */
   async deactivate(id: string): Promise<Schedule> {
     const response = await apiClient.post<{ success: boolean; data: Schedule }>(
-      `/api/schedules/${id}/deactivate`
+      `/api/admin/schedules/${id}/deactivate`
     )
     return response.data.data
   }
@@ -179,7 +179,7 @@ export class ScheduleService {
    */
   async duplicate(id: string, newName?: string): Promise<Schedule> {
     const response = await apiClient.post<{ success: boolean; data: Schedule }>(
-      `/api/schedules/${id}/duplicate`,
+      `/api/admin/schedules/${id}/duplicate`,
       { newName }
     )
     return response.data.data
@@ -189,21 +189,21 @@ export class ScheduleService {
    * Bulk delete schedules
    */
   async bulkDelete(scheduleIds: string[]): Promise<void> {
-    await apiClient.post('/api/schedules/bulk-delete', { scheduleIds })
+  await apiClient.post('/api/admin/schedules/bulk-delete', { scheduleIds })
   }
 
   /**
    * Bulk activate schedules
    */
   async bulkActivate(scheduleIds: string[]): Promise<void> {
-    await apiClient.post('/api/schedules/bulk-activate', { scheduleIds })
+  await apiClient.post('/api/admin/schedules/bulk-activate', { scheduleIds })
   }
 
   /**
    * Bulk deactivate schedules
    */
   async bulkDeactivate(scheduleIds: string[]): Promise<void> {
-    await apiClient.post('/api/schedules/bulk-deactivate', { scheduleIds })
+  await apiClient.post('/api/admin/schedules/bulk-deactivate', { scheduleIds })
   }
 
   /**
@@ -211,7 +211,7 @@ export class ScheduleService {
    */
   async getForDevice(deviceId: string): Promise<Schedule[]> {
     const response = await apiClient.get<{ success: boolean; data: Schedule[] }>(
-      `/api/schedules/device/${deviceId}`
+      `/api/admin/schedules/device/${deviceId}`
     )
     return response.data.data
   }

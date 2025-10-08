@@ -20,6 +20,10 @@ public class UserDeviceAssociationConfiguration : IEntityTypeConfiguration<UserD
             .HasColumnType("timestamp without time zone")
             .IsRequired();
 
+        // Ensure audit fields already configured by BaseEntityConfiguration remain with correct type
+        builder.Property(x => x.CreatedAt).HasColumnType("timestamp without time zone");
+        builder.Property(x => x.UpdatedAt).HasColumnType("timestamp without time zone");
+
         builder.Property(x => x.IsActive)
             .IsRequired();
 

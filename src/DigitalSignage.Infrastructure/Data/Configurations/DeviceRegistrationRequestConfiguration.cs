@@ -75,6 +75,13 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
                .IsRequired(false)
                .HasComment("Timestamp when hardware information was processed");
 
+        // Explicit DateTime column type mappings to enforce "timestamp without time zone"
+        builder.Property(e => e.ExpiresAt)
+               .HasColumnType("timestamp without time zone");
+
+        builder.Property(e => e.LastPolledAt)
+               .HasColumnType("timestamp without time zone");
+
         // Configure QR Code support fields
         builder.Property(e => e.QrCodeData)
                .HasMaxLength(2000)

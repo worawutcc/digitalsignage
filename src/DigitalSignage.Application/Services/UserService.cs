@@ -49,6 +49,39 @@ public class UserService : IUserService
     }
 
     /// <summary>
+    /// Create new user (Admin only)
+    /// </summary>
+    public async Task<DigitalSignage.Application.DTOs.Auth.UserDto> CreateAsync(CreateUserRequest request)
+    {
+        _logger.LogInformation("Creating new user with email: {Email}", request.Email);
+
+        // Check if email already exists
+        var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+        if (existingUser != null)
+        {
+            throw new InvalidOperationException($"User with email {request.Email} already exists");
+        }
+
+        // Create new user entity
+        var user = new User
+        {
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            PasswordHash = HashPassword(request.Password),
+            Role = Enum.Parse<UserRole>(request.Role),
+            IsActive = request.IsActive,
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        };
+
+        var createdUser = await _userRepository.CreateAsync(user);
+        _logger.LogInformation("User created successfully with email: {Email}", createdUser.Email);
+
+        return MapToDto(createdUser);
+    }
+
+    /// <summary>
     /// Update user profile (self-update)
     /// </summary>
     public async Task<DigitalSignage.Application.DTOs.Auth.UserDto?> UpdateProfileAsync(int userId, UpdateUserProfileRequest request)

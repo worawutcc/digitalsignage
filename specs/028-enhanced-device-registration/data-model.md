@@ -27,6 +27,11 @@ public class DeviceHardwareProfile : BaseEntity
     public string Manufacturer { get; set; } = string.Empty;
     public string Model { get; set; } = string.Empty;
     public string AndroidVersion { get; set; } = string.Empty;
+    /// <summary>
+    /// Android API Level (int) — ระบุเวอร์ชันของ Android OS ที่ device ใช้งาน เช่น 29 = Android 10, 30 = Android 11
+    /// ใช้สำหรับตรวจสอบ compatibility, ฟีเจอร์, และ logic ฝั่ง backend
+    /// ตัวอย่าง: Android TV ต้องมี ApiLevel >= 21 (Android 5.0 ขึ้นไป)
+    /// </summary>
     public int ApiLevel { get; set; }
     public string BuildFingerprint { get; set; } = string.Empty;
     

@@ -10,8 +10,8 @@ import { addNotification } from '@/store/slices/uiSlice'
 import type { LoginFormData, FormErrors } from './types'
 
 /**
- * Login page component with form validation and error handling
- * Provides user authentication interface with email/password login
+ * Admin login page component with form validation and error handling
+ * Provides admin authentication interface for Digital Signage management system
  */
 function LoginPageContent() {
   const router = useRouter()
@@ -189,16 +189,10 @@ function LoginPageContent() {
           </div>
           <h1 className="text-4xl font-bold text-blue-600">Digital Signage</h1>
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Sign in to your account
+            Admin Dashboard
           </h2>
           <p className="mt-2 text-sm text-gray-600">
-            Or{' '}
-            <Link
-              href="/register"
-              className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
-            >
-              create a new account
-            </Link>
+            Sign in with your administrator credentials
           </p>
         </div>
 
@@ -299,13 +293,8 @@ function LoginPageContent() {
                   </label>
                 </div>
 
-                <div className="text-sm">
-                  <Link
-                    href="/forgot-password"
-                    className="font-medium text-blue-600 hover:text-blue-500 transition-colors hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
+                <div className="text-sm text-gray-500">
+                  <p>Contact system administrator if you need assistance</p>
                 </div>
               </div>
 
@@ -344,7 +333,7 @@ function LoginPageContent() {
                       </svg>
                     )}
                   </span>
-                  {isLoading ? 'Signing in...' : 'Sign in to Dashboard'}
+                  {isLoading ? 'Signing in...' : 'Sign in to Admin Dashboard'}
                 </button>
               </div>
             </form>

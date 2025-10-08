@@ -22,6 +22,14 @@ public interface IUserService
     Task<IEnumerable<UserDto>> GetAllAsync();
 
     /// <summary>
+    /// Create new user (Admin only)
+    /// </summary>
+    /// <param name="request">Create user request</param>
+    /// <returns>Created user DTO</returns>
+    /// <exception cref="InvalidOperationException">Email already exists</exception>
+    Task<UserDto> CreateAsync(CreateUserRequest request);
+
+    /// <summary>
     /// Update user profile (self-update)
     /// </summary>
     /// <param name="userId">User ID</param>

@@ -34,13 +34,14 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IPinGenerationService, PinGenerationService>();
         services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService>();
         
-        // Placeholder Services for Feature 028 (Enhanced Device Registration)
-        // TODO: Replace with full implementations when DTOs and repositories are complete
-        // Phase 3.4 Enhanced Device Registration - Placeholder services for compilation
-        services.AddScoped<IDeviceHardwareProfileService, PlaceholderDeviceHardwareProfileService>();
-        services.AddScoped<IOptimizedContentService, PlaceholderOptimizedContentService>();
-        services.AddScoped<IHardwareDetectionService, PlaceholderHardwareDetectionService>();
-        services.AddScoped<IEnhancedDeviceRegistrationService, PlaceholderEnhancedDeviceRegistrationService>();
+    // Enhanced Device Registration (replacing placeholder with production implementation)
+    services.AddScoped<IEnhancedDeviceRegistrationService, EnhancedDeviceRegistrationService>();
+    // Keep other placeholder services until their real implementations are ready
+    // Replace placeholder with minimal in-memory implementation
+    services.AddScoped<IDeviceHardwareProfileService, DeviceHardwareProfileService>();
+    services.AddScoped<IOptimizedContentService, OptimizedContentService>();
+    // Replacing placeholder with minimal in-memory implementation (to be upgraded later)
+    services.AddScoped<IHardwareDetectionService, HardwareDetectionService>();
         
         // Android TV Management Application Services - temporarily disabled for compilation
         // services.AddScoped<IAndroidTVDeviceManagementService, AndroidTVDeviceManagementService>();
@@ -61,6 +62,9 @@ public static class ApplicationServiceExtensions
     // User-Device Association Services
     services.AddScoped<IUserDeviceAssociationService, UserDeviceAssociationService>();
     services.AddScoped<IUserDeviceAssociationRepository, UserDeviceAssociationRepository>();
+
+    // User Schedule Service (Feature 019)
+    services.AddScoped<IUserScheduleService, UserScheduleService>();
 
     // AutoMapper registration (scan all profiles in Application Mappings assembly)
     services.AddAutoMapper(typeof(DigitalSignage.Application.Mappings.UserDeviceAssociationProfile));

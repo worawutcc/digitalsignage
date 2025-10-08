@@ -1,142 +1,127 @@
 'use client'
 
-// Force dynamic rendering to avoid prerendering issues
-export const dynamic = 'force-dynamic'
-
-import DashboardStats from '@/components/dashboard/DashboardStats'
-import { LineChart, BarChart, PieChart } from '@/components/charts'
 import AdminLayout from '@/components/layouts/AdminLayout'
 import { UnifiedSearch } from '@/components/ui/UnifiedSearch'
-import { RecentItems } from '@/features/dashboard/components/RecentItems'
 import { Button } from '@/components/ui/Button'
-import { Plus, Upload, Calendar, Tag, Copy, Users, RefreshCw, AlertCircle, TrendingUp, Activity } from 'lucide-react'
+import { 
+  RefreshCw, 
+  Monitor,
+  Shield,
+  Settings,
+  Image,
+  Play,
+  Calendar,
+  QrCode,
+  TrendingUp,
+  MonitorSpeaker,
+  CheckCircle2,
+  Upload,
+  AlertTriangle,
+  Activity,
+  Database,
+  HardDrive,
+  Wifi,
+  Plus
+} from 'lucide-react'
 import Link from 'next/link'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { useQuery } from '@tanstack/react-query'
-import { deviceHealthService, userService, MediaService, ScheduleService } from '@/services'
-
-
 
 /**
- * Dashboard page showing system overview, metrics, and analytics
- * Uses real API services for data fetching with React Query
- * Enhanced with Tailwind CSS 4 patterns and mobile-first responsive design
+ * Admin Dashboard - Central Hub for Digital Signage Management
+ * 
+ * Comprehensive admin interface following admin-only system architecture
+ * Features device management, content control, and system monitoring
  */
-export default function DashboardPage() {
-  const [isRefreshing, setIsRefreshing] = useState(false)
-  
-  // Real API data fetching with React Query
-  const {
-    data: usersData,
-    isLoading: isLoadingUsers,
-    refetch: refetchUsers,
-    error: usersError
-  } = useQuery({
-    queryKey: ['dashboard', 'users'],
-    queryFn: async () => {
-      try {
-        return await userService.getAllUsers()
-      } catch (error) {
-        console.warn('Failed to fetch users:', error)
-        return []
-      }
-    },
-    refetchInterval: 60000, // Refresh every minute
-    retry: false, // Don't retry to avoid blocking the dashboard
-  })
 
-  const {
-    data: mediaStats,
-    isLoading: isLoadingMedia,
-    refetch: refetchMedia,
-    error: mediaError
-  } = useQuery({
-    queryKey: ['dashboard', 'media-stats'],
-    queryFn: async () => {
-      try {
-        return await MediaService.getAll()
-      } catch (error) {
-        console.warn('Failed to fetch media:', error)
-        return []
-      }
-    },
-    refetchInterval: 60000,
-    retry: false,
-  })
+interface AdminActionCardProps {
+  href: string
+  icon: React.ReactNode
+  title: string
+  description: string
+  status?: 'success' | 'warning' | 'error' | 'info'
+  count?: number | string
+  badge?: string
+}
 
-  const {
-    data: scheduleStats,
-    isLoading: isLoadingSchedules,
-    refetch: refetchSchedules,
-    error: schedulesError
-  } = useQuery({
-    queryKey: ['dashboard', 'schedule-stats'],
-    queryFn: async () => {
-      try {
-        return await ScheduleService.getAll()
-      } catch (error) {
-        console.warn('Failed to fetch schedules:', error)
-        return []
-      }
-    },
-    refetchInterval: 60000,
-    retry: false,
-  })
-
-  // Calculate derived stats
-  const dashboardStats = {
-    totalDevices: 156, // TODO: Fetch from device service
-    activeDevices: 142,
-    offlineDevices: 14,
-    totalUsers: usersData?.length || 24,
-    activeUsers: usersData?.filter(u => u.isActive).length || 18,
-    totalSchedules: scheduleStats?.length || 89,
-    activeSchedules: scheduleStats?.filter(s => s.isActive).length || 67,
-    totalMediaFiles: mediaStats?.length || 1247,
-    mediaSizeGB: mediaStats ? mediaStats.reduce((total, file) => total + (file.fileSize || 0), 0) / (1024 * 1024 * 1024) : 23.7,
-    systemAlerts: 3, // TODO: Fetch from alerts service
+function AdminActionCard({ href, icon, title, description, status, count, badge }: AdminActionCardProps) {
+  const statusStyles = {
+    success: 'border-green-200 bg-green-50 hover:bg-green-100',
+    warning: 'border-yellow-200 bg-yellow-50 hover:bg-yellow-100',
+    error: 'border-red-200 bg-red-50 hover:bg-red-100',
+    info: 'border-blue-200 bg-blue-50 hover:bg-blue-100',
   }
 
-  // Mock chart data (will be replaced with real data later)
-  const deviceStatusData = [
-    { label: 'Jan', value: 95 },
-    { label: 'Feb', value: 87 },
-    { label: 'Mar', value: 92 },
-    { label: 'Apr', value: 89 },
-    { label: 'May', value: 94 },
-    { label: 'Jun', value: 91 },
-  ]
+  return (
+    <Link href={href}>
+      <div className={cn(
+        'group relative overflow-hidden rounded-lg border-2 p-6 transition-all duration-200 hover:shadow-lg',
+        status ? statusStyles[status] : 'border-gray-200 bg-white hover:bg-gray-50'
+      )}>
+        <div className="flex items-start justify-between">
+          <div className="flex items-center space-x-3">
+            <div className="flex-shrink-0">
+              {icon}
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 group-hover:text-gray-700">
+                {title}
+              </h3>
+              <p className="mt-1 text-xs text-gray-600">
+                {description}
+              </p>
+            </div>
+          </div>
+          
+          {(count || badge) && (
+            <div className="flex flex-col items-end space-y-1">
+              {count && (
+                <span className="text-2xl font-bold text-gray-900">
+                  {count}
+                </span>
+              )}
+              {badge && (
+                <span className={cn(
+                  "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium",
+                  status === 'warning' ? 'bg-yellow-100 text-yellow-800' :
+                  status === 'error' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-100 text-blue-800'
+                )}>
+                  {badge}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </Link>
+  )
+}
 
-  const contentTypeData = [
-    { label: 'Images', value: 847, color: '#3B82F6' },
-    { label: 'Videos', value: 234, color: '#EF4444' },
-    { label: 'HTML', value: 166, color: '#10B981' },
-  ]
+export default function DashboardPage() {
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
-  const deviceLocationData = [
-    { label: 'Lobby', value: 45 },
-    { label: 'Conference Rooms', value: 38 },
-    { label: 'Cafeteria', value: 25 },
-    { label: 'Hallways', value: 32 },
-    { label: 'Reception', value: 16 },
-  ]
+  // Mock data for admin dashboard
+  const adminStats = {
+    totalDevices: 156,
+    activeDevices: 142,
+    offlineDevices: 8,
+    pendingRegistrations: 5,
+    totalMedia: 1247,
+    totalPlaylists: 45,
+    activeSchedules: 12,
+    systemUptime: '99.8%',
+    avgResponseTime: '120ms',
+    storageUsed: 78,
+    criticalAlerts: 0,
+    warningAlerts: 2,
+  }
 
-  const isLoadingAny = isLoadingUsers || isLoadingMedia || isLoadingSchedules
-  
   const handleRefreshStats = async () => {
     setIsRefreshing(true)
-    try {
-      await Promise.all([
-        refetchUsers(),
-        refetchMedia(),
-        refetchSchedules()
-      ])
-    } catch (error) {
-      console.error('Error refreshing dashboard:', error)
-    } finally {
+    setTimeout(() => {
       setIsRefreshing(false)
-    }
+    }, 1000)
   }
 
   return (
@@ -144,245 +129,301 @@ export default function DashboardPage() {
       header={
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Dashboard</h1>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-              Monitor your digital signage system performance and health
+            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-sm text-gray-600 mt-1">
+              Central hub for managing your digital signage system
             </p>
           </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <UnifiedSearch className="flex-1 sm:flex-none sm:w-80" />
+          <div className="flex items-center gap-3">
+            <UnifiedSearch className="hidden md:block w-80" />
             <Button
-              onClick={handleRefreshStats}
-              variant="secondary"
+              variant="outline"
               size="sm"
-              className="shrink-0"
+              onClick={handleRefreshStats}
               disabled={isRefreshing}
+              className="flex items-center gap-2"
             >
               <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
-              <span className="hidden sm:inline ml-2">Refresh</span>
+              Refresh
             </Button>
+            <Link href="/media/upload">
+              <Button size="sm" className="flex items-center gap-2">
+                <Plus className="h-4 w-4" />
+                Upload Content
+              </Button>
+            </Link>
           </div>
         </div>
       }
     >
-      <div className="space-y-6 sm:space-y-8">
-        {/* System Health Alert */}
-        <div className="bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-950/50 dark:to-red-950/50 border border-orange-200 dark:border-orange-800 rounded-xl p-4">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="h-5 w-5 text-orange-600 dark:text-orange-400 mt-0.5 shrink-0" />
-            <div>
-              <h3 className="font-medium text-orange-900 dark:text-orange-100">System Health Check</h3>
-              <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-                3 devices offline • 2 schedules require attention • Storage at 78%
-              </p>
+      <div className="space-y-8">
+        {/* Quick Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Total Devices</p>
+                <p className="text-2xl font-bold text-gray-900">{adminStats.totalDevices}</p>
+                <p className="text-xs text-green-600">{adminStats.activeDevices} active</p>
+              </div>
+              <Monitor className="h-8 w-8 text-blue-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Media Files</p>
+                <p className="text-2xl font-bold text-gray-900">{adminStats.totalMedia}</p>
+                <p className="text-xs text-blue-600">Content library</p>
+              </div>
+              <Image className="h-8 w-8 text-green-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Active Schedules</p>
+                <p className="text-2xl font-bold text-gray-900">{adminStats.activeSchedules}</p>
+                <p className="text-xs text-purple-600">Running now</p>
+              </div>
+              <Calendar className="h-8 w-8 text-purple-500" />
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-600">Pending Approvals</p>
+                <p className="text-2xl font-bold text-gray-900">{adminStats.pendingRegistrations}</p>
+                <p className="text-xs text-orange-600">Need attention</p>
+              </div>
+              <Shield className="h-8 w-8 text-orange-500" />
             </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6 shadow-sm">
-          <div className="flex items-center gap-2 mb-6">
-            <Activity className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Quick Actions</h2>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-            <Link href="/media" className="group">
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <Upload className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  <span className="text-xs font-medium">Upload Media</span>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/schedules" className="group">
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <span className="text-xs font-medium">New Schedule</span>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/media/tags" className="group">
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <Tag className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                  <span className="text-xs font-medium">Manage Tags</span>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/schedules/templates" className="group">
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <Copy className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-                  <span className="text-xs font-medium">Templates</span>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/users" className="group">
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <Users className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-                  <span className="text-xs font-medium">User Mgmt</span>
-                </div>
-              </Button>
-            </Link>
-            <Link href="/devices" className="group">
-              <Button 
-                variant="secondary" 
-                className="w-full justify-start h-auto p-4 group-hover:shadow-md transition-shadow"
-              >
-                <div className="flex flex-col items-center gap-2 w-full">
-                  <Plus className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-xs font-medium">Add Device</span>
-                </div>
-              </Button>
-            </Link>
-          </div>
-        </div>
-
-        {/* Recent Items and Search (Mobile) */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          <div className="lg:col-span-2">
-            {/* Main Statistics */}
-            <DashboardStats 
-              data={dashboardStats}
-              onRefresh={handleRefreshStats}
+        {/* Admin Action Cards */}
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <AdminActionCard
+              href="/devices"
+              icon={<Monitor className="h-6 w-6 text-blue-600" />}
+              title="Device Management"
+              description="Monitor devices, check status, and manage connections"
+              count={adminStats.activeDevices}
+              status="success"
             />
-          </div>
-          <div className="space-y-6">
-            <UnifiedSearch className="md:hidden" />
-            <RecentItems maxItems={5} />
-          </div>
-        </div>
 
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Device Uptime Trend */}
-          <LineChart
-            data={deviceStatusData}
-            title="Device Uptime Trend (%)"
-            height={250}
-            color="#10B981"
-          />
+            <AdminActionCard
+              href="/admin/device-registrations/pending"
+              icon={<Shield className="h-6 w-6 text-orange-600" />}
+              title="Device Registrations"
+              description="Review Android TV self-registration requests"
+              count={adminStats.pendingRegistrations}
+              status="warning"
+              badge="Pending"
+            />
 
-          {/* Content Distribution */}
-          <PieChart
-            data={contentTypeData}
-            title="Content Distribution"
-            size={250}
-            showLegend={true}
-            showPercentages={true}
-          />
-        </div>
+            <AdminActionCard
+              href="/media"
+              icon={<Image className="h-6 w-6 text-green-600" />}
+              title="Media Library"
+              description="Upload, organize, and manage content files"
+              count={adminStats.totalMedia}
+            />
 
-        {/* Additional Charts */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* Devices by Location */}
-          <BarChart
-            data={deviceLocationData}
-            title="Devices by Location"
-            height={300}
-            showValues={true}
-          />
+            <AdminActionCard
+              href="/playlists"
+              icon={<Play className="h-6 w-6 text-purple-600" />}
+              title="Playlists"
+              description="Create and manage content playlists"
+              count={adminStats.totalPlaylists}
+            />
 
-          {/* Recent Activity Summary */}
-          <div className="rounded-lg bg-white p-6 shadow-sm border">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Recent Activity</h3>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between border-b pb-2">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">New device registered</p>
-                  <p className="text-xs text-gray-500">Conference Room B - Display #157</p>
-                </div>
-                <span className="text-xs text-gray-400">2 min ago</span>
-              </div>
-              
-              <div className="flex items-center justify-between border-b pb-2">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Schedule updated</p>
-                  <p className="text-xs text-gray-500">Lobby promotion campaign</p>
-                </div>
-                <span className="text-xs text-gray-400">15 min ago</span>
-              </div>
-              
-              <div className="flex items-center justify-between border-b pb-2">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Media uploaded</p>
-                  <p className="text-xs text-gray-500">summer-promo-video.mp4 (12.3 MB)</p>
-                </div>
-                <span className="text-xs text-gray-400">1 hour ago</span>
-              </div>
-              
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-900">Device offline</p>
-                  <p className="text-xs text-red-500">Cafeteria - Display #089</p>
-                </div>
-                <span className="text-xs text-gray-400">2 hours ago</span>
-              </div>
-            </div>
-            
-            <div className="mt-4 pt-4 border-t">
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                View all activity →
-              </button>
-            </div>
+            <AdminActionCard
+              href="/schedules"
+              icon={<Calendar className="h-6 w-6 text-indigo-600" />}
+              title="Schedules"
+              description="Plan and manage content scheduling"
+              count={adminStats.activeSchedules}
+              badge="Active"
+              status="info"
+            />
+
+            <AdminActionCard
+              href="/device-groups"
+              icon={<MonitorSpeaker className="h-6 w-6 text-cyan-600" />}
+              title="Device Groups"
+              description="Organize devices into manageable groups"
+            />
+
+            <AdminActionCard
+              href="/qr-codes"
+              icon={<QrCode className="h-6 w-6 text-pink-600" />}
+              title="QR Codes"
+              description="Generate QR codes for device setup"
+            />
+
+            <AdminActionCard
+              href="/analytics"
+              icon={<TrendingUp className="h-6 w-6 text-emerald-600" />}
+              title="Analytics"
+              description="View system performance and usage analytics"
+            />
+
+            <AdminActionCard
+              href="/settings"
+              icon={<Settings className="h-6 w-6 text-gray-600" />}
+              title="System Settings"
+              description="Configure system preferences and settings"
+            />
           </div>
         </div>
 
         {/* System Health Status */}
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-          <div className="rounded-lg bg-white p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">API Status</h4>
-                <div className="flex items-center mt-1">
-                  <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-green-600">Operational</span>
+        <div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">System Health</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="rounded-lg bg-white p-6 shadow-sm border">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-full text-green-600 bg-green-100">
+                  <Activity className="h-5 w-5" />
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Response time: 120ms</p>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">System Uptime</h4>
+                  <div className="flex items-center mt-1">
+                    <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
+                    <span className="text-lg font-semibold text-gray-900">{adminStats.systemUptime}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow-sm border">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-full text-green-600 bg-green-100">
+                  <Wifi className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Response Time</h4>
+                  <div className="flex items-center mt-1">
+                    <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
+                    <span className="text-lg font-semibold text-gray-900">{adminStats.avgResponseTime}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Average API response</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow-sm border">
+              <div className="flex items-center space-x-3">
+                <div className={cn(
+                  "p-2 rounded-full",
+                  adminStats.storageUsed > 80 ? "text-yellow-600 bg-yellow-100" : "text-green-600 bg-green-100"
+                )}>
+                  <HardDrive className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Storage Usage</h4>
+                  <div className="flex items-center mt-1">
+                    <div className={cn(
+                      "h-2 w-2 rounded-full mr-2",
+                      adminStats.storageUsed > 80 ? "bg-yellow-500" : "bg-green-500"
+                    )}></div>
+                    <span className="text-lg font-semibold text-gray-900">{adminStats.storageUsed}%</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Of total capacity</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-white p-6 shadow-sm border">
+              <div className="flex items-center space-x-3">
+                <div className="p-2 rounded-full text-green-600 bg-green-100">
+                  <Database className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Database</h4>
+                  <div className="flex items-center mt-1">
+                    <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
+                    <span className="text-lg font-semibold text-gray-900">Healthy</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">All connections active</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Activity */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+              <Button variant="outline" size="sm">
+                View All
+              </Button>
+            </div>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+                <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Device approved</p>
+                  <p className="text-xs text-gray-500">Android TV - Conference Room A</p>
+                </div>
+                <span className="text-xs text-gray-500">2 mins ago</span>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+                <Upload className="h-5 w-5 text-blue-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Media uploaded</p>
+                  <p className="text-xs text-gray-500">holiday-promotion.mp4</p>
+                </div>
+                <span className="text-xs text-gray-500">15 mins ago</span>
+              </div>
+              
+              <div className="flex items-center space-x-3 p-3 rounded-lg bg-gray-50">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-gray-900">Device offline</p>
+                  <p className="text-xs text-gray-500">Display - Lobby East</p>
+                </div>
+                <span className="text-xs text-gray-500">1 hour ago</span>
               </div>
             </div>
           </div>
 
-          <div className="rounded-lg bg-white p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">Database</h4>
-                <div className="flex items-center mt-1">
-                  <div className="h-2 w-2 bg-green-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-green-600">Healthy</span>
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Links</h3>
+            <div className="space-y-3">
+              <Link href="/media/upload" className="flex items-center justify-between p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors">
+                <div className="flex items-center space-x-3">
+                  <Upload className="h-5 w-5 text-blue-600" />
+                  <span className="text-sm font-medium text-gray-900">Upload New Content</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Connections: 12/100</p>
-              </div>
-            </div>
-          </div>
+                <span className="text-xs text-blue-600">→</span>
+              </Link>
 
-          <div className="rounded-lg bg-white p-6 shadow-sm border">
-            <div className="flex items-center">
-              <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-900">Storage</h4>
-                <div className="flex items-center mt-1">
-                  <div className="h-2 w-2 bg-yellow-500 rounded-full mr-2"></div>
-                  <span className="text-sm text-yellow-600">Warning</span>
+              <Link href="/schedules/create" className="flex items-center justify-between p-3 rounded-lg bg-purple-50 hover:bg-purple-100 transition-colors">
+                <div className="flex items-center space-x-3">
+                  <Calendar className="h-5 w-5 text-purple-600" />
+                  <span className="text-sm font-medium text-gray-900">Create Schedule</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Used: 78% of 100GB</p>
-              </div>
+                <span className="text-xs text-purple-600">→</span>
+              </Link>
+
+              <Link href="/admin/device-registrations/pending" className="flex items-center justify-between p-3 rounded-lg bg-orange-50 hover:bg-orange-100 transition-colors">
+                <div className="flex items-center space-x-3">
+                  <Shield className="h-5 w-5 text-orange-600" />
+                  <span className="text-sm font-medium text-gray-900">Review Registrations</span>
+                </div>
+                <span className="text-xs text-orange-600 bg-orange-200 px-2 py-0.5 rounded-full">{adminStats.pendingRegistrations}</span>
+              </Link>
             </div>
           </div>
         </div>

@@ -59,10 +59,19 @@ public class DeviceCapabilityConfiguration : IEntityTypeConfiguration<DeviceCapa
             .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
         // JSON column for supported formats
+        // SupportedFormats: use ValueComparer to ensure EF can detect modifications in List<string>
+        var supportedFormatsComparer = new Microsoft.EntityFrameworkCore.ChangeTracking.ValueComparer<List<string>>(
+            (c1, c2) => c1 != null && c2 != null && c1.SequenceEqual(c2),
+            c => c == null ? 0 : c.Aggregate(0, (a, v) => HashCode.Combine(a, v.GetHashCode())),
+            c => c == null ? new List<string>() : c.ToList());
+
         builder.Property(dc => dc.SupportedFormats)
             .HasConversion(
                 v => JsonSerializer.Serialize(v, (JsonSerializerOptions?)null),
                 v => JsonSerializer.Deserialize<List<string>>(v, (JsonSerializerOptions?)null) ?? new List<string>())
+            .Metadata.SetValueComparer(supportedFormatsComparer);
+
+        builder.Property(dc => dc.SupportedFormats)
             .HasColumnType("jsonb")
             .HasDefaultValue(new List<string> { "mp4", "jpg", "webp" });
 

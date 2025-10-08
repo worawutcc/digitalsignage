@@ -10,7 +10,7 @@ public interface IPlaylistService
     Task<PlaylistDto> CreateAsync(CreatePlaylistRequest request, int userId);
     Task<PlaylistDto?> UpdateAsync(int id, UpdatePlaylistRequest request);
     Task<bool> DeleteAsync(int id);
-    Task<bool> DuplicateAsync(int id, string newName);
+    Task<PlaylistDto?> DuplicateAsync(int id, string? newName = null);
     
     // Playlist Item Management
     Task<PlaylistItemDto?> AddItemAsync(int playlistId, CreatePlaylistItemRequest request);
@@ -32,6 +32,10 @@ public interface IPlaylistService
     // Validation
     Task<bool> ValidatePlaylistAsync(int id);
     Task<List<string>> GetValidationErrorsAsync(int id);
+    
     // Assignment summary for playlist
     Task<PlaylistAssignmentSummaryDto> GetAssignmentSummaryAsync(int playlistId);
+    
+    // Statistics
+    Task<PlaylistStatisticsDto> GetStatisticsAsync();
 }

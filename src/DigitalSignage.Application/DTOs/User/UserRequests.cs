@@ -3,6 +3,36 @@ using System.ComponentModel.DataAnnotations;
 namespace DigitalSignage.Application.DTOs.User;
 
 /// <summary>
+/// Request to create a new user (Admin only)
+/// </summary>
+public class CreateUserRequest
+{
+    [Required]
+    [EmailAddress]
+    [StringLength(255)]
+    public string Email { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100, MinimumLength = 1)]
+    public string FirstName { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(100, MinimumLength = 1)]
+    public string LastName { get; set; } = string.Empty;
+
+    [Required]
+    [StringLength(255, MinimumLength = 8)]
+    [RegularExpression(@"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]",
+        ErrorMessage = "Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character")]
+    public string Password { get; set; } = string.Empty;
+
+    [Required]
+    public string Role { get; set; } = "User";
+
+    public bool IsActive { get; set; } = true;
+}
+
+/// <summary>
 /// Request to update user profile (self-update)
 /// </summary>
 public class UpdateUserProfileRequest

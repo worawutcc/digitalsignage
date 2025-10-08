@@ -6,105 +6,104 @@ using Microsoft.Extensions.Logging;
 namespace DigitalSignage.Application.Services;
 
 /// <summary>
-/// Placeholder implementation for IDeviceHardwareProfileService
-/// Provides temporary method implementations to enable compilation during Phase 3.4 development
+/// Minimal in-memory implementation replacing placeholder; persistence to be added later.
 /// </summary>
 public class DeviceHardwareProfileService : IDeviceHardwareProfileService
 {
     private readonly ILogger<DeviceHardwareProfileService> _logger;
+    private static readonly List<DeviceHardwareProfileDto> _profiles = new();
+    private static int _nextId = 1;
 
     public DeviceHardwareProfileService(ILogger<DeviceHardwareProfileService> logger)
     {
         _logger = logger;
     }
 
-    public async Task<DeviceHardwareProfileDto?> GetByDeviceIdAsync(int deviceId)
-    {
-        _logger.LogInformation("Getting hardware profile for device ID: {DeviceId}", deviceId);
-        return await Task.FromResult<DeviceHardwareProfileDto?>(null);
-    }
+    public Task<DeviceHardwareProfileDto?> GetByDeviceIdAsync(int deviceId) => Task.FromResult(_profiles.FirstOrDefault(p => p.DeviceId == deviceId));
 
-    public async Task<DeviceHardwareProfileDto?> GetByIdAsync(int profileId)
-    {
-        _logger.LogInformation("Getting hardware profile by ID: {ProfileId}", profileId);
-        return await Task.FromResult<DeviceHardwareProfileDto?>(null);
-    }
+    public Task<DeviceHardwareProfileDto?> GetByIdAsync(int profileId) => Task.FromResult(_profiles.FirstOrDefault(p => p.Id == profileId));
 
-    public async Task<DeviceHardwareProfileDto> CreateAsync(int deviceId, CreateDeviceHardwareProfileRequestDto requestDto)
+    public Task<DeviceHardwareProfileDto> CreateAsync(int deviceId, CreateDeviceHardwareProfileRequestDto requestDto)
     {
-        _logger.LogInformation("Creating hardware profile for device ID: {DeviceId}", deviceId);
-        return await Task.FromResult(new DeviceHardwareProfileDto
+        if (_profiles.Any(p => p.DeviceId == deviceId))
+            throw new InvalidOperationException("Profile already exists for device");
+        var dto = new DeviceHardwareProfileDto
         {
-            Id = 1,
+            Id = _nextId++,
             DeviceId = deviceId,
             DisplayWidth = requestDto.DisplayWidth,
             DisplayHeight = requestDto.DisplayHeight,
-            RefreshRate = requestDto.RefreshRate
-        });
+            RefreshRate = requestDto.RefreshRate,
+            IsAutoDetected = false,
+            DetectionSource = "manual",
+            DetectedAt = DateTime.UtcNow
+        };
+        _profiles.Add(dto);
+        return Task.FromResult(dto);
     }
 
-    public async Task<DeviceHardwareProfileDto> CreateFromDetectionAsync(int deviceId, DeviceHardwareInfoDto hardwareInfo, int adminUserId)
+    public Task<DeviceHardwareProfileDto> CreateFromDetectionAsync(int deviceId, DeviceHardwareInfoDto hardwareInfo, int jobId)
     {
-        _logger.LogInformation("Creating hardware profile from detection for device ID: {DeviceId}", deviceId);
-        return await Task.FromResult(new DeviceHardwareProfileDto
+        var existing = _profiles.FirstOrDefault(p => p.DeviceId == deviceId);
+        if (existing != null) return Task.FromResult(existing);
+        var dto = new DeviceHardwareProfileDto
         {
-            Id = 1,
+            Id = _nextId++,
             DeviceId = deviceId,
             DisplayWidth = hardwareInfo.DisplayWidth ?? 1920,
             DisplayHeight = hardwareInfo.DisplayHeight ?? 1080,
-            RefreshRate = 60.0f
-        });
+            RefreshRate = hardwareInfo.RefreshRate ?? 60.0f,
+            IsAutoDetected = true,
+            DetectionSource = "system",
+            DetectedAt = DateTime.UtcNow
+        };
+        _profiles.Add(dto);
+        return Task.FromResult(dto);
     }
 
-    public async Task<DeviceHardwareProfileDto> UpdateAsync(int deviceId, UpdateDeviceHardwareProfileRequestDto requestDto, int adminUserId)
+    public Task<DeviceHardwareProfileDto> UpdateAsync(int deviceId, UpdateDeviceHardwareProfileRequestDto requestDto, int userId)
     {
-        _logger.LogInformation("Updating hardware profile for device ID: {DeviceId}", deviceId);
-        return await Task.FromResult(new DeviceHardwareProfileDto
+        var profile = _profiles.FirstOrDefault(p => p.DeviceId == deviceId) ?? throw new ArgumentException("Profile not found");
+        if (requestDto.DisplayWidth.HasValue) profile.DisplayWidth = requestDto.DisplayWidth.Value;
+        if (requestDto.DisplayHeight.HasValue) profile.DisplayHeight = requestDto.DisplayHeight.Value;
+        if (requestDto.RefreshRate.HasValue) profile.RefreshRate = requestDto.RefreshRate.Value;
+        profile.IsAutoDetected = false;
+        return Task.FromResult(profile);
+    }
+
+    public Task<bool> DeleteByDeviceIdAsync(int deviceId, int userId)
+    {
+        var removed = _profiles.RemoveAll(p => p.DeviceId == deviceId);
+        return Task.FromResult(removed > 0);
+    }
+
+    public Task<List<int>> GetDevicesWithoutProfilesAsync(int limit = 100)
+    {
+        return Task.FromResult(new List<int>()); // needs device repo for real implementation
+    }
+
+    public Task<bool> HasHardwareProfileAsync(int deviceId) => Task.FromResult(_profiles.Any(p => p.DeviceId == deviceId));
+
+    public Task<List<DeviceHardwareProfileDto>> GetByCapabilitiesAsync(int? minWidth = null, int? minHeight = null, List<string>? supportedFormats = null)
+    {
+        var query = _profiles.AsEnumerable();
+        if (minWidth.HasValue) query = query.Where(p => p.DisplayWidth >= minWidth.Value);
+        if (minHeight.HasValue) query = query.Where(p => p.DisplayHeight >= minHeight.Value);
+        return Task.FromResult(query.ToList());
+    }
+
+    public Task<HardwareProfileStatistics> GetStatisticsAsync()
+    {
+        var stats = new HardwareProfileStatistics
         {
-            Id = 1,
-            DeviceId = deviceId,
-            DisplayWidth = requestDto.DisplayWidth ?? 1920,
-            DisplayHeight = requestDto.DisplayHeight ?? 1080,
-            RefreshRate = requestDto.RefreshRate ?? 60.0f
-        });
-    }
-
-    public async Task<bool> DeleteByDeviceIdAsync(int deviceId, int adminUserId)
-    {
-        _logger.LogInformation("Deleting hardware profile for device ID: {DeviceId}", deviceId);
-        return await Task.FromResult(true);
-    }
-
-    public async Task<List<int>> GetDevicesWithoutProfilesAsync(int maxResults = 50)
-    {
-        _logger.LogInformation("Getting devices without hardware profiles");
-        return await Task.FromResult(new List<int>());
-    }
-
-    public async Task<bool> HasHardwareProfileAsync(int deviceId)
-    {
-        _logger.LogInformation("Checking if device has hardware profile: {DeviceId}", deviceId);
-        return await Task.FromResult(false);
-    }
-
-    public async Task<List<DeviceHardwareProfileDto>> GetByCapabilitiesAsync(int? minWidth = null, int? minHeight = null, List<string>? requiredCodecs = null)
-    {
-        _logger.LogInformation("Getting hardware profiles by capabilities");
-        return await Task.FromResult(new List<DeviceHardwareProfileDto>());
-    }
-
-    public async Task<HardwareProfileStatistics> GetStatisticsAsync()
-    {
-        _logger.LogInformation("Getting hardware profile statistics");
-        return await Task.FromResult(new HardwareProfileStatistics
-        {
-            TotalProfilesCount = 0,
-            AutoDetectedCount = 0,
-            ManuallyConfiguredCount = 0,
-            MostCommonResolution = "Unknown",
+            TotalProfilesCount = _profiles.Count,
+            AutoDetectedCount = _profiles.Count(p => p.IsAutoDetected),
+            ManuallyConfiguredCount = _profiles.Count(p => !p.IsAutoDetected),
+            MostCommonResolution = _profiles.GroupBy(p => $"{p.DisplayWidth}x{p.DisplayHeight}").OrderByDescending(g => g.Count()).FirstOrDefault()?.Key ?? "Unknown",
             MostCommonManufacturer = "Unknown",
             AndroidVersionDistribution = new Dictionary<string, int>(),
-            LastProfileCreated = null
-        });
+            LastProfileCreated = _profiles.OrderByDescending(p => p.DetectedAt).FirstOrDefault()?.DetectedAt
+        };
+        return Task.FromResult(stats);
     }
 }

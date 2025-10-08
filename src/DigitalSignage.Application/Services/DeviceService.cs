@@ -18,15 +18,18 @@ public class DeviceService : IDeviceService
 {
     private readonly DbContext _context;
     private readonly IRealtimeEventBroadcaster _eventBroadcaster;
+    private readonly IDeviceNotificationService _deviceNotificationService;
     private readonly ILogger<DeviceService> _logger;
     
     public DeviceService(
         DbContext context,
         IRealtimeEventBroadcaster eventBroadcaster,
+        IDeviceNotificationService deviceNotificationService,
         ILogger<DeviceService> logger)
     {
         _context = context;
         _eventBroadcaster = eventBroadcaster;
+        _deviceNotificationService = deviceNotificationService;
         _logger = logger;
     }
 
@@ -333,14 +336,14 @@ public class DeviceService : IDeviceService
         {
             Name = request.Name,
             MacAddress = request.MacAddress,
-            IpAddress = request.IpAddress,
+            IpAddress = request.IpAddress ?? string.Empty,
             AndroidVersion = request.AndroidVersion,
             ApiLevel = request.ApiLevel,
             SerialNumber = request.SerialNumber,
             Manufacturer = request.Manufacturer,
             Model = request.Model,
             DisplayResolution = request.DisplayResolution,
-            Location = request.Location,
+            Location = request.Location ?? string.Empty,
             DeviceGroupId = request.DeviceGroupId,
             Status = DeviceStatus.Pending,
             DeviceKey = Guid.NewGuid().ToString(),
@@ -542,6 +545,25 @@ public class DeviceService : IDeviceService
         }
 
         await _context.SaveChangesAsync();
+
+        // Check if user assignment changed
+        var assignmentChanged = changes.Any(c => c.Contains("AssignedUserId") || c.Contains("DeviceGroupId"));
+        
+        // Notify device about assignment change if applicable
+        if (assignmentChanged)
+        {
+            var assignmentType = device.AssignedUserId.HasValue ? "User" 
+                               : device.DeviceGroupId.HasValue ? "Group" 
+                               : "Default";
+            
+            await _deviceNotificationService.NotifyDeviceAssignmentChangedAsync(
+                deviceId,
+                previousUserId: null, // Could track old value if needed
+                newUserId: device.AssignedUserId,
+                assignmentType: assignmentType,
+                groupId: device.DeviceGroupId,
+                requiresContentRefresh: true);
+        }
 
         // Broadcast device update event if there were changes
         if (changes.Any())

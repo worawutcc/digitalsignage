@@ -65,6 +65,46 @@ public class UserService : IUserService
         });
     }
 
+    public async Task<UserDto> CreateAsync(CreateUserRequest request)
+    {
+        _logger.LogInformation("Creating new user with email: {Email}", request.Email);
+
+        // Check if email already exists
+        var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+        if (existingUser != null)
+        {
+            throw new InvalidOperationException($"User with email {request.Email} already exists");
+        }
+
+        // Create new user entity
+        var user = new Domain.Entities.User
+        {
+            Email = request.Email,
+            FirstName = request.FirstName,
+            LastName = request.LastName,
+            PasswordHash = _passwordHashService.HashPassword(request.Password),
+            Role = Enum.Parse<Domain.Enums.UserRole>(request.Role),
+            IsActive = request.IsActive,
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        };
+
+        var createdUser = await _userRepository.CreateAsync(user);
+        _logger.LogInformation("User created successfully with email: {Email}", createdUser.Email);
+
+        return new UserDto
+        {
+            UserId = createdUser.Id,
+            Email = createdUser.Email,
+            FullName = $"{createdUser.FirstName} {createdUser.LastName}",
+            PhoneNumber = createdUser.PhoneNumber,
+            Role = createdUser.Role.ToString(),
+            IsActive = createdUser.IsActive,
+            CreatedAt = createdUser.CreatedAt,
+            LastLoginAt = createdUser.LastLoginAt
+        };
+    }
+
     public async Task<UserDto?> UpdateProfileAsync(int userId, UpdateUserProfileRequest request)
     {
         var user = await _userRepository.GetByIdAsync(userId);
@@ -187,7 +227,9 @@ public class UserService : IUserService
 
         if (request.IsLocked)
         {
-            user.LockoutUntil = request.LockoutUntil ?? DateTime.UtcNow.AddHours(_expirationSettings.UserLockoutHours);
+            user.LockoutUntil = request.LockoutUntil != null
+                ? DateTime.SpecifyKind(request.LockoutUntil.Value, DateTimeKind.Unspecified)
+                : DateTime.SpecifyKind(DateTime.UtcNow.AddHours(_expirationSettings.UserLockoutHours), DateTimeKind.Unspecified);
         }
         else
         {

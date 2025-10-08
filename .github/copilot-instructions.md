@@ -158,6 +158,41 @@ builder.Property(e => e.CreatedAt)
 
 ### Entity Framework Core
 - `AppDbContext` in `Infrastructure/Data/`
+#### DateTime Remediation & Enforcement (2025-10-08)
+To eliminate mixed usage of `timestamp with time zone` vs `timestamp without time zone` which caused runtime errors (e.g. `Cannot apply binary operation on types 'timestamp with time zone' and 'timestamp without time zone'`), the codebase is being standardized:
+
+1. Storage Type Standard: Always use `timestamp without time zone` in PostgreSQL for all audit / lifecycle columns (`CreatedAt`, `UpdatedAt`, `DeletedAt`, domain-specific timestamps, scheduling fields, log timestamps).
+2. Default Values: Use `NOW() AT TIME ZONE 'UTC'` for default creation timestamps. Never use `GETUTCDATE()` (SQL Server syntax) in PostgreSQL migrations.
+3. Runtime Assignment Pattern (Services/Domain):
+    - Use `DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)` before persisting or comparing values that will be sent to EF queries.
+    - Do NOT persist `DateTime.UtcNow` directly (Kind = UTC) because Npgsql will reject writing UTC kind to a `timestamp without time zone` column in strict scenarios or create inconsistent comparisons.
+4. Validation / Query Parameters: Convert any `DateTime.UtcNow.Add...` to unspecified kind before building EF predicates.
+5. Migration Hygiene: Any existing migration that still contains `.HasColumnType("timestamp with time zone")` must be either:
+    - Superseded by a new corrective migration performing `ALTER TABLE ... ALTER COLUMN ... TYPE timestamp without time zone USING (<col> AT TIME ZONE 'UTC')`, OR
+    - (Dev only) Edited and database recreated if no production deployment has occurred.
+6. Snapshot Consistency: Ensure the model snapshot (if present) reflects only `timestamp without time zone` types; otherwise future diffs will reintroduce unwanted changes.
+7. Review Checklist (add to PR template for backend):
+    - [ ] No new `timestamp with time zone` strings in migrations
+    - [ ] All new DateTime columns explicitly configured with `.HasColumnType("timestamp without time zone")`
+    - [ ] All service-layer persistence assignments use `SpecifyKind(..., Unspecified)`
+    - [ ] No `GETUTCDATE()` in PostgreSQL migrations
+    - [ ] Tests involving time comparisons normalize to unspecified kind
+
+Example Corrected Pattern:
+```csharp
+entity.CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+builder.Property(e => e.CreatedAt)
+         .IsRequired()
+         .HasColumnType("timestamp without time zone")
+         .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+```
+
+Example Migration Snippet (conversion):
+```csharp
+migrationBuilder.Sql(@"ALTER TABLE \"Devices\" ALTER COLUMN \"UpdatedAt\" TYPE timestamp without time zone USING (\"UpdatedAt\" AT TIME ZONE 'UTC')");
+```
+
+All contributors must follow this remediation section until removed (once legacy time zone columns are fully eradicated).
 - Multi-provider support: PostgreSQL (primary), SQL Server (alternate)
 - Connection via `appsettings.{Environment}.json` + Environment Variables
 - Migrations: `dotnet ef migrations add <Name> -p src/DigitalSignage.Infrastructure -s src/DigitalSignage.Api`
@@ -347,9 +382,9 @@ dotnet build
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
 ## Recent Changes
+- 030-recheck-function-menu: Added PostgreSQL database with Entity Framework Core migrations, AWS S3 for media files
 - 028-enhanced-device-registration: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Authentication, AWS S3 SDK, AutoMapper, SixLabors.ImageSharp, SignalR
 - 027-device-approval-group: Added C# .NET 8 (Backend), TypeScript 5.x (Frontend) + ASP.NET Core Web API, Entity Framework Core 9, Next.js 15, React 18, PostgreSQL, JWT Authentication, AWS S3
-- 021-user-schedule-assignment: Added TypeScript 5.x with Next.js 15 (React 18), C# .NET 8 (backend) + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, React Hook Form + Zod, Axios, Lucide Reac
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

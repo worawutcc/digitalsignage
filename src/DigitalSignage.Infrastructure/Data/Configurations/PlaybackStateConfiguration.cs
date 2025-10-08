@@ -47,6 +47,13 @@ public class PlaybackStateConfiguration : IEntityTypeConfiguration<PlaybackState
                .HasColumnName("estimated_end_at")
                .HasColumnType("timestamp without time zone");
 
+     // Enforce non-timezone timestamps for other DateTime fields
+     builder.Property(ps => ps.ErrorOccurredAt)
+         .HasColumnType("timestamp without time zone");
+
+     builder.Property(ps => ps.LastSyncAt)
+         .HasColumnType("timestamp without time zone");
+
         // Indexes
         builder.HasIndex(ps => new { ps.DeviceId, ps.PlaylistId })
             .IsUnique(); // One playback state per device-playlist combination

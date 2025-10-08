@@ -187,6 +187,93 @@ public class UsersController : ControllerBase
     }
 
     /// <summary>
+    /// Search users with filtering (Admin/Manager only)
+    /// </summary>
+    /// <param name="searchTerm">Search term for email, firstName, or lastName</param>
+    /// <param name="role">Filter by role</param>
+    /// <param name="isActive">Filter by active status</param>
+    /// <returns>List of matching users</returns>
+    [HttpGet("search")]
+    [Authorize(Roles = "Admin,Manager")]
+    [ProducesResponseType(typeof(IEnumerable<UserDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<IEnumerable<UserDto>>> SearchUsers(
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] string? role = null,
+        [FromQuery] bool? isActive = null)
+    {
+        try
+        {
+            var users = await _userService.GetAllAsync();
+            
+            // Apply filters
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+            {
+                users = users.Where(u =>
+                    (u.Email?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false) ||
+                    (u.FullName?.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ?? false));
+            }
+
+            if (!string.IsNullOrWhiteSpace(role))
+            {
+                users = users.Where(u => u.Role?.Equals(role, StringComparison.OrdinalIgnoreCase) ?? false);
+            }
+
+            if (isActive.HasValue)
+            {
+                users = users.Where(u => u.IsActive == isActive.Value);
+            }
+
+            _logger.LogInformation("Search users with term '{SearchTerm}', role '{Role}', isActive '{IsActive}', found {Count} users",
+                searchTerm, role, isActive, users.Count());
+
+            return Ok(users);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error searching users");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { error = "An unexpected error occurred" });
+        }
+    }
+
+    /// <summary>
+    /// Create new user (Admin only)
+    /// </summary>
+    /// <param name="request">User creation request</param>
+    /// <returns>Created user details</returns>
+    [HttpPost]
+    [Authorize(Roles = "Admin")]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status403Forbidden)]
+    public async Task<ActionResult<UserDto>> CreateUser([FromBody] CreateUserRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var createdUser = await _userService.CreateAsync(request);
+
+            _logger.LogInformation("User created with ID {UserId} by admin", createdUser.UserId);
+
+            return CreatedAtAction(nameof(GetUser), new { id = createdUser.UserId }, createdUser);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning("User creation failed: {Error}", ex.Message);
+            return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error creating user");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { error = "An unexpected error occurred" });
+        }
+    }
+
+    /// <summary>
     /// Get user by ID (Admin/Manager only)
     /// </summary>
     /// <param name="id">User ID</param>

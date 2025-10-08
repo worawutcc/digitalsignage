@@ -8,7 +8,6 @@ import {
   BarChart3,
   Monitor,
   Calendar,
-  Users,
   Settings,
   ChevronLeft,
   LogOut,
@@ -18,7 +17,8 @@ import {
   TrendingUp,
   QrCode,
   FileBarChart,
-  MonitorSpeaker
+  MonitorSpeaker,
+  Shield
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
@@ -51,7 +51,7 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: TrendingUp, description: 'Performance analytics' },
   { name: 'QR Codes', href: '/qr-codes', icon: QrCode, description: 'QR code management' },
   { name: 'Reports', href: '/reports', icon: FileBarChart, description: 'Reports & exports' },
-  { name: 'Users', href: '/users', icon: Users, description: 'User management' },
+  { name: 'Admin', href: '/admin', icon: Shield, description: 'Admin dashboard & device registrations' },
   { name: 'Settings', href: '/settings', icon: Settings, description: 'System configuration' },
 ]
 

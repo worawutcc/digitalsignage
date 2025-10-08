@@ -132,16 +132,10 @@ export default function PlaylistsPage() {
               Manage content playlists for your digital signage displays
             </p>
           </div>
-          <div className="flex gap-2">
-            <Button variant="outline">
-              <Copy className="h-4 w-4 mr-2" />
-              Duplicate
-            </Button>
-            <Button onClick={() => router.push('/playlists/create')}>
-              <Plus className="h-4 w-4 mr-2" />
-              Create Playlist
-            </Button>
-          </div>
+          <Button onClick={() => router.push('/playlists/create')}>
+            <Plus className="h-4 w-4 mr-2" />
+            Create Playlist
+          </Button>
         </div>
 
         {/* Stats */}
@@ -302,11 +296,27 @@ export default function PlaylistsPage() {
                       </p>
                     </div>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="sm">
-                        <Play className="h-4 w-4" />
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleToggleActive(playlist)}
+                        disabled={activateMutation.isPending || deactivateMutation.isPending}
+                        title={playlist.status === PlaylistStatus.Active ? 'Deactivate' : 'Activate'}
+                      >
+                        {playlist.status === PlaylistStatus.Active ? (
+                          <Pause className="h-4 w-4" />
+                        ) : (
+                          <Play className="h-4 w-4" />
+                        )}
                       </Button>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDelete(playlist.id)}
+                        disabled={deleteMutation.isPending}
+                        title="Delete"
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
@@ -355,11 +365,22 @@ export default function PlaylistsPage() {
                   )}
 
                   <div className="flex gap-2">
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => router.push(`/playlists/edit/${playlist.id}`)}
+                    >
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleDuplicate(playlist.id)}
+                      disabled={duplicateMutation.isPending}
+                    >
                       <Copy className="h-4 w-4 mr-2" />
                       Duplicate
                     </Button>
@@ -423,16 +444,43 @@ export default function PlaylistsPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="sm">
-                            <Play className="h-4 w-4" />
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleToggleActive(playlist)}
+                            disabled={activateMutation.isPending || deactivateMutation.isPending}
+                            title={playlist.status === PlaylistStatus.Active ? 'Deactivate' : 'Activate'}
+                          >
+                            {playlist.status === PlaylistStatus.Active ? (
+                              <Pause className="h-4 w-4" />
+                            ) : (
+                              <Play className="h-4 w-4" />
+                            )}
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => router.push(`/playlists/edit/${playlist.id}`)}
+                            title="Edit"
+                          >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDuplicate(playlist.id)}
+                            disabled={duplicateMutation.isPending}
+                            title="Duplicate"
+                          >
                             <Copy className="h-4 w-4" />
                           </Button>
-                          <Button variant="ghost" size="sm">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleDelete(playlist.id)}
+                            disabled={deleteMutation.isPending}
+                            title="Delete"
+                          >
                             <Trash2 className="h-4 w-4" />
                           </Button>
                         </div>

@@ -38,6 +38,26 @@ public class PlaylistController : ControllerBase
     }
 
     /// <summary>
+    /// Get playlist statistics
+    /// </summary>
+    [HttpGet("statistics")]
+    [ProducesResponseType(typeof(PlaylistStatisticsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistStatisticsDto>> GetStatistics()
+    {
+        try
+        {
+            var statistics = await _playlistService.GetStatisticsAsync();
+            return Ok(statistics);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting playlist statistics");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
     /// Get playlists by user ID
     /// </summary>
     [HttpGet("user/{userId}")]
@@ -106,6 +126,39 @@ public class PlaylistController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error creating playlist");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Update an existing playlist
+    /// </summary>
+    [HttpPut("{id}")]
+    [ProducesResponseType(typeof(PlaylistDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistDto>> UpdatePlaylist(int id, [FromBody] UpdatePlaylistRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var playlist = await _playlistService.UpdateAsync(id, request);
+            if (playlist == null)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return Ok(playlist);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for updating playlist {PlaylistId}", id);
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating playlist {PlaylistId}", id);
             return StatusCode(500, "Internal server error");
         }
     }
@@ -181,6 +234,31 @@ public class PlaylistController : ControllerBase
             return StatusCode(500, "Internal server error");
         }
     }
+    /// <summary>
+    /// Duplicate a playlist
+    /// </summary>
+    [HttpPost("{id}/duplicate")]
+    [ProducesResponseType(typeof(PlaylistDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistDto>> DuplicatePlaylist(int id, [FromBody] DuplicatePlaylistRequest? request = null)
+    {
+        try
+        {
+            var newName = request?.NewName ?? null;
+            var duplicatedPlaylist = await _playlistService.DuplicateAsync(id, newName);
+            if (duplicatedPlaylist == null)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return CreatedAtAction(nameof(GetPlaylist), new { id = duplicatedPlaylist.Id }, duplicatedPlaylist);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error duplicating playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
     /// <summary>
     /// Get assignment summary for a playlist
     /// </summary>
