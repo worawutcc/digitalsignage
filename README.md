@@ -33,11 +33,10 @@ Files added/changed for this feature:
   - `src/DigitalSignage.Api/Controllers/MediaController.cs` (UPDATED - POST /api/media/{id}/quick-assign)
 
 Quick test (local):
-1. Start backend API and frontend (see Quick Start below).
+
 2. Upload a media file via Admin UI (Media → Upload).
 3. After upload completes, confirm Post-Upload Actions dialog appears.
 4. Choose "Assign to Users" → confirm Quick Assign dialog loads real users and schedules.
-5. Submit assignment and verify success toast and that media appears in media list.
 
 Environment note:
 - Ensure `NEXT_PUBLIC_API_URL` points to your running backend (e.g. `http://localhost:5100`). See Frontend Setup below.
@@ -58,7 +57,6 @@ tests/
 ├── DigitalSignage.Api.Tests/
 ├── DigitalSignage.Application.Tests/
 ├── DigitalSignage.Domain.Tests/
-└── DigitalSignage.Infrastructure.Tests/
 ```
 
 ### Frontend (Next.js 15)
@@ -70,7 +68,6 @@ src/digital-signage-web/
 │   ├── features/         # Feature-based modules
 │   ├── hooks/            # Custom React hooks
 │   ├── lib/              # Utilities & configurations
-│   ├── store/            # Redux Toolkit state management
 │   └── types/            # TypeScript type definitions
 └── tests/                # Jest & Playwright tests
 ```
@@ -88,7 +85,6 @@ src/digital-signage-web/
 
 ### 🖥️ Admin Interface (Next.js 15)
 - **Modern Dashboard**: Real-time device monitoring with interactive charts
-- **Responsive Design**: Mobile-first UI with Tailwind CSS 4
 - **State Management**: Redux Toolkit for global state + React Query for server state
 - **Form Validation**: React Hook Form with Zod schema validation
 - **Real-time Updates**: WebSocket integration for live notifications
@@ -110,7 +106,6 @@ src/digital-signage-web/
 - **Connection Management**: Authenticated WebSocket connections with automatic reconnection
 - **Event Broadcasting**: Admin notifications, device alerts, and system status updates
 
-### �📊 Audit Trail System
 - **Automatic Audit Logging**: All entity changes tracked automatically with PostgreSQL `timestamp without time zone`
 - **BaseEntity Pattern**: Consistent audit fields across all domain entities with proper DateTime handling
 - **User Context Integration**: Links all changes to authenticated users
@@ -124,7 +119,6 @@ src/digital-signage-web/
 - **Content Synchronization**: Automatic content updates to devices
 - **Registration Methods**: Support for both QR code and manual PIN entry
 
-### 👤 User-Based Content Assignment (Feature 019)
 - **Personalized Content Delivery**: Assign specific schedules to individual users
 - **Three-Tier Priority System**: User schedules → Device group schedules → Default schedules
 - **Email-Based Auto-Matching**: Automatic user identification during device registration
@@ -132,7 +126,6 @@ src/digital-signage-web/
 - **Real-time Change Detection**: Heartbeat detects user assignment changes and triggers content refresh
 - **Presigned URLs**: Secure 24-hour access to media files via AWS S3
 - **Audit Trail**: Complete tracking of schedule assignments and changes
-
 ## 🚀 Quick Start
 
 ### Prerequisites
@@ -143,7 +136,6 @@ src/digital-signage-web/
 - AWS S3 account (for media storage)
 
 **Frontend:**
-- Node.js 18+ and npm
 - Modern web browser
 
 ### Backend Setup
@@ -154,7 +146,6 @@ git clone https://github.com/worawutcc/digitalsignage.git
 cd digital_signage
 ```
 
-2. **Configure database connection**
 ```json
 // src/DigitalSignage.Api/appsettings.Development.json
 {
@@ -165,7 +156,6 @@ cd digital_signage
 ```
 
 3. **Configure AWS S3** (optional for development)
-```json
 {
   "AWS": {
     "AccessKey": "your-access-key",

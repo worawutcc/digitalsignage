@@ -105,11 +105,11 @@ public class EnhancedDeviceRegistrationRequestDto
     public string DeviceName { get; set; } = string.Empty;
 
     /// <summary>
-    /// 6-digit PIN for device approval
+    /// (Deprecated) Client-supplied PIN. Ignored by server because PIN is generated server-side.
+    /// Retained only for backward compatibility; will be removed in a future version.
     /// </summary>
-    [Required(ErrorMessage = "PIN is required")]
-    [RegularExpression(@"^[0-9]{6}$", ErrorMessage = "PIN must be exactly 6 digits")]
-    public string Pin { get; set; } = string.Empty;
+    [Obsolete("Provide no PIN; server generates it. This field will be removed.")]
+    public string? Pin { get; set; }
 
     /// <summary>
     /// Device MAC address in AA:BB:CC:DD:EE:FF format

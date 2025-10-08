@@ -95,6 +95,28 @@ digital_signage/
 
 **Note:** This guide covers only the frontend web application in `src/digital-signage-web/`. Backend API development is handled separately with its own instruction file.
 
+## System Overview: Admin-Only Digital Signage Management
+
+**System Architecture:** This is an **admin-only** digital signage management system with **no public user registration**
+
+**User Access Model:**
+- **Administrators Only**: Full web dashboard access via admin authentication
+- **No Public Users**: No user sign-up, registration, or public access
+- **Device Registration**: Android TV devices self-register via PIN-based approval workflow
+
+**Core Admin Features:**
+- **Content Management**: Upload, organize, and manage media files (images, videos, HTML widgets)
+- **Device Management**: Approve/reject Android TV self-registrations, monitor device status
+- **Schedule Management**: Create time-based content schedules with priority and recurrence
+- **Playlist Management**: Build content sequences with automatic fallback
+- **Real-time Monitoring**: Live device status, heartbeat monitoring, connection tracking
+- **System Analytics**: Usage statistics, device performance metrics
+
+**Authentication Flow:**
+- **Admin Login**: JWT-based authentication for dashboard access
+- **No User Registration**: Remove all public sign-up flows and registration forms
+- **Device Authentication**: Separate PIN-based workflow for Android TV devices
+
 ## General Guidelines
 - Use **TypeScript** instead of JavaScript.
 - Follow **Next.js 13+ App Router** structure (`app/` instead of `pages/`).
@@ -379,44 +401,45 @@ const buttonVariants = tv({
 - Do not expose sensitive information in logs.
 
 ### Authentication & Security Rules
-- **JWT Token Management**: Secure token storage and refresh
-- **Route Protection**: Protected routes with middleware
-- **RBAC Implementation**: Role-based access control
+- **Admin-Only System**: No public user registration - only admin authentication
+- **JWT Token Management**: Secure token storage and refresh for admin users
+- **Route Protection**: All routes protected - admin authentication required
+- **Device Registration**: Separate PIN-based Android TV self-registration workflow
 - **HTTPS Only**: Production must use HTTPS
 
 ```typescript
-// Auth Middleware Pattern
-export function withAuth(WrappedComponent: React.ComponentType<any>) {
-  return function AuthenticatedComponent(props: any) {
-    const { user, isLoading } = useSelector((state: RootState) => state.auth)
+// Admin Auth Middleware Pattern (Admin-Only System)
+export function withAdminAuth(WrappedComponent: React.ComponentType<any>) {
+  return function AdminAuthenticatedComponent(props: any) {
+    const { adminUser, isLoading } = useSelector((state: RootState) => state.auth)
     
     if (isLoading) {
       return <LoadingSpinner />
     }
     
-    if (!user) {
-      redirect('/login')
+    if (!adminUser) {
+      redirect('/admin/login')
     }
     
     return <WrappedComponent {...props} />
   }
 }
 
-// Route Protection with Redux
+// Admin Layout (No User Registration - Admin Only)
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
   return (
-    <RoleGuard requiredRole="Admin">
+    <AdminGuard>
       <div className="flex h-screen">
-        <Sidebar />
+        <AdminSidebar />
         <main className="flex-1 overflow-y-auto">
           {children}
         </main>
       </div>
-    </RoleGuard>
+    </AdminGuard>
   )
 }
 ```
@@ -424,11 +447,11 @@ export default function AdminLayout({
 ## Digital Signage Specific Features
 
 ### Admin Dashboard Components
-- **Device Status Grid**: Real-time device monitoring
+- **Device Status Grid**: Real-time device monitoring with Android TV self-registration approval
 - **Content Management**: Media library with drag-drop upload
 - **Schedule Builder**: Visual schedule creation
 - **Analytics Charts**: Device and content analytics
-- **User Management**: Role-based user administration
+- **Device Registration Management**: PIN-based Android TV approval workflow (no public user registration)
 
 ### Real-time Features
 - **WebSocket Integration**: Real-time device status updates
@@ -500,12 +523,13 @@ NEXTAUTH_URL=http://localhost:3000
 
 ### API Integration with Backend
 - **Base URL**: `http://localhost:5100` (development)
-- **Authentication**: JWT Bearer tokens
+- **Admin Authentication**: JWT Bearer tokens for admin dashboard access
+- **Device API**: Separate authentication for Android TV device endpoints
 - **Error Handling**: Centralized error management
 - **Type Safety**: Generated types from OpenAPI spec
 - **Retry Logic**: Automatic retry for failed requests
 
-This frontend connects to the Digital Signage API backend and provides a modern, responsive admin interface for managing digital signage systems using **clean architecture patterns** with **feature-based organization**.
+This frontend connects to the Digital Signage API backend and provides a modern, responsive **admin-only interface** for managing digital signage systems. **No public user features** - only admin dashboard functionality using **clean architecture patterns** with **feature-based organization**.
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

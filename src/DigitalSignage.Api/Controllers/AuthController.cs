@@ -1,5 +1,6 @@
 using DigitalSignage.Application.DTOs.Auth;
 using DigitalSignage.Application.Interfaces;
+using UserDto = DigitalSignage.Application.DTOs.UserDto;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
@@ -15,13 +16,16 @@ namespace DigitalSignage.Api.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthenticationService _authenticationService;
+    private readonly IUserService _userService;
     private readonly ILogger<AuthController> _logger;
 
     public AuthController(
         IAuthenticationService authenticationService,
+        IUserService userService,
         ILogger<AuthController> logger)
     {
         _authenticationService = authenticationService;
+        _userService = userService;
         _logger = logger;
     }
 
@@ -56,6 +60,43 @@ public class AuthController : ControllerBase
             _logger.LogError(ex, "Unexpected error during registration for email {Email}", request.Email);
             return StatusCode(StatusCodes.Status500InternalServerError, 
                 new { error = "An unexpected error occurred during registration" });
+        }
+    }
+
+    /// <summary>
+    /// Get current authenticated user
+    /// </summary>
+    /// <returns>Current user details</returns>
+    [HttpGet("me")]
+    [Authorize]
+    [ProducesResponseType(typeof(UserDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    public async Task<ActionResult<UserDto>> GetCurrentUser()
+    {
+        try
+        {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+            {
+                _logger.LogWarning("Invalid user ID in token");
+                return Unauthorized(new { error = "Invalid token" });
+            }
+
+            var user = await _userService.GetByIdAsync(userId);
+            if (user == null)
+            {
+                _logger.LogWarning("User {UserId} not found", userId);
+                return NotFound(new { error = "User not found" });
+            }
+
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting current user");
+            return StatusCode(StatusCodes.Status500InternalServerError,
+                new { error = "An error occurred while retrieving user information" });
         }
     }
 

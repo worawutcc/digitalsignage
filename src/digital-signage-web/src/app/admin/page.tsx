@@ -131,14 +131,14 @@ export default function AdminPage() {
             <div className="p-5">
               <div className="flex items-center">
                 <div className="flex-shrink-0">
-                  <Users className="h-6 w-6 text-gray-400" />
+                  <AlertTriangle className="h-6 w-6 text-gray-400" />
                 </div>
                 <div className="ml-5 w-0 flex-1">
                   <dl>
                     <dt className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate">
-                      Total Users
+                      Pending Registrations
                     </dt>
-                    <dd className="text-lg font-medium text-gray-900 dark:text-white">24</dd>
+                    <dd className="text-lg font-medium text-gray-900 dark:text-white">5</dd>
                   </dl>
                 </div>
               </div>
@@ -247,13 +247,13 @@ export default function AdminPage() {
 
         {/* Admin Sections */}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {/* User Management */}
+          {/* Content Management */}
           <AdminCard
-            href="/users"
-            icon={<Users className="h-6 w-6 text-blue-600" />}
-            title="User Management"
-            description="Manage user accounts, roles, and permissions"
-            count={24}
+            href="/media"
+            icon={<FileText className="h-6 w-6 text-blue-600" />}
+            title="Content Management"
+            description="Manage media files, playlists, and schedules"
+            count={248}
           />
 
           {/* Device Management */}

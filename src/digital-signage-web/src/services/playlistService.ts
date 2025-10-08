@@ -177,19 +177,8 @@ export class PlaylistService {
    * Get playlist statistics
    */
   static async getStatistics(): Promise<PlaylistStatistics> {
-    const playlists = await this.getAll()
-
-    return {
-      totalPlaylists: playlists.length,
-      activePlaylists: playlists.filter(p => p.status === 1).length, // Active
-      draftPlaylists: playlists.filter(p => p.status === 0).length, // Draft
-      scheduledPlaylists: playlists.filter(p => p.status === 2).length, // Scheduled
-      archivedPlaylists: playlists.filter(p => p.status === 3).length, // Archived
-      averageDuration: playlists.length > 0
-        ? Math.round(playlists.reduce((sum, p) => sum + p.totalDurationSeconds, 0) / playlists.length)
-        : 0,
-      totalAssignedDevices: 0 // TODO: Implement when assignment API is available
-    }
+    const response = await apiClient.get<PlaylistStatistics>('/api/playlist/statistics')
+    return response.data
   }
 
   /**

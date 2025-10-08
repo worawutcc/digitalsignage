@@ -207,10 +207,10 @@ export class UserService {
   }
 
   /**
-   * Change password
+   * Change password (for current user)
    */
-  static async changePassword(id: number, passwordData: ChangePasswordRequest): Promise<void> {
-    await apiClient.post(`/api/users/${id}/change-password`, passwordData)
+  static async changePassword(passwordData: ChangePasswordRequest): Promise<void> {
+    await apiClient.post('/api/users/change-password', passwordData)
   }
 
   /**
@@ -308,14 +308,13 @@ export class UserService {
   }
 
   /**
-   * Update user profile
+   * Update user profile (current user)
    */
   static async updateProfile(updates: {
     firstName?: string
     lastName?: string
-    email?: string
   }): Promise<User> {
-    const response = await apiClient.put('/api/auth/profile', updates)
+    const response = await apiClient.put('/api/users/profile', updates)
     return response.data
   }
 

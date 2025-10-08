@@ -57,5 +57,11 @@ public class AndroidTVDeviceConfigurationConfiguration : IEntityTypeConfiguratio
             .WithMany()
             .HasForeignKey(dc => dc.UpdatedBy)
             .OnDelete(DeleteBehavior.Restrict);
+
+     // Explicit audit DateTime column types (BaseEntity fields are not inherited here because this entity does not inherit BaseEntity)
+     builder.Property(dc => dc.CreatedAt)
+         .HasColumnType("timestamp without time zone");
+     builder.Property(dc => dc.UpdatedAt)
+         .HasColumnType("timestamp without time zone");
     }
 }

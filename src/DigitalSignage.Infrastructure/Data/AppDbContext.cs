@@ -104,6 +104,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new UserDeviceGroupPermissionConfiguration());
         modelBuilder.ApplyConfiguration(new PermissionAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceGroupAuditLogConfiguration());
+        modelBuilder.ApplyConfiguration(new UserDeviceAssociationConfiguration());
         
         // User-based content configurations (Feature 019)
         modelBuilder.ApplyConfiguration(new UserScheduleConfiguration());

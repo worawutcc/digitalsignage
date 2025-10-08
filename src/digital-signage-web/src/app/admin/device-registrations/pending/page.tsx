@@ -28,7 +28,7 @@ export default function AdminPendingRegistrationsPage() {
                 Pending Device Registrations
               </h1>
               <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
-                Review and approve device registration requests with user matching
+                Review and approve Android TV self-registration requests
               </p>
             </div>
             
