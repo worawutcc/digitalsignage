@@ -75,9 +75,25 @@ export const deviceRegistrationService = {
     data: ApprovalRequest
   ): Promise<ApprovalResponse> {
     try {
+      // Use Dashboard endpoint (no PIN required)
+      // Admin is already authenticated via JWT
+      const requestPayload = { 
+        RegistrationId: registrationId,
+        DeviceName: data.deviceName,
+        Location: data.location || '',
+        DeviceGroupId: data.deviceGroupId,
+        ZoneId: data.zoneId,
+        InitialScheduleId: data.initialScheduleId,
+        Tags: data.tags,
+        Notes: data.notes,
+        Reason: 'Approved via admin dashboard'
+      }
+      
+      console.log('Sending dashboard approval request (no PIN):', requestPayload)
+      
       const response = await apiClient.post<ApprovalResponse>(
-        `${BASE_PATH}/${registrationId}/approve`,
-        data
+        `${BASE_PATH}/dashboard/approve`,
+        requestPayload
       )
       
       return response.data
@@ -87,7 +103,7 @@ export const deviceRegistrationService = {
         
         switch (status) {
           case 400:
-            throw new Error(data?.message || 'Invalid approval request. Please check your input.')
+            throw new Error(data?.message || data?.detail || 'Invalid approval request. Please check your input.')
           case 401:
             throw new Error('Authentication required. Please log in.')
           case 403:
@@ -108,7 +124,7 @@ export const deviceRegistrationService = {
   /**
    * Reject a device registration request
    * 
-   * @param registrationId - Registration ID to reject
+   * @param pin - PIN from the device screen (not registrationId)
    * @param reason - Rejection reason
    * @returns Promise with rejection response
    * @throws ApiError on failure (400, 401, 403, 404, 500)
@@ -118,9 +134,19 @@ export const deviceRegistrationService = {
     reason: string
   ): Promise<{ success: boolean; message: string }> {
     try {
+      // Use Dashboard endpoint (no PIN required)
+      // Admin is already authenticated via JWT
+      const requestPayload = {
+        RegistrationId: registrationId,
+        Reason: reason,
+        Notes: '' // Optional notes
+      }
+      
+      console.log('Sending dashboard rejection request (no PIN):', { RegistrationId: registrationId, Reason: reason })
+      
       const response = await apiClient.post<{ success: boolean; message: string }>(
-        `${BASE_PATH}/${registrationId}/reject`,
-        { reason }
+        `${BASE_PATH}/dashboard/reject`,
+        requestPayload
       )
       
       return response.data
@@ -130,7 +156,7 @@ export const deviceRegistrationService = {
         
         switch (status) {
           case 400:
-            throw new Error(data?.message || 'Invalid rejection request. Please provide a reason.')
+            throw new Error(data?.message || data?.detail || 'Invalid rejection request. Please provide a reason.')
           case 401:
             throw new Error('Authentication required. Please log in.')
           case 403:

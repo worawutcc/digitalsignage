@@ -214,9 +214,45 @@ export interface DeviceRegistrationResponse {
 }
 
 export interface DeviceApprovalRequest {
-  deviceId: number
-  approve: boolean
+  registrationId: string
+  deviceName: string
+  pin: string
+  location?: string
+  deviceGroupId?: number
+  zoneId?: number
+  initialScheduleId?: number
+  tags?: Record<string, any>
   notes?: string
+}
+
+export interface DeviceRejectionRequest {
+  pin: string
+  reason: string
+  notes?: string
+}
+
+export interface DeviceApprovalResponse {
+  registrationId: string
+  deviceId: number
+  deviceKey: string
+  status: string
+  message: string
+  deviceGroup?: {
+    id: number
+    name: string
+    path: string
+    level: number
+  }
+  deviceName: string
+  location: string
+  approvedAt: string
+  approvedByUserId: number
+}
+
+export interface DeviceRejectionResponse {
+  registrationId: string
+  status: string
+  message: string
 }
 
 export interface UpdateDeviceConfigurationRequest {

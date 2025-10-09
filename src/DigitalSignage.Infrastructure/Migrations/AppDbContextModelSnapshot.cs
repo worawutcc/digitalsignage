@@ -22,6 +22,286 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.Assignment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AssignmentType")
+                        .HasColumnType("integer")
+                        .HasColumnName("assignment_type");
+
+                    b.Property<int>("ContentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("content_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("DaysOfWeek")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("days_of_week");
+
+                    b.Property<int?>("DeviceGroupId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DeviceId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("EmergencyExpiresAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("emergency_expires_at");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("end_date");
+
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time")
+                        .HasColumnName("end_time");
+
+                    b.Property<bool>("IsEmergencyBroadcast")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_emergency_broadcast");
+
+                    b.Property<bool>("IsRecurring")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_recurring");
+
+                    b.Property<int?>("LastModifiedByUserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_modified_by_user_id");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("notes");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(5)
+                        .HasColumnName("priority");
+
+                    b.Property<string>("RecurrencePattern")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("recurrence_pattern");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("start_date");
+
+                    b.Property<TimeOnly?>("StartTime")
+                        .HasColumnType("time")
+                        .HasColumnName("start_time");
+
+                    b.Property<int>("Status")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("status");
+
+                    b.Property<int>("TargetId")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_id");
+
+                    b.Property<int>("TargetType")
+                        .HasColumnType("integer")
+                        .HasColumnName("target_type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentType")
+                        .HasDatabaseName("IX_Assignment_AssignmentType");
+
+                    b.HasIndex("ContentId")
+                        .HasDatabaseName("IX_Assignment_ContentId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_Assignment_CreatedAt");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("DeviceGroupId");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("EmergencyExpiresAt")
+                        .HasDatabaseName("IX_Assignment_EmergencyExpiresAt");
+
+                    b.HasIndex("EndDate")
+                        .HasDatabaseName("IX_Assignment_EndDate");
+
+                    b.HasIndex("IsEmergencyBroadcast")
+                        .HasDatabaseName("IX_Assignment_IsEmergencyBroadcast");
+
+                    b.HasIndex("LastModifiedByUserId");
+
+                    b.HasIndex("Priority")
+                        .HasDatabaseName("IX_Assignment_Priority");
+
+                    b.HasIndex("StartDate")
+                        .HasDatabaseName("IX_Assignment_StartDate");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_Assignment_Status");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_Assignment_UpdatedAt");
+
+                    b.HasIndex("TargetType", "TargetId")
+                        .HasDatabaseName("IX_Assignment_Target");
+
+                    b.HasIndex("IsEmergencyBroadcast", "Status", "Priority")
+                        .HasDatabaseName("IX_Assignment_Emergency_Status_Priority");
+
+                    b.HasIndex("Status", "StartDate", "EndDate")
+                        .HasDatabaseName("IX_Assignment_Status_DateRange");
+
+                    b.HasIndex("TargetType", "TargetId", "Priority")
+                        .HasDatabaseName("IX_Assignment_Target_Priority");
+
+                    b.ToTable("assignments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_Assignment_Emergency_Expiry", "is_emergency_broadcast = false OR emergency_expires_at IS NOT NULL");
+
+                            t.HasCheckConstraint("CK_Assignment_EndDate_After_StartDate", "end_date IS NULL OR end_date >= start_date");
+
+                            t.HasCheckConstraint("CK_Assignment_Priority_Range", "priority >= 1 AND priority <= 10");
+
+                            t.HasCheckConstraint("CK_Assignment_Time_Window", "start_time IS NULL OR end_time IS NULL OR start_time != end_time");
+                        });
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.AssignmentHistory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Action")
+                        .HasColumnType("integer")
+                        .HasColumnName("action");
+
+                    b.Property<DateTime>("ActionDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("action_date")
+                        .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
+
+                    b.Property<int>("AssignmentId")
+                        .HasColumnType("integer")
+                        .HasColumnName("assignment_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("NewValues")
+                        .HasColumnType("text")
+                        .HasColumnName("new_values");
+
+                    b.Property<string>("PreviousValues")
+                        .HasColumnType("text")
+                        .HasColumnName("previous_values");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("reason");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Action")
+                        .HasDatabaseName("IX_AssignmentHistory_Action");
+
+                    b.HasIndex("ActionDate")
+                        .HasDatabaseName("IX_AssignmentHistory_ActionDate");
+
+                    b.HasIndex("AssignmentId")
+                        .HasDatabaseName("IX_AssignmentHistory_AssignmentId");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_AssignmentHistory_CreatedAt");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_AssignmentHistory_UpdatedAt");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_AssignmentHistory_UserId");
+
+                    b.HasIndex("Action", "ActionDate")
+                        .HasDatabaseName("IX_AssignmentHistory_Action_Date");
+
+                    b.HasIndex("AssignmentId", "ActionDate")
+                        .HasDatabaseName("IX_AssignmentHistory_Assignment_Date");
+
+                    b.HasIndex("UserId", "ActionDate")
+                        .HasDatabaseName("IX_AssignmentHistory_User_Date");
+
+                    b.ToTable("assignment_histories", (string)null);
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Device", b =>
                 {
                     b.Property<int>("Id")
@@ -801,10 +1081,19 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDefaultValue(-1)
                         .HasColumnName("created_by");
 
+                    b.Property<int?>("CreatedUserId")
+                        .HasColumnType("integer");
+
                     b.Property<string>("DeviceModel")
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasComment("Email address provided by device for automatic user creation");
 
                     b.Property<DateTime>("ExpiresAt")
                         .HasColumnType("timestamp without time zone");
@@ -912,6 +1201,11 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("IX_DeviceRegistrationRequest_CreatedAt");
+
+                    b.HasIndex("CreatedUserId");
+
+                    b.HasIndex("Email")
+                        .HasDatabaseName("IX_DeviceRegistrationRequests_Email");
 
                     b.HasIndex("HardwareProcessed")
                         .HasDatabaseName("IX_DeviceRegistrationRequests_HardwareProcessed");
@@ -3104,6 +3398,51 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.ToTable("WebSocketConnectionLogs", (string)null);
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.Assignment", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "CreatedByUser")
+                        .WithMany("CreatedAssignments")
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("DigitalSignage.Domain.Entities.DeviceGroup", null)
+                        .WithMany("Assignments")
+                        .HasForeignKey("DeviceGroupId");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.Device", null)
+                        .WithMany("Assignments")
+                        .HasForeignKey("DeviceId");
+
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "LastModifiedByUser")
+                        .WithMany("ModifiedAssignments")
+                        .HasForeignKey("LastModifiedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedByUser");
+
+                    b.Navigation("LastModifiedByUser");
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.AssignmentHistory", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.Assignment", "Assignment")
+                        .WithMany("AssignmentHistories")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "User")
+                        .WithMany("AssignmentActions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Device", b =>
                 {
                     b.HasOne("DigitalSignage.Domain.Entities.User", "AssignedUser")
@@ -3253,12 +3592,19 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("ApprovedDeviceId");
 
+                    b.HasOne("DigitalSignage.Domain.Entities.User", "CreatedUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedUserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("DigitalSignage.Domain.Entities.User", "MatchedUser")
                         .WithMany()
                         .HasForeignKey("MatchedUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("ApprovedDevice");
+
+                    b.Navigation("CreatedUser");
 
                     b.Navigation("MatchedUser");
                 });
@@ -3646,8 +3992,15 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.Assignment", b =>
+                {
+                    b.Navigation("AssignmentHistories");
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Device", b =>
                 {
+                    b.Navigation("Assignments");
+
                     b.Navigation("Capability");
 
                     b.Navigation("Configuration");
@@ -3665,6 +4018,8 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceGroup", b =>
                 {
+                    b.Navigation("Assignments");
+
                     b.Navigation("ChildGroups");
 
                     b.Navigation("Devices");
@@ -3725,11 +4080,17 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.User", b =>
                 {
+                    b.Navigation("AssignmentActions");
+
+                    b.Navigation("CreatedAssignments");
+
                     b.Navigation("DeviceAssociations");
 
                     b.Navigation("DeviceGroupPermissions");
 
                     b.Navigation("ManagedDevices");
+
+                    b.Navigation("ModifiedAssignments");
 
                     b.Navigation("RefreshTokens");
                 });

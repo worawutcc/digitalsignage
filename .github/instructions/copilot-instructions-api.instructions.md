@@ -343,10 +343,10 @@ dotnet build
 ## Code Style
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
-## Recent Changes
-- 021-user-schedule-assignment: Added TypeScript 5.x with Next.js 15 (React 18), C# .NET 8 (backend) + React Query/TanStack Query, Redux Toolkit, Tailwind CSS 4, React Hook Form + Zod, Axios, Lucide Reac
-- 020-phase-1: Added TypeScript 5.x with Next.js 15 (React 19)
-- 019-user-based-content: Added C# .NET 8, TypeScript 5.x + ASP.NET Core Web API, Entity Framework Core 9, PostgreSQL (Npgsql), Next.js 15, React 18
+## Recent Changes  
+- 032-content-assignment-ux-design: Added unified content assignment system with Assignment entities, AssignmentService/AssignmentAnalyticsService/BulkAssignmentService, enhanced ContentDeliveryService with emergency broadcast priority, PostgreSQL assignment tracking
+- 031-fix-media-menu: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
+- 030-recheck-function-menu: Added PostgreSQL database with Entity Framework Core migrations, AWS S3 for media files
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

@@ -29,6 +29,21 @@
 
 1. **Given** a new Android TV device has requested registration, **When** an admin views the pending registrations page, **Then** they should see a list of pending device requests with device details
 
+## Phase 2: Playlist Assignment Implementation
+
+### Primary User Story - Playlist Assignment
+**As an** admin user  
+**I want to** create playlists and assign them to devices/groups with scheduling  
+**So that** I can manage content delivery more flexibly than direct schedule assignment
+
+### Acceptance Scenarios - Playlist Assignment
+
+1. **Given** an admin has created a playlist, **When** they want to assign it to devices, **Then** they should have an "Assign" button that opens assignment interface
+
+2. **Given** an admin is assigning a playlist, **When** they select target devices/groups and set schedule, **Then** the system should create playlist assignments with proper timing
+
+3. **Given** playlist assignments are active, **When** TV clients request content, **Then** content delivery service should prioritize playlist assignments appropriately
+
 2. **Given** an admin views a pending device request, **When** they click "Approve", **Then** the device should move to the approved devices list and gain system access
 
 3. **Given** an admin views a pending device request, **When** they click "Reject" with a reason, **Then** the device should move to the rejected list and not gain access

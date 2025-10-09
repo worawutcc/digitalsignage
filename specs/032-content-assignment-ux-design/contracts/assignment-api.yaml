@@ -1,0 +1,1005 @@
+openapi: 3.0.0
+info:
+  title: Digital Signage Assignment Management API
+  description: Unified content assignment system for managing media, playlist, and schedule assignments to devices and device groups
+  version: 1.0.0
+  contact:
+    name: Digital Signage Team
+    email: admin@digitalsignage.local
+
+servers:
+  - url: http://localhost:5100/api
+    description: Development server
+  - url: https://api.digitalsignage.local/api
+    description: Production server
+
+security:
+  - bearerAuth: []
+
+paths:
+  /assignments:
+    get:
+      summary: List all assignments
+      description: Retrieve assignments with filtering, pagination, and sorting
+      tags: [Assignment Management]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Draft, Scheduled, Active, Expired, Paused, Cancelled]
+          description: Filter by assignment status
+        - name: assignmentType
+          in: query
+          schema:
+            type: string
+            enum: [Schedule, Playlist, Media, Emergency]
+          description: Filter by assignment type
+        - name: targetType
+          in: query
+          schema:
+            type: string
+            enum: [Device, DeviceGroup]
+          description: Filter by target type
+        - name: targetId
+          in: query
+          schema:
+            type: integer
+          description: Filter by specific target ID
+        - name: isEmergency
+          in: query
+          schema:
+            type: boolean
+          description: Filter emergency broadcasts
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 20
+          description: Number of items per page
+        - name: sortBy
+          in: query
+          schema:
+            type: string
+            enum: [priority, startDate, createdAt, status]
+            default: priority
+          description: Sort field
+        - name: sortOrder
+          in: query
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+          description: Sort order
+      responses:
+        '200':
+          description: Successful response with paginated assignments
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssignmentDto'
+                  totalCount:
+                    type: integer
+                  totalPages:
+                    type: integer
+                  currentPage:
+                    type: integer
+                  pageSize:
+                    type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    post:
+      summary: Create new assignment
+      description: Create a new content assignment to device or device group
+      tags: [Assignment Management]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssignmentRequest'
+      responses:
+        '201':
+          description: Assignment created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: Assignment conflict detected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  conflicts:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssignmentConflictDto'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/{id}:
+    get:
+      summary: Get assignment by ID
+      description: Retrieve detailed assignment information
+      tags: [Assignment Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Assignment ID
+      responses:
+        '200':
+          description: Assignment details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Update assignment
+      description: Update existing assignment details
+      tags: [Assignment Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Assignment ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssignmentRequest'
+      responses:
+        '200':
+          description: Assignment updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete assignment
+      description: Remove assignment and add to audit history
+      tags: [Assignment Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Assignment ID
+      responses:
+        '204':
+          description: Assignment deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/bulk:
+    post:
+      summary: Create multiple assignments
+      description: Bulk create assignments for efficient multi-device/multi-content assignment
+      tags: [Bulk Operations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkCreateAssignmentRequest'
+      responses:
+        '201':
+          description: Bulk assignments created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssignmentDto'
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        request:
+                          $ref: '#/components/schemas/CreateAssignmentRequest'
+                        error:
+                          type: string
+                  summary:
+                    type: object
+                    properties:
+                      totalRequested:
+                        type: integer
+                      successfullyCreated:
+                        type: integer
+                      failed:
+                        type: integer
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    put:
+      summary: Update multiple assignments
+      description: Bulk update assignments (status, dates, etc.)
+      tags: [Bulk Operations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkUpdateAssignmentRequest'
+      responses:
+        '200':
+          description: Bulk assignments updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssignmentDto'
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        assignmentId:
+                          type: integer
+                        error:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      summary: Delete multiple assignments
+      description: Bulk delete assignments
+      tags: [Bulk Operations]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                assignmentIds:
+                  type: array
+                  items:
+                    type: integer
+                reason:
+                  type: string
+                  description: Reason for bulk deletion
+      responses:
+        '200':
+          description: Bulk deletion completed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  deleted:
+                    type: array
+                    items:
+                      type: integer
+                  failed:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        assignmentId:
+                          type: integer
+                        error:
+                          type: string
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/device/{deviceId}:
+    get:
+      summary: Get assignments for device
+      description: Retrieve all assignments targeting a specific device
+      tags: [Device Assignments]
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Device ID
+        - name: includeGroupAssignments
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include assignments from device's group
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Draft, Scheduled, Active, Expired, Paused, Cancelled]
+          description: Filter by assignment status
+      responses:
+        '200':
+          description: Device assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssignmentDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/device-group/{groupId}:
+    get:
+      summary: Get assignments for device group
+      description: Retrieve all assignments targeting a specific device group
+      tags: [Device Group Assignments]
+      parameters:
+        - name: groupId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Device Group ID
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [Draft, Scheduled, Active, Expired, Paused, Cancelled]
+          description: Filter by assignment status
+      responses:
+        '200':
+          description: Device group assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssignmentDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/content/{contentType}/{contentId}:
+    get:
+      summary: Get assignments for content
+      description: Retrieve all assignments for specific content (schedule/playlist/media)
+      tags: [Content Assignments]
+      parameters:
+        - name: contentType
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [Schedule, Playlist, Media]
+          description: Content type
+        - name: contentId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Content ID
+      responses:
+        '200':
+          description: Content assignments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssignmentDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/analytics/overview:
+    get:
+      summary: Get assignment analytics overview
+      description: Dashboard analytics for assignment management
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Assignment analytics data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentAnalyticsDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/analytics/coverage:
+    get:
+      summary: Get device coverage statistics
+      description: Statistics on device assignment coverage
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Device coverage statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceCoverageDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/analytics/utilization:
+    get:
+      summary: Get content utilization statistics
+      description: Statistics on content assignment utilization
+      tags: [Analytics]
+      responses:
+        '200':
+          description: Content utilization statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContentUtilizationDto'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/{id}/history:
+    get:
+      summary: Get assignment history
+      description: Retrieve audit trail for assignment changes
+      tags: [Assignment Management]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Assignment ID
+      responses:
+        '200':
+          description: Assignment history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AssignmentHistoryDto'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /assignments/emergency:
+    post:
+      summary: Create emergency broadcast
+      description: Create high-priority emergency broadcast assignment
+      tags: [Emergency Broadcast]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EmergencyBroadcastRequest'
+      responses:
+        '201':
+          description: Emergency broadcast created and activated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AssignmentDto'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    AssignmentDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        assignmentType:
+          type: string
+          enum: [Schedule, Playlist, Media, Emergency]
+        contentId:
+          type: integer
+        contentName:
+          type: string
+          description: Name of assigned content
+        targetType:
+          type: string
+          enum: [Device, DeviceGroup]
+        targetId:
+          type: integer
+        targetName:
+          type: string
+          description: Name of target device/group
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        startTime:
+          type: string
+          format: time
+          nullable: true
+        endTime:
+          type: string
+          format: time
+          nullable: true
+        isRecurring:
+          type: boolean
+        recurrencePattern:
+          type: string
+          nullable: true
+          description: JSON recurrence pattern
+        daysOfWeek:
+          type: string
+          nullable: true
+          description: Comma-separated day numbers
+        status:
+          type: string
+          enum: [Draft, Scheduled, Active, Expired, Paused, Cancelled]
+        isEmergencyBroadcast:
+          type: boolean
+        emergencyExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+        createdByUserId:
+          type: integer
+        createdByUserName:
+          type: string
+        lastModifiedByUserId:
+          type: integer
+          nullable: true
+        lastModifiedByUserName:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAssignmentRequest:
+      type: object
+      required:
+        - assignmentType
+        - contentId
+        - targetType
+        - targetId
+        - startDate
+      properties:
+        assignmentType:
+          type: string
+          enum: [Schedule, Playlist, Media, Emergency]
+        contentId:
+          type: integer
+        targetType:
+          type: string
+          enum: [Device, DeviceGroup]
+        targetId:
+          type: integer
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        startTime:
+          type: string
+          format: time
+          nullable: true
+        endTime:
+          type: string
+          format: time
+          nullable: true
+        isRecurring:
+          type: boolean
+          default: false
+        recurrencePattern:
+          type: string
+          nullable: true
+        daysOfWeek:
+          type: string
+          nullable: true
+        notes:
+          type: string
+          nullable: true
+
+    UpdateAssignmentRequest:
+      type: object
+      properties:
+        priority:
+          type: integer
+          minimum: 1
+          maximum: 10
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+          nullable: true
+        startTime:
+          type: string
+          format: time
+          nullable: true
+        endTime:
+          type: string
+          format: time
+          nullable: true
+        isRecurring:
+          type: boolean
+        recurrencePattern:
+          type: string
+          nullable: true
+        daysOfWeek:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [Draft, Scheduled, Active, Expired, Paused, Cancelled]
+        notes:
+          type: string
+          nullable: true
+
+    BulkCreateAssignmentRequest:
+      type: object
+      required:
+        - assignments
+      properties:
+        assignments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CreateAssignmentRequest'
+        validateConflicts:
+          type: boolean
+          default: true
+          description: Check for assignment conflicts before creation
+
+    BulkUpdateAssignmentRequest:
+      type: object
+      required:
+        - assignmentIds
+        - updates
+      properties:
+        assignmentIds:
+          type: array
+          items:
+            type: integer
+        updates:
+          $ref: '#/components/schemas/UpdateAssignmentRequest'
+
+    EmergencyBroadcastRequest:
+      type: object
+      required:
+        - contentId
+        - contentType
+        - expiresAt
+      properties:
+        contentType:
+          type: string
+          enum: [Schedule, Playlist, Media]
+        contentId:
+          type: integer
+        expiresAt:
+          type: string
+          format: date-time
+          description: When emergency broadcast expires
+        targetType:
+          type: string
+          enum: [Device, DeviceGroup, All]
+          default: All
+        targetIds:
+          type: array
+          items:
+            type: integer
+          description: Specific targets (empty = all devices)
+        reason:
+          type: string
+          description: Emergency broadcast reason
+
+    AssignmentConflictDto:
+      type: object
+      properties:
+        conflictType:
+          type: string
+          enum: [TimeOverlap, PriorityConflict, ResourceConflict]
+        existingAssignmentId:
+          type: integer
+        existingAssignmentName:
+          type: string
+        conflictDescription:
+          type: string
+        resolution:
+          type: string
+          enum: [Override, Adjust, Cancel]
+
+    AssignmentAnalyticsDto:
+      type: object
+      properties:
+        totalAssignments:
+          type: integer
+        activeAssignments:
+          type: integer
+        scheduledAssignments:
+          type: integer
+        expiredAssignments:
+          type: integer
+        emergencyBroadcasts:
+          type: integer
+        assignmentsByType:
+          type: object
+          properties:
+            schedule:
+              type: integer
+            playlist:
+              type: integer
+            media:
+              type: integer
+            emergency:
+              type: integer
+        assignmentsByStatus:
+          type: object
+          additionalProperties:
+            type: integer
+
+    DeviceCoverageDto:
+      type: object
+      properties:
+        totalDevices:
+          type: integer
+        assignedDevices:
+          type: integer
+        unassignedDevices:
+          type: integer
+        coveragePercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        deviceGroupCoverage:
+          type: array
+          items:
+            type: object
+            properties:
+              groupId:
+                type: integer
+              groupName:
+                type: string
+              totalDevices:
+                type: integer
+              assignedDevices:
+                type: integer
+              coveragePercentage:
+                type: number
+
+    ContentUtilizationDto:
+      type: object
+      properties:
+        totalContent:
+          type: integer
+        assignedContent:
+          type: integer
+        unusedContent:
+          type: integer
+        utilizationPercentage:
+          type: number
+          minimum: 0
+          maximum: 100
+        contentByType:
+          type: object
+          properties:
+            schedules:
+              type: object
+              properties:
+                total:
+                  type: integer
+                assigned:
+                  type: integer
+            playlists:
+              type: object
+              properties:
+                total:
+                  type: integer
+                assigned:
+                  type: integer
+            media:
+              type: object
+              properties:
+                total:
+                  type: integer
+                assigned:
+                  type: integer
+
+    AssignmentHistoryDto:
+      type: object
+      properties:
+        id:
+          type: integer
+        assignmentId:
+          type: integer
+        action:
+          type: string
+          enum: [Created, Updated, Deleted, Activated, Deactivated, Paused, Resumed, Emergency]
+        previousValues:
+          type: string
+          nullable: true
+          description: JSON of previous values
+        newValues:
+          type: string
+          nullable: true
+          description: JSON of new values
+        reason:
+          type: string
+          nullable: true
+        userId:
+          type: integer
+        userName:
+          type: string
+        actionDate:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Bad request - invalid input
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              errors:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+
+    Unauthorized:
+      description: Unauthorized - authentication required
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              message:
+                type: string
+              traceId:
+                type: string
+
+tags:
+  - name: Assignment Management
+    description: Core assignment CRUD operations
+  - name: Bulk Operations
+    description: Bulk assignment operations for efficiency
+  - name: Device Assignments
+    description: Device-specific assignment queries
+  - name: Device Group Assignments
+    description: Device group assignment queries
+  - name: Content Assignments
+    description: Content-specific assignment queries
+  - name: Analytics
+    description: Assignment analytics and reporting
+  - name: Emergency Broadcast
+    description: Emergency broadcast management

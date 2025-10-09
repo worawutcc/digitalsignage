@@ -382,9 +382,9 @@ dotnet build
 C# .NET 8 with ASP.NET Core Web API: Follow standard conventions with Clean Architecture patterns
 
 ## Recent Changes
+- 031-fix-media-menu: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 030-recheck-function-menu: Added PostgreSQL database with Entity Framework Core migrations, AWS S3 for media files
 - 028-enhanced-device-registration: Added C# .NET 8 with ASP.NET Core Web API + Entity Framework Core 9, JWT Authentication, AWS S3 SDK, AutoMapper, SixLabors.ImageSharp, SignalR
-- 027-device-approval-group: Added C# .NET 8 (Backend), TypeScript 5.x (Frontend) + ASP.NET Core Web API, Entity Framework Core 9, Next.js 15, React 18, PostgreSQL, JWT Authentication, AWS S3
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

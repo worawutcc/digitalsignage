@@ -63,6 +63,10 @@ public class AppDbContext : DbContext
     
     // WebSocket entities
     public DbSet<WebSocketConnectionLog> WebSocketConnectionLogs { get; set; }
+    
+    // Assignment System entities (Feature 032)
+    public DbSet<Assignment> Assignments { get; set; }
+    public DbSet<AssignmentHistory> AssignmentHistories { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -116,6 +120,10 @@ public class AppDbContext : DbContext
         
         // WebSocket configurations
         modelBuilder.ApplyConfiguration(new WebSocketConnectionLogConfiguration());
+        
+        // Assignment System configurations (Feature 032)
+        modelBuilder.ApplyConfiguration(new AssignmentConfiguration());
+        modelBuilder.ApplyConfiguration(new AssignmentHistoryConfiguration());
 
         // Configure RefreshToken manually since it doesn't have a separate configuration class yet
         modelBuilder.Entity<RefreshToken>(entity =>

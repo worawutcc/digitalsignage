@@ -1,0 +1,239 @@
+/**
+ * @fileoverview Assignment Wizard Context
+ * @description React context for managing wizard state and navigation
+ */
+
+'use client';
+
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import {
+  WizardStep,
+  type AssignmentWizardContextValue,
+  type AssignmentWizardData,
+  type ContentSelectionData,
+  type TargetSelectionData,
+  type SchedulingData,
+  contentSelectionSchema,
+  targetSelectionSchema,
+  schedulingSchema,
+} from './AssignmentWizard.types';
+import { useCreateAssignment } from '../../api/assignmentHooks';
+
+const AssignmentWizardContext = createContext<AssignmentWizardContextValue | null>(null);
+
+const STEP_ORDER: WizardStep[] = [
+  WizardStep.ContentSelection,
+  WizardStep.TargetSelection,
+  WizardStep.Scheduling,
+  WizardStep.Review,
+];
+
+interface AssignmentWizardProviderProps {
+  children: React.ReactNode;
+  initialData?: Partial<AssignmentWizardData>;
+  onSuccess?: (assignmentId: number) => void;
+  onClose?: () => void;
+}
+
+export function AssignmentWizardProvider({
+  children,
+  initialData,
+  onSuccess,
+  onClose,
+}: AssignmentWizardProviderProps) {
+  const [currentStep, setCurrentStep] = useState<WizardStep>(WizardStep.ContentSelection);
+  const [data, setData] = useState<Partial<AssignmentWizardData>>(initialData || {});
+  
+  const createAssignmentMutation = useCreateAssignment();
+
+  // Navigation
+  const goToStep = useCallback((step: WizardStep) => {
+    setCurrentStep(step);
+  }, []);
+
+  const nextStep = useCallback(() => {
+    const currentIndex = STEP_ORDER.indexOf(currentStep);
+    if (currentIndex < STEP_ORDER.length - 1) {
+      const nextStep = STEP_ORDER[currentIndex + 1];
+      if (nextStep) {
+        setCurrentStep(nextStep);
+      }
+    }
+  }, [currentStep]);
+
+  const previousStep = useCallback(() => {
+    const currentIndex = STEP_ORDER.indexOf(currentStep);
+    if (currentIndex > 0) {
+      const prevStep = STEP_ORDER[currentIndex - 1];
+      if (prevStep) {
+        setCurrentStep(prevStep);
+      }
+    }
+  }, [currentStep]);
+
+  // Data management
+  const updateContentData = useCallback((contentData: Partial<ContentSelectionData>) => {
+    setData((prev) => ({
+      ...prev,
+      content: {
+        ...prev.content,
+        ...contentData,
+      } as ContentSelectionData,
+    }));
+  }, []);
+
+  const updateTargetData = useCallback((targetData: Partial<TargetSelectionData>) => {
+    setData((prev) => ({
+      ...prev,
+      target: {
+        ...prev.target,
+        ...targetData,
+      } as TargetSelectionData,
+    }));
+  }, []);
+
+  const updateSchedulingData = useCallback((schedulingData: Partial<SchedulingData>) => {
+    setData((prev) => ({
+      ...prev,
+      scheduling: {
+        ...prev.scheduling,
+        ...schedulingData,
+      } as SchedulingData,
+    }));
+  }, []);
+
+  // Validation
+  const isStepValid = useCallback(
+    (step: WizardStep): boolean => {
+      try {
+        switch (step) {
+          case WizardStep.ContentSelection:
+            if (!data.content) return false;
+            contentSelectionSchema.parse(data.content);
+            return true;
+          case WizardStep.TargetSelection:
+            if (!data.target) return false;
+            targetSelectionSchema.parse(data.target);
+            return true;
+          case WizardStep.Scheduling:
+            if (!data.scheduling) return false;
+            schedulingSchema.parse(data.scheduling);
+            return true;
+          case WizardStep.Review:
+            return (
+              isStepValid(WizardStep.ContentSelection) &&
+              isStepValid(WizardStep.TargetSelection) &&
+              isStepValid(WizardStep.Scheduling)
+            );
+          default:
+            return false;
+        }
+      } catch {
+        return false;
+      }
+    },
+    [data]
+  );
+
+  // Submission
+  const submitWizard = useCallback(async () => {
+    if (!isStepValid(WizardStep.Review)) {
+      console.error('Please complete all required fields');
+      return;
+    }
+
+    if (!data.content || !data.target || !data.scheduling) {
+      console.error('Missing required data');
+      return;
+    }
+
+    const firstTargetId = data.target.targetIds[0];
+    if (!firstTargetId) {
+      console.error('No target selected');
+      return;
+    }
+
+    try {
+      const response = await createAssignmentMutation.mutateAsync({
+        assignmentType: data.content.assignmentType,
+        contentId: data.content.contentId,
+        targetType: data.target.targetType,
+        targetId: firstTargetId,
+        startDate: data.scheduling.startDate,
+        endDate: data.scheduling.endDate || null,
+        priority: data.scheduling.priority,
+        isEmergencyBroadcast: data.scheduling.isEmergencyBroadcast,
+        recurrencePattern: data.scheduling.recurrencePattern || null,
+        notes: data.scheduling.notes || null,
+      });
+
+      console.log('Assignment created successfully');
+      
+      if (onSuccess && response?.assignment?.id) {
+        onSuccess(response.assignment.id);
+      }
+      
+      if (onClose) {
+        onClose();
+      }
+      
+      resetWizard();
+    } catch (error) {
+      console.error('Failed to create assignment:', error);
+    }
+  }, [data, isStepValid, createAssignmentMutation, onSuccess, onClose]);
+
+  // Reset
+  const resetWizard = useCallback(() => {
+    setCurrentStep(WizardStep.ContentSelection);
+    setData(initialData || {});
+  }, [initialData]);
+
+  const contextValue = useMemo<AssignmentWizardContextValue>(
+    () => ({
+      currentStep,
+      data,
+      goToStep,
+      nextStep,
+      previousStep,
+      updateContentData,
+      updateTargetData,
+      updateSchedulingData,
+      isStepValid,
+      submitWizard,
+      isSubmitting: createAssignmentMutation.isPending,
+      resetWizard,
+    }),
+    [
+      currentStep,
+      data,
+      goToStep,
+      nextStep,
+      previousStep,
+      updateContentData,
+      updateTargetData,
+      updateSchedulingData,
+      isStepValid,
+      submitWizard,
+      createAssignmentMutation.isPending,
+      resetWizard,
+    ]
+  );
+
+  return (
+    <AssignmentWizardContext.Provider value={contextValue}>
+      {children}
+    </AssignmentWizardContext.Provider>
+  );
+}
+
+/**
+ * Hook to use the Assignment Wizard context
+ */
+export function useAssignmentWizard() {
+  const context = useContext(AssignmentWizardContext);
+  if (!context) {
+    throw new Error('useAssignmentWizard must be used within AssignmentWizardProvider');
+  }
+  return context;
+}

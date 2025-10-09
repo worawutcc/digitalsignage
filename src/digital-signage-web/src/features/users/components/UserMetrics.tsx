@@ -279,7 +279,7 @@ export function UserMetrics({
         
         // For general user analytics
         const [dashboardStats, userStats] = await Promise.all([
-          analyticsService.getDashboardStats(),
+          analyticsService.getOverview(),
           userService.getUsers({ page: 1, limit: 1000 }) // Get all users for analysis
         ])
         

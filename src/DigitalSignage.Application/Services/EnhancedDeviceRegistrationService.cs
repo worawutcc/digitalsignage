@@ -16,17 +16,20 @@ public class EnhancedDeviceRegistrationService : IEnhancedDeviceRegistrationServ
 {
     private readonly IDeviceRegistrationRepository _registrationRepository;
     private readonly IDeviceRepository _deviceRepository;
+    private readonly IUserRepository _userRepository;
     private readonly IPinGenerationService _pinGenerationService;
     private readonly ILogger<EnhancedDeviceRegistrationService> _logger;
 
     public EnhancedDeviceRegistrationService(
         IDeviceRegistrationRepository registrationRepository,
         IDeviceRepository deviceRepository,
+        IUserRepository userRepository,
         IPinGenerationService pinGenerationService,
         ILogger<EnhancedDeviceRegistrationService> logger)
     {
         _registrationRepository = registrationRepository;
         _deviceRepository = deviceRepository;
+        _userRepository = userRepository;
         _pinGenerationService = pinGenerationService;
         _logger = logger;
     }
@@ -65,6 +68,30 @@ public class EnhancedDeviceRegistrationService : IEnhancedDeviceRegistrationServ
         // Create new registration record
     var pin = await _pinGenerationService.GenerateAsync();
 
+        // Check if user already exists with this email
+        var existingUser = await _userRepository.GetByEmailAsync(request.Email);
+        User? createdUser = null;
+        
+        if (existingUser == null)
+        {
+            // Create new user with IsActive = false (will be activated when device is approved)
+            createdUser = new User
+            {
+                Email = request.Email,
+                Username = request.Email, // Use email as username
+                FirstName = request.DeviceName, // Use device name as display name for now
+                LastName = "",
+                PasswordHash = "", // No password for device-registered users
+                Role = UserRole.User, // Set role as User
+                IsActive = false, // Inactive until approved
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            };
+            
+            createdUser = await _userRepository.CreateAsync(createdUser);
+            _logger.LogInformation("Created new user {Email} for device registration {Mac}", request.Email, mac);
+        }
+
         var registration = new DeviceRegistrationRequest
         {
             MacAddress = mac,
@@ -76,8 +103,11 @@ public class EnhancedDeviceRegistrationService : IEnhancedDeviceRegistrationServ
             AppVersion = "Unknown", // Not supplied in enhanced request DTO yet
             IpAddress = "0.0.0.0", // Could be captured at controller via HttpContext
             NetworkName = "Unknown",
-            RequestedUsername = mac, // Simplified until user-provided identity is added
+            Email = request.Email, // Set email field
+            RequestedUsername = request.Email, // Use email as requested username
             RequestedUserDisplayName = null,
+            MatchedUserId = existingUser?.Id, // Link to existing user if found
+            CreatedUserId = createdUser?.Id, // Link to created user if new
             HasHardwareInfo = request.HardwareInfo != null,
             HardwareInfo = request.HardwareInfo != null ? System.Text.Json.JsonSerializer.Serialize(request.HardwareInfo) : null,
             ExpiresAt = DateTime.SpecifyKind(DateTime.UtcNow.AddMinutes(15), DateTimeKind.Unspecified)

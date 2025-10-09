@@ -7,6 +7,9 @@ import {
   DeviceRegistrationRequest,
   DeviceRegistrationResponse,
   DeviceApprovalRequest,
+  DeviceApprovalResponse,
+  DeviceRejectionRequest,
+  DeviceRejectionResponse,
   UpdateDeviceConfigurationRequest,
   DeviceFilters,
   ApiResponse 
@@ -93,10 +96,17 @@ export const deviceApi = {
   },
 
   /**
-   * Approve or reject device registration (admin)
+   * Approve device registration (admin)
    */
-  async approveDeviceRegistration(data: DeviceApprovalRequest): Promise<ApiResponse<Device>> {
-    return await api.post<Device>('/api/device/approve-registration', data)
+  async approveDeviceRegistration(data: DeviceApprovalRequest): Promise<ApiResponse<DeviceApprovalResponse>> {
+    return await api.post<DeviceApprovalResponse>('/api/admin/device-registration/approve', data)
+  },
+
+  /**
+   * Reject device registration (admin)
+   */
+  async rejectDeviceRegistration(data: DeviceRejectionRequest): Promise<ApiResponse<DeviceRejectionResponse>> {
+    return await api.post<DeviceRejectionResponse>('/api/admin/device-registration/reject', data)
   },
 
   /**
