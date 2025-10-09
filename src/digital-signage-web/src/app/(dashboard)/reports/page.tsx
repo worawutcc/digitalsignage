@@ -19,143 +19,15 @@ import {
   Printer,
   Mail,
   Settings,
-  Play
+  Play,
+  Trash2
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { useReportTemplates, useGeneratedReports, useGenerateReport, useDeleteReport } from '@/hooks/useReports'
+import type { ReportType, ReportFormat } from '@/types/reports'
 
-interface ReportTemplate {
-  id: string
-  name: string
-  description: string
-  type: 'analytics' | 'device' | 'content' | 'user' | 'custom'
-  icon: React.ReactNode
-  lastGenerated: string
-  frequency: 'daily' | 'weekly' | 'monthly' | 'custom'
-  format: 'pdf' | 'excel' | 'csv'
-  status: 'active' | 'draft' | 'scheduled'
-  recipients?: string[]
-}
-
-const reportTemplates: ReportTemplate[] = [
-  {
-    id: '1',
-    name: 'Daily Analytics Summary',
-    description: 'Daily overview of views, engagement, and device performance',
-    type: 'analytics',
-    icon: <BarChart3 className="h-5 w-5" />,
-    lastGenerated: '2025-01-07 08:00',
-    frequency: 'daily',
-    format: 'pdf',
-    status: 'active',
-    recipients: ['admin@company.com', 'manager@company.com']
-  },
-  {
-    id: '2',
-    name: 'Weekly Device Health Report',
-    description: 'Device uptime, connectivity, and performance metrics',
-    type: 'device',
-    icon: <Monitor className="h-5 w-5" />,
-    lastGenerated: '2025-01-06 09:00',
-    frequency: 'weekly',
-    format: 'excel',
-    status: 'active',
-    recipients: ['tech@company.com']
-  },
-  {
-    id: '3',
-    name: 'Content Performance Analysis',
-    description: 'Most viewed content, engagement rates, and recommendations',
-    type: 'content',
-    icon: <Eye className="h-5 w-5" />,
-    lastGenerated: '2025-01-05 10:30',
-    frequency: 'weekly',
-    format: 'pdf',
-    status: 'active',
-    recipients: ['marketing@company.com']
-  },
-  {
-    id: '4',
-    name: 'Monthly Executive Summary',
-    description: 'High-level metrics and trends for executive review',
-    type: 'analytics',
-    icon: <TrendingUp className="h-5 w-5" />,
-    lastGenerated: '2025-01-01 09:00',
-    frequency: 'monthly',
-    format: 'pdf',
-    status: 'active',
-    recipients: ['exec@company.com']
-  },
-  {
-    id: '5',
-    name: 'User Activity Report',
-    description: 'User login activity and system usage patterns',
-    type: 'user',
-    icon: <Users className="h-5 w-5" />,
-    lastGenerated: '2025-01-04 14:00',
-    frequency: 'weekly',
-    format: 'csv',
-    status: 'draft'
-  }
-]
-
-interface GeneratedReport {
-  id: string
-  templateId: string
-  templateName: string
-  generatedDate: string
-  period: string
-  format: string
-  size: string
-  status: 'completed' | 'generating' | 'failed'
-  downloadUrl?: string
-}
-
-const generatedReports: GeneratedReport[] = [
-  {
-    id: '1',
-    templateId: '1',
-    templateName: 'Daily Analytics Summary',
-    generatedDate: '2025-01-07 08:00',
-    period: '2025-01-06',
-    format: 'PDF',
-    size: '2.4 MB',
-    status: 'completed',
-    downloadUrl: '/reports/daily-analytics-2025-01-06.pdf'
-  },
-  {
-    id: '2',
-    templateId: '2',
-    templateName: 'Weekly Device Health Report',
-    generatedDate: '2025-01-06 09:00',
-    period: 'Dec 30 - Jan 05, 2025',
-    format: 'Excel',
-    size: '1.8 MB',
-    status: 'completed',
-    downloadUrl: '/reports/device-health-week-01.xlsx'
-  },
-  {
-    id: '3',
-    templateId: '3',
-    templateName: 'Content Performance Analysis',
-    generatedDate: '2025-01-05 10:30',
-    period: 'Dec 29 - Jan 04, 2025',
-    format: 'PDF',
-    size: '3.1 MB',
-    status: 'completed',
-    downloadUrl: '/reports/content-performance-week-01.pdf'
-  },
-  {
-    id: '4',
-    templateId: '1',
-    templateName: 'Daily Analytics Summary',
-    generatedDate: '2025-01-07 08:05',
-    period: '2025-01-05',
-    format: 'PDF',
-    size: '0 MB',
-    status: 'generating'
-  }
-]
+// Mock data removed - using React Query hooks
 
 const getTypeIcon = (type: string) => {
   switch (type) {
@@ -212,14 +84,42 @@ export default function ReportsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
 
-  const filteredTemplates = reportTemplates.filter(template =>
+  // React Query hooks
+  const { data: templates = [], isLoading: templatesLoading } = useReportTemplates()
+  const { data: reports = [], isLoading: reportsLoading } = useGeneratedReports()
+  const generateReportMutation = useGenerateReport()
+  const deleteReportMutation = useDeleteReport()
+
+  const isLoading = templatesLoading || reportsLoading
+
+  const filteredTemplates = templates.filter(template =>
     template.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     template.description.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const filteredReports = generatedReports.filter(report =>
+  const filteredReports = reports.filter(report =>
     report.templateName.toLowerCase().includes(searchTerm.toLowerCase())
   )
+
+  const handleGenerateReport = (templateId: number) => {
+    generateReportMutation.mutate(
+      { templateId },
+      {
+        onSuccess: (response) => {
+          console.log('Report generated:', response.message)
+        },
+        onError: (error) => {
+          console.error('Failed to generate report:', error)
+        }
+      }
+    )
+  }
+
+  const handleDeleteReport = (reportId: number) => {
+    if (confirm('Are you sure you want to delete this report?')) {
+      deleteReportMutation.mutate(reportId)
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -256,7 +156,7 @@ export default function ReportsPage() {
                   Total Templates
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {reportTemplates.length}
+                  {templates.length}
                 </p>
               </div>
             </div>
@@ -270,7 +170,7 @@ export default function ReportsPage() {
                   Active Reports
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {reportTemplates.filter(t => t.status === 'active').length}
+                  {templates.filter(t => t.status === 'Active').length}
                 </p>
               </div>
             </div>
@@ -284,7 +184,10 @@ export default function ReportsPage() {
                   Generated Today
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {generatedReports.filter(r => r.generatedDate.includes('2025-01-07')).length}
+                  {reports.filter(r => {
+                    const today = new Date().toISOString().split('T')[0]
+                    return r.generatedDate.includes(today || '')
+                  }).length}
                 </p>
               </div>
             </div>
@@ -298,7 +201,7 @@ export default function ReportsPage() {
                   Auto-Sent
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {reportTemplates.filter(t => t.recipients && t.recipients.length > 0).length}
+                  {templates.filter(t => t.recipients && t.recipients.length > 0).length}
                 </p>
               </div>
             </div>
@@ -348,8 +251,15 @@ export default function ReportsPage() {
           </Button>
         </div>
 
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+
         {/* Content */}
-        {activeTab === 'templates' ? (
+        {!isLoading && activeTab === 'templates' ? (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {filteredTemplates.map((template) => (
               <div key={template.id} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
@@ -396,9 +306,14 @@ export default function ReportsPage() {
                   </div>
 
                   <div className="flex gap-2">
-                    <Button size="sm" className="flex-1">
+                    <Button 
+                      size="sm" 
+                      className="flex-1"
+                      onClick={() => handleGenerateReport(template.id)}
+                      disabled={generateReportMutation.isPending}
+                    >
                       <Play className="h-4 w-4 mr-2" />
-                      Generate Now
+                      {generateReportMutation.isPending ? 'Generating...' : 'Generate Now'}
                     </Button>
                     <Button variant="outline" size="sm">
                       <Settings className="h-4 w-4" />
@@ -464,22 +379,34 @@ export default function ReportsPage() {
                       </td>
                       <td className="p-4">
                         <div className="flex gap-1">
-                          {report.status === 'completed' && (
+                          {report.status === 'Completed' && report.downloadUrl && (
                             <>
-                              <Button variant="ghost" size="sm" title="Download">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                title="Download"
+                                onClick={() => window.open(report.downloadUrl!, '_blank')}
+                              >
                                 <Download className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" title="Email">
-                                <Mail className="h-4 w-4" />
-                              </Button>
-                              <Button variant="ghost" size="sm" title="Print">
-                                <Printer className="h-4 w-4" />
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                title="Delete"
+                                onClick={() => handleDeleteReport(report.id)}
+                              >
+                                <Trash2 className="h-4 w-4" />
                               </Button>
                             </>
                           )}
-                          {report.status === 'generating' && (
+                          {report.status === 'Generating' && (
                             <div className="px-2 py-1 text-xs text-blue-600">
                               Generating...
+                            </div>
+                          )}
+                          {report.status === 'Failed' && report.errorMessage && (
+                            <div className="px-2 py-1 text-xs text-red-600">
+                              {report.errorMessage}
                             </div>
                           )}
                         </div>

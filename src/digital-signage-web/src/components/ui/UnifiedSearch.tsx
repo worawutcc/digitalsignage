@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Search, FileImage, Calendar, X, Tag, Monitor, Loader2 } from 'lucide-react'
+import { Search, FileImage, Calendar, X, Monitor, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -9,7 +9,7 @@ import { SearchResultItem, UnifiedSearchProps } from './UnifiedSearch.types'
 
 /**
  * Unified search component for all system entities
- * Provides quick access across media, schedules, devices, and tags
+ * Provides quick access across media, schedules, and devices
  */
 export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
   const [query, setQuery] = useState('')
@@ -35,7 +35,7 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
     try {
       // Try API integration first
       const searchResult = await DashboardService.search(searchQuery, {
-        types: ['media', 'schedules', 'devices', 'tags'],
+        types: ['media', 'schedules', 'devices'],
         limit: 10
       })
 
@@ -48,7 +48,7 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
           path: `/media?id=${item.id}`,
           ...(item.thumbnailUrl && { thumbnail: item.thumbnailUrl }),
           lastModified: new Date().toISOString().split('T')[0],
-          description: `${item.mediaType} • ${item.tags.join(', ')}`,
+          description: `${item.mediaType}`,
           relevanceScore: item.relevanceScore
         })),
         ...searchResult.schedules.map(item => ({
@@ -171,8 +171,6 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
         return <Calendar className="h-4 w-4" />
       case 'device':
         return <Monitor className="h-4 w-4" />
-      case 'tag':
-        return <Tag className="h-4 w-4" />
       default:
         return <Search className="h-4 w-4" />
     }
@@ -184,7 +182,7 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
           type="text"
-          placeholder="Search media, schedules, devices, or tags..."
+          placeholder="Search media, schedules, or devices..."
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="pl-10 pr-10 bg-white/5 border-white/10 text-white placeholder:text-white/50"

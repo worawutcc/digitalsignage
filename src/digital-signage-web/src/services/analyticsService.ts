@@ -1,32 +1,58 @@
 import { apiClient } from '@/lib/api'
+import type {
+  AnalyticsOverview,
+  ContentPerformance,
+  DevicePerformance,
+  ViewsByHour,
+  ContentTypeStats
+} from '@/types/analytics'
 
 /**
- * Analytics service for gathering system metrics
+ * Analytics API service
  */
-export class AnalyticsService {
+export const analyticsService = {
   /**
-   * Get dashboard statistics
+   * Get analytics overview with main dashboard metrics
    */
-  async getDashboardStats() {
-    const response = await apiClient.get<{
-      totalDevices: number
-      onlineDevices: number
-      totalContent: number
-      activeSchedules: number
-    }>('/api/analytics/dashboard')
+  getOverview: async (): Promise<AnalyticsOverview> => {
+    const response = await apiClient.get<AnalyticsOverview>('/api/analytics/overview')
     return response.data
-  }
+  },
 
   /**
-   * Get device analytics
+   * Get top performing content by view count
+   * @param limit - Number of top content items to return (default: 10)
    */
-  async getDeviceAnalytics(timeRange: '24h' | '7d' | '30d' = '7d') {
-    const response = await apiClient.get<{
-      deviceUptime: Array<{ date: string; uptime: number }>
-      contentViews: Array<{ deviceId: number; views: number }>
-    }>(`/api/analytics/devices?range=${timeRange}`)
+  getTopContent: async (limit: number = 10): Promise<ContentPerformance[]> => {
+    const response = await apiClient.get<ContentPerformance[]>('/api/analytics/content-performance', {
+      params: { limit }
+    })
+    return response.data
+  },
+
+  /**
+   * Get device performance metrics
+   */
+  getDevicePerformance: async (): Promise<DevicePerformance[]> => {
+    const response = await apiClient.get<DevicePerformance[]>('/api/analytics/device-performance')
+    return response.data
+  },
+
+  /**
+   * Get views distribution by hour
+   * @param date - Target date (optional, defaults to today)
+   */
+  getViewsByHour: async (date?: Date): Promise<ViewsByHour[]> => {
+    const params = date ? { date: date.toISOString() } : {}
+    const response = await apiClient.get<ViewsByHour[]>('/api/analytics/views-by-hour', { params })
+    return response.data
+  },
+
+  /**
+   * Get content type statistics
+   */
+  getContentTypeStats: async (): Promise<ContentTypeStats[]> => {
+    const response = await apiClient.get<ContentTypeStats[]>('/api/analytics/content-types')
     return response.data
   }
 }
-
-export const analyticsService = new AnalyticsService()

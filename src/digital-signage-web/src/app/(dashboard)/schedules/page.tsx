@@ -120,12 +120,6 @@ export default function SchedulesPage() {
                   </div>
                 </div>
               )}
-              <Link href="/schedules/templates">
-                <button className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 font-medium">
-                  <Copy className="h-5 w-5" />
-                  Templates
-                </button>
-              </Link>
               <button
                 onClick={() => setShowCreateModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium"
