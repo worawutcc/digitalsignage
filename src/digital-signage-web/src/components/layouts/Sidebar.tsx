@@ -18,7 +18,9 @@ import {
   QrCode,
   FileBarChart,
   MonitorSpeaker,
-  Shield
+  Shield,
+  Link as LinkIcon,
+  Users
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/Button'
@@ -40,6 +42,13 @@ const navigation = [
     icon: Calendar, 
     description: 'Schedule management'
   },
+  { 
+    name: 'Assignments', 
+    href: '/assignments', 
+    icon: LinkIcon, 
+    description: 'Content assignment to devices, groups, playlists & schedules'
+  },
+  { name: 'Users', href: '/users', icon: Users, description: 'User management & permissions' },
   { name: 'Analytics', href: '/analytics', icon: TrendingUp, description: 'Performance analytics' },
   { name: 'QR Codes', href: '/qr-codes', icon: QrCode, description: 'QR code management' },
   { name: 'Reports', href: '/reports', icon: FileBarChart, description: 'Reports & exports' },

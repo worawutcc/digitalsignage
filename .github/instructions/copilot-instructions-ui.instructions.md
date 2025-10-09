@@ -236,6 +236,133 @@ export function useDevices() {
 
 Refer to migration report `/docs/SERVICES-APICLIENT-MIGRATION.md` for audit history and compliance status.
 
+#### API Response Mapping & Data Binding
+**CRITICAL: Always verify backend API response structure before mapping to frontend models.**
+
+**Common Mistakes to Avoid:**
+1. ❌ **Assuming wrapped responses**: Not all endpoints wrap data in `{ data: [], items: [] }`
+2. ❌ **Missing null checks**: Backend may return `null` or `undefined` for optional fields
+3. ❌ **Wrong property names**: Backend uses different naming (e.g., `fileName` vs `name`)
+
+**Best Practices:**
+1. ✅ **Check API controller response type** - Verify what the backend returns
+   ```csharp
+   // Backend: MediaController.cs
+   [HttpGet]
+   public async Task<ActionResult<IEnumerable<MediaDto>>> GetMedia()
+   {
+       return Ok(media); // Returns array directly, NOT wrapped
+   }
+   ```
+
+2. ✅ **Add console logging** - Debug API responses during development
+   ```typescript
+   export async function getMedia(): Promise<MediaItem[]> {
+     try {
+       const response = await apiClient.get('/api/media');
+       console.log('📦 Media API response:', response.data); // ← Debug log
+       
+       // Verify response structure
+       const mediaArray = Array.isArray(response.data) ? response.data : [];
+       
+       return mediaArray.map((media: any) => ({
+         id: media.id,
+         name: media.fileName || media.name || 'Untitled', // ← Fallback values
+         type: media.fileType || 'unknown',
+       }));
+     } catch (error) {
+       console.error('❌ Failed to fetch media:', error);
+       return []; // ← Always return empty array on error
+     }
+   }
+   ```
+
+3. ✅ **Use Array.isArray() guard** - Protect against unexpected response formats
+   ```typescript
+   // ❌ WRONG: Assumes response.data is always array
+   return response.data.map(...)
+   
+   // ✅ CORRECT: Guard against non-array responses
+   const dataArray = Array.isArray(response.data) ? response.data : [];
+   return dataArray.map(...)
+   ```
+
+4. ✅ **Provide default values** - Handle missing/null fields gracefully
+   ```typescript
+   return mediaArray.map((media: any) => ({
+     id: media.id,
+     name: media.fileName || media.name || 'Untitled',     // ← Multiple fallbacks
+     description: media.description || 'No description',    // ← Default text
+     status: media.status || 'unknown',                     // ← Default status
+     count: media.count || 0,                               // ← Default number
+   }));
+   ```
+
+5. ✅ **Define TypeScript interfaces matching backend DTOs**
+   ```typescript
+   // Backend DTO (C#)
+   public class MediaDto {
+       public int Id { get; set; }
+       public string FileName { get; set; }
+       public MediaType FileType { get; set; }
+       public long FileSize { get; set; }
+   }
+   
+   // Frontend interface (TypeScript)
+   export interface MediaItem {
+     id: number;
+     fileName: string;    // Match backend property names
+     fileType: string;
+     fileSize: number;
+   }
+   ```
+
+**Response Structure Patterns:**
+
+| Backend Return Type | Frontend Handling |
+|---------------------|-------------------|
+| `IEnumerable<T>` | Array directly: `response.data` |
+| `List<T>` | Array directly: `response.data` |
+| `PagedResult<T>` | Object: `response.data.items` |
+| `ApiResponse<T>` | Object: `response.data.data` |
+| Single object `T` | Object directly: `response.data` |
+
+**Example: Correct API Response Mapping**
+```typescript
+// ✅ Complete example with all best practices
+export async function getSchedules(): Promise<ScheduleItem[]> {
+  try {
+    const response = await apiClient.get('/api/admin/schedules');
+    console.log('📅 Schedules API response:', response.data);
+    
+    // 1. Guard: Ensure array
+    const schedulesArray = Array.isArray(response.data) ? response.data : [];
+    
+    // 2. Map with fallbacks
+    return schedulesArray.map((schedule: any) => ({
+      id: schedule.id,
+      name: schedule.name || 'Untitled Schedule',        // Fallback
+      description: schedule.description || 'No description', // Fallback
+      status: schedule.status || 'active',                // Fallback
+      priority: schedule.priority ?? 0,                   // Nullish coalescing for numbers
+    }));
+  } catch (error) {
+    // 3. Error handling with logging
+    console.error('❌ Failed to fetch schedules:', error);
+    return []; // Always return empty array
+  }
+}
+```
+
+**Debugging Checklist:**
+- [ ] Added console.log to see actual API response
+- [ ] Verified backend controller return type
+- [ ] Added Array.isArray() guard for array responses
+- [ ] Provided default values for all optional fields
+- [ ] Tested with empty API response (no data)
+- [ ] Tested with API error (500, 404, etc.)
+- [ ] TypeScript interface matches backend DTO
+
 ### Layout Groups & Routing Patterns
 
 **CRITICAL: Use Layout Groups for shared layouts without adding URL segments**

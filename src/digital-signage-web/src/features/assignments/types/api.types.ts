@@ -115,11 +115,9 @@ export interface AssignmentListResponse {
 
 /**
  * Response for assignment creation
+ * Backend returns Assignment directly, not wrapped
  */
-export interface CreateAssignmentResponse {
-  assignment: Assignment;
-  conflicts?: AssignmentConflict[];
-}
+export type CreateAssignmentResponse = Assignment;
 
 /**
  * Response for bulk assignment creation

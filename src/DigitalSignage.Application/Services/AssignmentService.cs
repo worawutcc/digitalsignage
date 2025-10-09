@@ -42,10 +42,10 @@ public class AssignmentService : IAssignmentService
 
     #region Assignment CRUD Operations
 
-    public async Task<AssignmentDto> CreateAssignmentAsync(CreateAssignmentRequest request, bool resolveConflicts = false)
+    public async Task<AssignmentDto> CreateAssignmentAsync(CreateAssignmentRequest request, int userId, bool resolveConflicts = false)
     {
-        _logger.LogInformation("Creating assignment for content {ContentId} targeting {TargetType} {TargetId}", 
-            request.ContentId, request.TargetType, request.TargetId);
+        _logger.LogInformation("Creating assignment for content {ContentId} targeting {TargetType} {TargetId} by user {UserId}", 
+            request.ContentId, request.TargetType, request.TargetId, userId);
 
         // Validate request
         var validationErrors = await ValidateAssignmentAsync(request);
@@ -76,6 +76,7 @@ public class AssignmentService : IAssignmentService
             DaysOfWeek = request.DaysOfWeek,
             Status = AssignmentStatus.Draft,
             CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            CreatedByUserId = userId, // Set user ID from JWT token
             Notes = request.Notes
         };
 
@@ -182,10 +183,10 @@ public class AssignmentService : IAssignmentService
             ? DateTime.SpecifyKind(dateTo.Value, DateTimeKind.Unspecified) 
             : (DateTime?)null;
 
-        var assignments = await _assignmentRepository.GetFilteredAsync(
+        var (assignments, totalCount) = await _assignmentRepository.GetFilteredAsync(
             status, assignmentType, targetType, targetId, 
             null, // isEmergencyBroadcast
-            page, pageSize);
+            page, pageSize, sortBy, sortDirection);
 
         var assignmentDtos = _mapper.Map<IEnumerable<AssignmentDto>>(assignments);
         var assignmentList = assignmentDtos.ToList();
@@ -193,7 +194,7 @@ public class AssignmentService : IAssignmentService
         return new PagedResult<AssignmentDto>
         {
             Items = assignmentList,
-            TotalCount = assignmentList.Count,
+            TotalCount = totalCount,
             PageNumber = page,
             PageSize = pageSize
         };
@@ -352,13 +353,13 @@ public class AssignmentService : IAssignmentService
 
     #region Emergency Broadcast Management
 
-    public async Task<AssignmentDto> CreateEmergencyBroadcastAsync(CreateAssignmentRequest request)
+    public async Task<AssignmentDto> CreateEmergencyBroadcastAsync(CreateAssignmentRequest request, int userId)
     {
         request.IsEmergencyBroadcast = true;
         request.Priority = 1; // Highest priority
         request.AssignmentType = AssignmentType.Emergency;
 
-        return await CreateAssignmentAsync(request, resolveConflicts: false);
+        return await CreateAssignmentAsync(request, userId, resolveConflicts: false);
     }
 
     public async Task ExpireEmergencyBroadcastAsync(int emergencyAssignmentId, int userId)

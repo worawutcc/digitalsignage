@@ -1,60 +1,72 @@
 /**
- * @fileoverview Target Selection Step
- * @description Second step of assignment wizard - select target devices or device groups
+ * @fileoverview Target Selection Step  
+ * @description Second step of assignment wizard - select target devices or device groups from API
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Monitor, Users, Search, Check } from 'lucide-react';
+import { Monitor, Users, Search, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useAssignmentWizard } from '../AssignmentWizardContext';
 import { AssignmentTargetType } from '../../../types/assignment.types';
+import { getTargetsByType, type TargetDevice, type TargetDeviceGroup } from '../../../api/targetApi';
 
-// Mock data - replace with actual API calls
-const MOCK_DEVICES = [
-  { id: 1, name: 'Lobby Screen 1', location: 'Main Lobby', status: 'online', type: 'device' },
-  { id: 2, name: 'Lobby Screen 2', location: 'Main Lobby', status: 'online', type: 'device' },
-  { id: 3, name: 'Conference Room A Display', location: 'Floor 2', status: 'online', type: 'device' },
-  { id: 4, name: 'Cafeteria Menu Board', location: 'Cafeteria', status: 'offline', type: 'device' },
-  { id: 5, name: 'Emergency Exit Display', location: 'Stairwell B', status: 'online', type: 'device' },
-];
-
-const MOCK_DEVICE_GROUPS = [
-  { id: 101, name: 'Lobby Displays', deviceCount: 2, description: 'All lobby area screens', type: 'group' },
-  { id: 102, name: 'Conference Rooms', deviceCount: 5, description: 'Meeting room displays', type: 'group' },
-  { id: 103, name: 'All Emergency Exits', deviceCount: 8, description: 'Emergency information displays', type: 'group' },
-  { id: 104, name: 'Marketing Displays', deviceCount: 12, description: 'Customer-facing screens', type: 'group' },
-];
-
-type TargetType = 'devices' | 'groups';
+type TargetType = 'device' | 'group';
+type TargetItem = TargetDevice | TargetDeviceGroup;
 
 export function TargetSelectionStep() {
   const { data, updateTargetData } = useAssignmentWizard();
-  const [targetType, setTargetType] = useState<TargetType>('devices');
+  const [targetType, setTargetType] = useState<TargetType>('device');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedItems, setSelectedItems] = useState<number[]>(
     data.target?.targetIds || []
   );
+  const [targets, setTargets] = useState<TargetItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Initialize target type from existing data
   useEffect(() => {
     if (data.target?.targetType !== undefined) {
-      setTargetType(data.target.targetType === AssignmentTargetType.Device ? 'devices' : 'groups');
+      setTargetType(data.target.targetType === AssignmentTargetType.Device ? 'device' : 'group');
     }
-  }, []);
+  }, [data.target?.targetType]);
 
-  // Filter items based on search and selected type
-  const filteredItems = targetType === 'devices'
-    ? MOCK_DEVICES.filter(device =>
-        device.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        device.location.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : MOCK_DEVICE_GROUPS.filter(group =>
-        group.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        group.description.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+  // Fetch targets when type changes
+  useEffect(() => {
+    const loadTargets = async () => {
+      setIsLoading(true);
+      console.log('🔄 Loading targets for type:', targetType);
+      
+      try {
+        const fetchedTargets = await getTargetsByType(targetType);
+        console.log('✅ Loaded targets:', fetchedTargets.length, 'items');
+        setTargets(fetchedTargets);
+      } catch (error) {
+        console.error('❌ Failed to load targets:', error);
+        setTargets([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadTargets();
+  }, [targetType]);
+
+  // Filter items based on search
+  const filteredItems = targets.filter(item => {
+    const searchLower = searchQuery.toLowerCase();
+    if (item.type === 'device') {
+      const device = item as TargetDevice;
+      return device.name.toLowerCase().includes(searchLower) ||
+             (device.location && device.location.toLowerCase().includes(searchLower));
+    } else {
+      const group = item as TargetDeviceGroup;
+      return group.name.toLowerCase().includes(searchLower) ||
+             (group.description && group.description.toLowerCase().includes(searchLower));
+    }
+  });
 
   // Handle target type change
   const handleTargetTypeChange = (newType: TargetType) => {
@@ -75,28 +87,20 @@ export function TargetSelectionStep() {
 
   // Update wizard data when selections change
   useEffect(() => {
-    const targetTypeEnum = targetType === 'devices' 
+    const targetTypeEnum = targetType === 'device' 
       ? AssignmentTargetType.Device 
       : AssignmentTargetType.DeviceGroup;
     
+    const targetNames = targets
+      .filter(item => selectedItems.includes(item.id))
+      .map(item => item.name);
+
     updateTargetData({
       targetType: targetTypeEnum,
       targetIds: selectedItems,
-      targetNames: selectedItems.length > 0 ? getSelectedNames() : [],
+      targetNames: targetNames,
     });
-  }, [targetType, selectedItems, updateTargetData]);
-
-  const getSelectedNames = () => {
-    if (targetType === 'devices') {
-      return MOCK_DEVICES
-        .filter(device => selectedItems.includes(device.id))
-        .map(device => device.name);
-    } else {
-      return MOCK_DEVICE_GROUPS
-        .filter(group => selectedItems.includes(group.id))
-        .map(group => group.name);
-    }
-  };
+  }, [targetType, selectedItems, targets, updateTargetData]);
 
   return (
     <div className="space-y-6">
@@ -114,9 +118,9 @@ export function TargetSelectionStep() {
         <div className="grid grid-cols-2 gap-3">
           <button
             type="button"
-            onClick={() => handleTargetTypeChange('devices')}
+            onClick={() => handleTargetTypeChange('device')}
             className={`flex items-center p-4 border-2 rounded-lg transition-all ${
-              targetType === 'devices'
+              targetType === 'device'
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
@@ -130,9 +134,9 @@ export function TargetSelectionStep() {
           
           <button
             type="button"
-            onClick={() => handleTargetTypeChange('groups')}
+            onClick={() => handleTargetTypeChange('group')}
             className={`flex items-center p-4 border-2 rounded-lg transition-all ${
-              targetType === 'groups'
+              targetType === 'group'
                 ? 'border-blue-500 bg-blue-50 text-blue-700'
                 : 'border-gray-200 hover:border-gray-300'
             }`}
@@ -149,98 +153,120 @@ export function TargetSelectionStep() {
       {/* Search */}
       <div>
         <label className="text-base font-medium mb-3 block">
-          Select {targetType === 'devices' ? 'Devices' : 'Device Groups'}
+          Select {targetType === 'device' ? 'Devices' : 'Device Groups'}
         </label>
-        
+
         <div className="relative mb-4">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <Input
-            placeholder={`Search ${targetType}...`}
+            placeholder={`Search ${targetType === 'device' ? 'devices' : 'groups'}...`}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-10"
           />
         </div>
-      </div>
 
-      {/* Items List */}
-      <div className="grid grid-cols-1 gap-3 max-h-64 overflow-y-auto">
-        {filteredItems.length > 0 ? (
-          filteredItems.map((item) => {
-            const isSelected = selectedItems.includes(item.id);
-            const isDevice = targetType === 'devices';
-            
-            return (
-              <div
-                key={item.id}
-                onClick={() => handleItemToggle(item.id)}
-                className={`p-4 border rounded-lg cursor-pointer transition-all hover:shadow-md ${
-                  isSelected
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300'
-                } ${isDevice && (item as any).status === 'offline' ? 'opacity-60' : ''}`}
-              >
-                <div className="flex items-center justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <h4 className="font-medium text-sm">{item.name}</h4>
-                      {isSelected && (
-                        <Check className="w-4 h-4 text-blue-600" />
-                      )}
+        {/* Target List */}
+        <div className="space-y-2 max-h-80 overflow-y-auto border rounded-lg p-4 bg-gray-50">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500 mr-2" />
+              <span className="text-gray-600">Loading targets...</span>
+            </div>
+          ) : filteredItems.length > 0 ? (
+            filteredItems.map((item) => {
+              const isSelected = selectedItems.includes(item.id);
+              
+              if (item.type === 'device') {
+                const device = item as TargetDevice;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => handleItemToggle(item.id)}
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Monitor className="w-5 h-5 text-gray-500" />
+                        <div>
+                          <p className="font-medium text-sm">{device.name}</p>
+                          <p className="text-xs text-gray-500">{device.location || 'No location'}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={`text-xs ${
+                          device.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'
+                        }`}>
+                          {device.status}
+                        </Badge>
+                        {isSelected && (
+                          <Badge className="text-xs">Selected</Badge>
+                        )}
+                      </div>
                     </div>
-                    
-                    {isDevice ? (
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-gray-600">{(item as any).location}</p>
-                        <Badge 
-                          className={`text-xs ${
-                            (item as any).status === 'online' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                          }`}
-                        >
-                          {(item as any).status}
-                        </Badge>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs text-gray-600">{(item as any).description}</p>
-                        <Badge className="text-xs">
-                          {(item as any).deviceCount} devices
-                        </Badge>
-                      </div>
-                    )}
                   </div>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <div className="text-center py-8 text-gray-500">
-            {searchQuery ? `No matching ${targetType} found` : `No ${targetType} available`}
-          </div>
-        )}
+                );
+              } else {
+                const group = item as TargetDeviceGroup;
+                return (
+                  <div
+                    key={item.id}
+                    onClick={() => handleItemToggle(item.id)}
+                    className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-200 bg-white hover:border-gray-300'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Users className="w-5 h-5 text-gray-500" />
+                        <div>
+                          <p className="font-medium text-sm">{group.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {group.description || `${group.deviceCount} devices`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className="text-xs bg-gray-100 text-gray-600">
+                          {group.deviceCount} devices
+                        </Badge>
+                        {isSelected && (
+                          <Badge className="text-xs">Selected</Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+            })
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              {searchQuery ? 'No matching targets found' : 'No targets available'}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Selection Summary */}
       {selectedItems.length > 0 && (
-        <div className="p-4 bg-gray-50 rounded-lg">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-sm font-medium">
-              Selected {targetType === 'devices' ? 'Devices' : 'Groups'}: {selectedItems.length}
-            </p>
-            <button
-              type="button"
-              onClick={() => setSelectedItems([])}
-              className="text-xs text-blue-600 hover:text-blue-800"
-            >
-              Clear All
-            </button>
-          </div>
+        <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm font-medium text-blue-900 mb-2">
+            Selected {selectedItems.length} {targetType === 'device' ? 'device(s)' : 'group(s)'}
+          </p>
           <div className="flex flex-wrap gap-2">
-            {getSelectedNames().map((name, index) => (
-              <Badge key={index} className="text-xs">
-                {name}
-              </Badge>
-            ))}
+            {targets
+              .filter(item => selectedItems.includes(item.id))
+              .map(item => (
+                <Badge key={item.id} className="text-xs">
+                  {item.name}
+                </Badge>
+              ))}
           </div>
         </div>
       )}

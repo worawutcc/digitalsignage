@@ -884,7 +884,8 @@ public class BulkAssignmentService : IBulkAssignmentService
         {
             try
             {
-                var assignment = await _assignmentService.CreateAssignmentAsync(request);
+                // TODO: Pass actual user ID from bulk operation context
+                var assignment = await _assignmentService.CreateAssignmentAsync(request, userId: 1, resolveConflicts: false);
                 createdAssignments.Add(assignment);
             }
             catch (Exception ex)
@@ -914,7 +915,8 @@ public class BulkAssignmentService : IBulkAssignmentService
             {
                 try
                 {
-                    return await _assignmentService.CreateAssignmentAsync(request);
+                    // TODO: Pass actual user ID from bulk operation context
+                    return await _assignmentService.CreateAssignmentAsync(request, userId: 1, resolveConflicts: false);
                 }
                 catch (Exception ex)
                 {

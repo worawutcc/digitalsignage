@@ -249,23 +249,30 @@ export function useCreateAssignment(
 ) {
   const queryClient = useQueryClient();
 
-  return useMutation(
-    (request: CreateAssignmentRequest) => assignmentApi.createAssignment(request),
-    {
-      onSuccess: (data) => {
-        // Invalidate assignment lists to refetch with new data
-        queryClient.invalidateQueries(assignmentKeys.lists());
-        queryClient.invalidateQueries(assignmentKeys.analytics());
-        
-        // Set the new assignment in cache
+  return useMutation({
+    mutationFn: (request: CreateAssignmentRequest) => {
+      console.log('🚀 Creating assignment:', request);
+      return assignmentApi.createAssignment(request);
+    },
+    onSuccess: (assignment) => {
+      console.log('✅ Assignment created successfully:', assignment);
+      // Invalidate assignment lists to refetch with new data
+      queryClient.invalidateQueries(assignmentKeys.lists());
+      queryClient.invalidateQueries(assignmentKeys.analytics());
+      
+      // Set the new assignment in cache (response is Assignment directly)
+      if (assignment?.id) {
         queryClient.setQueryData(
-          assignmentKeys.detail(data.assignment.id),
-          data.assignment
+          assignmentKeys.detail(assignment.id),
+          assignment
         );
-      },
-      ...options,
-    }
-  );
+      }
+    },
+    onError: (error) => {
+      console.error('❌ Failed to create assignment:', error);
+    },
+    ...options,
+  });
 }
 
 /**

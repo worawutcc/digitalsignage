@@ -1,26 +1,17 @@
 /**
- * @fileoverview Content Selection Step (Simplified)
- * @description First step of assignment wizard - select assignment type and content
+ * @fileoverview Content Selection Step
+ * @description First step of assignment wizard - select assignment type and content from API
  */
 
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Search, Calendar, List, Image, AlertTriangle } from 'lucide-react';
+import { Search, Calendar, List, Image, AlertTriangle, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { Badge } from '@/components/ui/Badge';
 import { useAssignmentWizard } from '../AssignmentWizardContext';
 import { AssignmentType } from '../../../types/assignment.types';
-
-// Mock data - replace with actual API calls
-const MOCK_CONTENT = [
-  { id: 1, name: 'Morning News Display', type: 'schedule', description: 'Daily news from 6-10 AM' },
-  { id: 2, name: 'Lunch Menu Board', type: 'schedule', description: 'Restaurant menu 11 AM-2 PM' },
-  { id: 4, name: 'Marketing Campaign Q4', type: 'playlist', description: '5 promotional videos' },
-  { id: 5, name: 'Safety Training Loop', type: 'playlist', description: '3 safety instruction videos' },
-  { id: 7, name: 'Emergency Exit Map', type: 'media', description: 'Building evacuation plan' },
-  { id: 8, name: 'Company Logo Animation', type: 'media', description: 'Animated brand logo' },
-];
+import { getContentByType, type ContentItem } from '../../../api/contentApi';
 
 const ASSIGNMENT_TYPES = [
   { value: AssignmentType.Schedule, label: 'Schedule', icon: Calendar },
@@ -38,16 +29,46 @@ export function ContentSelectionStep() {
   const [selectedContent, setSelectedContent] = useState<number | null>(
     data.content?.contentId || null
   );
+  const [content, setContent] = useState<ContentItem[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  // Fetch content when type changes
+  useEffect(() => {
+    const loadContent = async () => {
+      setIsLoading(true);
+      console.log('🔄 Loading content for type:', selectedType);
+      
+      try {
+        const typeMap: Record<AssignmentType, 'schedule' | 'playlist' | 'media'> = {
+          [AssignmentType.Schedule]: 'schedule',
+          [AssignmentType.Playlist]: 'playlist',
+          [AssignmentType.Media]: 'media',
+          [AssignmentType.Emergency]: 'media', // Emergency uses media
+        };
+        
+        const fetchedContent = await getContentByType(typeMap[selectedType]);
+        console.log('✅ Loaded content:', fetchedContent.length, 'items');
+        setContent(fetchedContent);
+      } catch (error) {
+        console.error('❌ Failed to load content:', error);
+        setContent([]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadContent();
+  }, [selectedType]);
 
   // Filter content based on search
-  const filteredContent = MOCK_CONTENT.filter(item =>
+  const filteredContent = content.filter(item =>
     item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    item.description.toLowerCase().includes(searchQuery.toLowerCase())
+    (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   // Update wizard data when selections change
   useEffect(() => {
-    const selectedItem = MOCK_CONTENT.find(item => item.id === selectedContent);
+    const selectedItem = content.find(item => item.id === selectedContent);
     if (selectedType && selectedContent && selectedItem) {
       updateContentData({
         assignmentType: selectedType,
@@ -62,7 +83,7 @@ export function ContentSelectionStep() {
       });
       setSelectedContent(null);
     }
-  }, [selectedType, selectedContent, updateContentData, data.content?.assignmentType]);
+  }, [selectedType, selectedContent, updateContentData, data.content?.assignmentType, content]);
 
   return (
     <div className="space-y-6">
@@ -123,7 +144,12 @@ export function ContentSelectionStep() {
 
         {/* Content List */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-          {filteredContent.length > 0 ? (
+          {isLoading ? (
+            <div className="col-span-2 flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-blue-500 mr-2" />
+              <span className="text-gray-600">Loading content...</span>
+            </div>
+          ) : filteredContent.length > 0 ? (
             filteredContent.map((item) => {
               const isSelected = selectedContent === item.id;
               return (
@@ -154,11 +180,11 @@ export function ContentSelectionStep() {
         </div>
 
         {/* Selection Summary */}
-        {selectedContent && (
+        {selectedContent && content.length > 0 && (
           <div className="mt-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-sm font-medium">Selected:</p>
             <p className="text-sm text-gray-600">
-              {MOCK_CONTENT.find(item => item.id === selectedContent)?.name}
+              {content.find(item => item.id === selectedContent)?.name}
             </p>
           </div>
         )}

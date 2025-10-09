@@ -35,7 +35,7 @@ import type {
  * Provides comprehensive assignment management functionality
  */
 export class AssignmentApiClient {
-  private readonly basePath = '/api/assignment';
+  private readonly basePath = '/api/admin/assignments';
 
   // ========================================================================
   // CRUD Operations

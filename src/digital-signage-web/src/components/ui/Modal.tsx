@@ -33,6 +33,8 @@ export function Modal({
   closeOnOverlayClick = true,
   className,
 }: ModalProps) {
+  console.log('🪟 Modal render - isOpen:', isOpen, 'title:', title);
+  
   // Handle ESC key
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -42,6 +44,7 @@ export function Modal({
     }
 
     if (isOpen) {
+      console.log('🪟 Modal opened - adding event listeners');
       document.addEventListener('keydown', handleEscape)
       // Prevent body scroll when modal is open
       document.body.style.overflow = 'hidden'
@@ -53,7 +56,12 @@ export function Modal({
     }
   }, [isOpen, onClose])
 
-  if (!isOpen) return null
+  if (!isOpen) {
+    console.log('🪟 Modal not open - returning null');
+    return null;
+  }
+  
+  console.log('🪟 Modal IS OPEN - rendering content');
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget && closeOnOverlayClick) {

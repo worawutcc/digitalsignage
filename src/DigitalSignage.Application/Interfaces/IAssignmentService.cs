@@ -19,11 +19,12 @@ public interface IAssignmentService
     /// Creates a new assignment with validation and optional conflict resolution
     /// </summary>
     /// <param name="request">Assignment creation request with all required data</param>
+    /// <param name="userId">ID of the user creating the assignment</param>
     /// <param name="resolveConflicts">Whether to automatically resolve priority conflicts</param>
     /// <returns>Created assignment DTO with generated ID and computed values</returns>
     /// <exception cref="ArgumentException">Thrown when request data is invalid</exception>
     /// <exception cref="InvalidOperationException">Thrown when target device/group not found or business rules violated</exception>
-    Task<AssignmentDto> CreateAssignmentAsync(CreateAssignmentRequest request, bool resolveConflicts = false);
+    Task<AssignmentDto> CreateAssignmentAsync(CreateAssignmentRequest request, int userId, bool resolveConflicts = false);
 
     /// <summary>
     /// Updates an existing assignment with validation and conflict checking
@@ -154,7 +155,7 @@ public interface IAssignmentService
     /// </summary>
     /// <param name="request">Emergency broadcast request</param>
     /// <returns>Created emergency assignment DTO</returns>
-    Task<AssignmentDto> CreateEmergencyBroadcastAsync(CreateAssignmentRequest request);
+    Task<AssignmentDto> CreateEmergencyBroadcastAsync(CreateAssignmentRequest request, int userId);
 
     /// <summary>
     /// Expires an emergency broadcast and restores previous assignments
