@@ -31,23 +31,24 @@ export interface Device {
   id: number
   name: string
   deviceKey: string
-  location: string
-  deviceType: string
   macAddress: string
-  ipAddress: string
+  ipAddress?: string
+  location?: string
   status: 'Online' | 'Offline' | 'Error' | 'Maintenance'
+  manufacturer?: string
+  model?: string
+  displayResolution?: string
+  lastHeartbeat?: string
+  createdAt: string
+  isActive: boolean
+  // Legacy fields for backward compatibility
+  deviceType?: string
   groupId?: number
   group?: DeviceGroup
-  isActive: boolean
-  createdAt: string
-  lastHeartbeat?: string
   currentContent?: string
-  softwareVersion: string
-  hardwareInfo: string
-  // Additional device properties
-  model?: string
+  softwareVersion?: string
+  hardwareInfo?: string
   resolution?: string
-  manufacturer?: string
   serialNumber?: string
   androidVersion?: string
   apiLevel?: number

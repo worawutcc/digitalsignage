@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { getAccessToken, decodeToken, isTokenExpired, clearTokens } from '@/lib/auth'
 import type { TokenPayload } from '@/lib/auth'
@@ -22,6 +22,7 @@ export function AuthWrapper({
 }: AuthWrapperProps) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [userPayload, setUserPayload] = useState<TokenPayload | null>(null)
+  const isRedirectingRef = useRef(false)
   const router = useRouter()
 
   useEffect(() => {
@@ -31,7 +32,7 @@ export function AuthWrapper({
         
         if (!token) {
           console.log('No access token found')
-          setIsAuthenticated(false)
+          setIsAuthenticated(prev => prev !== false ? false : prev)
           return
         }
 
@@ -40,14 +41,14 @@ export function AuthWrapper({
         if (!payload) {
           console.log('Invalid token format')
           clearTokens()
-          setIsAuthenticated(false)
+          setIsAuthenticated(prev => prev !== false ? false : prev)
           return
         }
 
         if (isTokenExpired(payload)) {
           console.log('Token has expired')
           clearTokens()
-          setIsAuthenticated(false)
+          setIsAuthenticated(prev => prev !== false ? false : prev)
           return
         }
 
@@ -63,12 +64,19 @@ export function AuthWrapper({
           }
         }
 
-        setUserPayload(payload)
-        setIsAuthenticated(true)
+        // Only update state if values actually changed to prevent unnecessary re-renders
+        setUserPayload(prev => {
+          if (JSON.stringify(prev) !== JSON.stringify(payload)) {
+            return payload
+          }
+          return prev
+        })
+        
+        setIsAuthenticated(prev => prev !== true ? true : prev)
       } catch (error) {
         console.error('Authentication check failed:', error)
         clearTokens()
-        setIsAuthenticated(false)
+        setIsAuthenticated(prev => prev !== false ? false : prev)
       }
     }
 
@@ -81,8 +89,9 @@ export function AuthWrapper({
   }, [requiredPermissions])
 
   useEffect(() => {
-    if (isAuthenticated === false) {
-      router.push('/login')
+    if (isAuthenticated === false && !isRedirectingRef.current) {
+      isRedirectingRef.current = true
+      router.replace('/login')
     }
   }, [isAuthenticated, router])
 

@@ -741,4 +741,195 @@ public class DeviceService : IDeviceService
         var bytes = System.Text.Encoding.UTF8.GetBytes(payload);
         return Convert.ToBase64String(bytes);
     }
+
+    /// <summary>
+    /// Get all approved devices with their status
+    /// </summary>
+    public async Task<List<DeviceResponseDto>> GetApprovedDevicesAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving all approved devices");
+
+            var devices = await _context.Set<Device>()
+                .Where(d => d.IsActive && !d.DeactivatedAt.HasValue)
+                .Include(d => d.DeviceGroup)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            return devices.Select(MapDeviceToResponseDto).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving approved devices");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Get all rejected devices with rejection details
+    /// </summary>
+    public async Task<List<DeviceResponseDto>> GetRejectedDevicesAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving all rejected devices");
+
+            // Get rejected registration requests
+            var rejectedRegistrations = await _context.Set<DeviceRegistrationRequest>()
+                .Where(r => r.Status == RegistrationStatus.Rejected)
+                .Include(r => r.DeviceApproval)
+                .ThenInclude(a => a!.ApprovedByUser)
+                .OrderByDescending(r => r.UpdatedAt)
+                .ToListAsync();
+
+            // Map to DeviceResponseDto with rejection information
+            var devices = rejectedRegistrations.Select(r => new DeviceResponseDto
+            {
+                Id = r.Id,
+                Name = r.DeviceModel,
+                DeviceKey = string.Empty, // No device key for rejected devices
+                Location = r.NetworkName, // Use network name as location temporarily
+                Status = DeviceStatus.Offline,
+                IsActive = false,
+                CreatedAt = r.CreatedAt,
+                LastHeartbeat = null,
+                Model = r.DeviceModel,
+                DisplayResolution = ExtractResolution(r.HardwareSpecs),
+                Manufacturer = r.Manufacturer,
+                MacAddress = r.MacAddress,
+                IpAddress = r.IpAddress,
+                // Note: Rejection details (reason, rejected by, rejected at) 
+                // are stored in DeviceApproval but not exposed in DeviceResponseDto
+                // Consider creating a separate RejectedDeviceDto if rejection details are needed
+            }).ToList();
+
+            return devices;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving rejected devices");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Get all devices (both approved and active)
+    /// </summary>
+    public async Task<List<DeviceResponseDto>> GetAllDevicesAsync()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving all devices");
+
+            var devices = await _context.Set<Device>()
+                .Include(d => d.DeviceGroup)
+                .OrderByDescending(d => d.CreatedAt)
+                .ToListAsync();
+
+            return devices.Select(MapDeviceToResponseDto).ToList();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all devices");
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Reconsider a rejected device (move registration back to pending)
+    /// </summary>
+    public async Task<ReconsiderDeviceResponseDto> ReconsiderDeviceAsync(int deviceId)
+    {
+        try
+        {
+            _logger.LogInformation("Reconsidering device {DeviceId}", deviceId);
+
+            // Find the rejected registration request
+            var registration = await _context.Set<DeviceRegistrationRequest>()
+                .Include(r => r.DeviceApproval)
+                .FirstOrDefaultAsync(r => r.Id == deviceId);
+
+            if (registration == null)
+            {
+                throw new KeyNotFoundException($"Device registration with ID {deviceId} not found");
+            }
+
+            if (registration.Status != RegistrationStatus.Rejected)
+            {
+                throw new InvalidOperationException($"Device {deviceId} is not in rejected status");
+            }
+
+            // Move back to pending
+            registration.Status = RegistrationStatus.Pending;
+            registration.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+            // Remove the rejection approval record
+            if (registration.DeviceApproval != null)
+            {
+                _context.Set<DeviceApproval>().Remove(registration.DeviceApproval);
+            }
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Device {DeviceId} moved back to pending status", deviceId);
+
+            return new ReconsiderDeviceResponseDto
+            {
+                Success = true,
+                Message = "Device moved back to pending registrations",
+                DeviceId = deviceId,
+                Status = "Pending",
+                ProcessedAt = DateTime.UtcNow
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reconsidering device {DeviceId}", deviceId);
+            throw;
+        }
+    }
+
+    /// <summary>
+    /// Map Device entity to DeviceResponseDto
+    /// </summary>
+    private static DeviceResponseDto MapDeviceToResponseDto(Device device)
+    {
+        return new DeviceResponseDto
+        {
+            Id = device.Id,
+            Name = device.Name,
+            DeviceKey = device.DeviceKey,
+            Location = device.Location,
+            Status = device.Status,
+            IsActive = device.IsActive,
+            CreatedAt = device.CreatedAt,
+            LastHeartbeat = device.LastHeartbeat,
+            Model = device.Model,
+            DisplayResolution = device.DisplayResolution ?? device.Resolution,
+            Manufacturer = device.Manufacturer,
+            MacAddress = device.MacAddress,
+            IpAddress = device.IpAddress,
+        };
+    }
+
+    /// <summary>
+    /// Extract resolution from hardware specs JSON
+    /// </summary>
+    private static string? ExtractResolution(string hardwareSpecs)
+    {
+        try
+        {
+            var specs = JsonSerializer.Deserialize<Dictionary<string, object>>(hardwareSpecs);
+            if (specs != null && specs.TryGetValue("resolution", out var resolution))
+            {
+                return resolution?.ToString();
+            }
+        }
+        catch
+        {
+            // Ignore parsing errors
+        }
+        return null;
+    }
 }

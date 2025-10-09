@@ -51,7 +51,18 @@ const navigation = [
   { name: 'Analytics', href: '/analytics', icon: TrendingUp, description: 'Performance analytics' },
   { name: 'QR Codes', href: '/qr-codes', icon: QrCode, description: 'QR code management' },
   { name: 'Reports', href: '/reports', icon: FileBarChart, description: 'Reports & exports' },
-  { name: 'Admin', href: '/admin', icon: Shield, description: 'Admin dashboard & device registrations' },
+  { 
+    name: 'Device Registrations', 
+    href: '/device-registrations/pending', 
+    icon: Shield, 
+    description: 'Device registration management',
+    subItems: [
+      { name: 'Pending', href: '/device-registrations/pending' },
+      { name: 'Approved', href: '/device-registrations/approved' },
+      { name: 'Rejected', href: '/device-registrations/rejected' },
+      { name: 'All Devices', href: '/device-registrations/devices' }
+    ]
+  },
   { name: 'Settings', href: '/settings', icon: Settings, description: 'System configuration' },
 ]
 
@@ -99,10 +110,10 @@ export function Sidebar({ className }: SidebarProps) {
         </Button>
       </div>
 
-      <nav className="flex-1 px-2 py-4">
+      <nav className="flex-1 px-2 py-4 overflow-y-auto">
         <ul className="space-y-1">
           {navigation.map((item) => {
-            const isActive = pathname === item.href
+            const isActive = pathname === item.href || (item.subItems && item.subItems.some(sub => pathname === sub.href))
             const Icon = item.icon
 
             return (
@@ -127,6 +138,30 @@ export function Sidebar({ className }: SidebarProps) {
                     <span className="truncate">{item.name}</span>
                   )}
                 </Link>
+                
+                {/* Sub-items */}
+                {!isCollapsed && item.subItems && item.subItems.length > 0 && (
+                  <ul className="ml-11 mt-1 space-y-1">
+                    {item.subItems.map((subItem) => {
+                      const isSubActive = pathname === subItem.href
+                      return (
+                        <li key={subItem.href}>
+                          <Link
+                            href={subItem.href}
+                            className={cn(
+                              'block rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                              isSubActive
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-700'
+                            )}
+                          >
+                            {subItem.name}
+                          </Link>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                )}
               </li>
             )
           })}

@@ -112,7 +112,7 @@ export function useDevices(options: UseDevicesOptions = {}) {
         const searchLower = filters.search.toLowerCase()
         const matchesSearch = 
           device.name.toLowerCase().includes(searchLower) ||
-          device.location.toLowerCase().includes(searchLower)
+          device.location?.toLowerCase().includes(searchLower)
         
         if (!matchesSearch) return false
       }
@@ -124,7 +124,7 @@ export function useDevices(options: UseDevicesOptions = {}) {
 
       // Location filter
       if (filters.location && filters.location.length > 0) {
-        if (!filters.location.includes(device.location)) return false
+        if (device.location && !filters.location.includes(device.location)) return false
       }
 
       // Device group filter
@@ -208,6 +208,101 @@ export function useDeviceHealth(deviceId: number, enabled = true) {
     queryFn: () => deviceService.getHealth(deviceId),
     enabled: enabled && !!deviceId,
     refetchInterval: 10000, // 10 seconds for health data
+  })
+}
+
+/**
+ * Query key factory for device registration queries
+ */
+export const deviceQueryKeys = {
+  all: ['devices'] as const,
+  approved: () => [...deviceQueryKeys.all, 'approved'] as const,
+  rejected: () => [...deviceQueryKeys.all, 'rejected'] as const,
+  allDevices: () => [...deviceQueryKeys.all, 'all-devices'] as const,
+}
+
+/**
+ * Hook to fetch approved devices
+ */
+export function useApprovedDevices(options: UseDevicesOptions = {}) {
+  const { refetchInterval = 30000, enabled = true } = options
+  
+  return useQuery<Device[], Error>({
+    queryKey: deviceQueryKeys.approved(),
+    queryFn: deviceService.getApprovedDevices,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    enabled,
+    staleTime: 10000,
+  })
+}
+
+/**
+ * Hook to fetch rejected devices
+ */
+export function useRejectedDevices(options: UseDevicesOptions = {}) {
+  const { refetchInterval = 60000, enabled = true } = options
+  
+  return useQuery<Device[], Error>({
+    queryKey: deviceQueryKeys.rejected(),
+    queryFn: deviceService.getRejectedDevices,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    enabled,
+    staleTime: 20000,
+  })
+}
+
+/**
+ * Hook to fetch all devices
+ */
+export function useAllDevices(options: UseDevicesOptions = {}) {
+  const { refetchInterval = 30000, enabled = true } = options
+  
+  return useQuery<Device[], Error>({
+    queryKey: deviceQueryKeys.allDevices(),
+    queryFn: deviceService.getAllDevices,
+    refetchInterval,
+    refetchOnWindowFocus: true,
+    enabled,
+    staleTime: 10000,
+  })
+}
+
+/**
+ * Hook to reconsider a rejected device (move back to pending)
+ */
+export function useReconsiderDevice() {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (deviceId: number) => deviceService.reconsiderDevice(deviceId),
+    
+    onMutate: async (deviceId) => {
+      await queryClient.cancelQueries({ queryKey: deviceQueryKeys.rejected() })
+      
+      const previousRejected = queryClient.getQueryData<Device[]>(deviceQueryKeys.rejected())
+      
+      if (previousRejected) {
+        queryClient.setQueryData<Device[]>(
+          deviceQueryKeys.rejected(),
+          previousRejected.filter(device => device.id !== deviceId)
+        )
+      }
+      
+      return { previousRejected }
+    },
+    
+    onError: (err, deviceId, context: any) => {
+      if (context?.previousRejected) {
+        queryClient.setQueryData(deviceQueryKeys.rejected(), context.previousRejected)
+      }
+    },
+    
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: deviceQueryKeys.rejected() })
+      queryClient.invalidateQueries({ queryKey: ['deviceRegistrations', 'pending'] })
+    },
   })
 }
 
