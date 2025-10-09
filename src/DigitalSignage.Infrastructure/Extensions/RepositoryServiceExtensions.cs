@@ -23,6 +23,7 @@ public static class RepositoryServiceExtensions
         services.AddScoped<IDeviceRegistrationRepository, DeviceRegistrationRepository>();
         services.AddScoped<IDeviceGroupRepository, DeviceGroupRepository>();
         services.AddScoped<IScheduleRepository, ScheduleRepository>();
+        services.AddScoped<IMediaRepository, MediaRepository>();
         // TODO: Add DeviceHardwareProfileRepository when created
 
         return services;

@@ -29,6 +29,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IDeviceGroupService, DeviceGroupService>();
         services.AddScoped<IDeviceService, DeviceService>();
         services.AddScoped<IScheduleService, ScheduleService>();
+        services.AddScoped<IAnalyticsService, AnalyticsService>();
+        services.AddScoped<IReportsService, ReportsService>();
         
         // Device Registration Services
         services.AddScoped<IPinGenerationService, PinGenerationService>();
@@ -48,7 +50,7 @@ public static class ApplicationServiceExtensions
         // services.AddScoped<IAndroidTVConfigurationManagementService, AndroidTVConfigurationManagementService>();
         // services.AddScoped<IAndroidTVStatusManagementService, AndroidTVStatusManagementService>();
         
-        // QR Code Services
+        // QR Code Services (existing QR service for device registration)
         services.AddScoped<IQrCodeService, QrCodeService>();
         
         // Content Delivery Service

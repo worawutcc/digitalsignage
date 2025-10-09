@@ -22,16 +22,18 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
+import { useDeviceDetail, useDeviceConfiguration, useDeactivateDevice, useRestartDevice } from '@/hooks/useDeviceDetail'
+import type { DeviceConfiguration } from '@/types/device-detail'
 
 /**
  * Device status indicator component
  */
-function DeviceStatusIndicator({ status }: { status: 'online' | 'offline' | 'maintenance' | 'error' }) {
+function DeviceStatusIndicator({ status }: { status: 'Online' | 'Offline' | 'Maintenance' | 'Error' }) {
   const statusConfig = {
-    online: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100', label: 'Online' },
-    offline: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', label: 'Offline' },
-    maintenance: { icon: AlertCircle, color: 'text-yellow-600', bg: 'bg-yellow-100', label: 'Maintenance' },
-    error: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', label: 'Error' }
+    Online: { icon: CheckCircle, color: 'text-green-600', bg: 'bg-green-100', label: 'Online' },
+    Offline: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', label: 'Offline' },
+    Maintenance: { icon: AlertCircle, color: 'text-yellow-600', bg: 'bg-yellow-100', label: 'Maintenance' },
+    Error: { icon: XCircle, color: 'text-red-600', bg: 'bg-red-100', label: 'Error' }
   }
   
   const config = statusConfig[status]
@@ -80,80 +82,7 @@ function CardTitle({ children, className }: { children: React.ReactNode; classNa
   )
 }
 
-// Mock device data - TODO: Replace with React Query hook
-const mockDevice = {
-  id: '1',
-  name: 'Lobby Display 1',
-  location: 'Main Lobby',
-  status: 'online' as const,
-  resolution: '1920x1080',
-  lastSeen: new Date().toISOString(),
-  version: '2.1.0',
-  ipAddress: '192.168.1.100',
-  macAddress: '00:1B:44:11:3A:B7',
-  deviceGroup: 'Lobby Displays',
-  uptime: 48,
-  currentContent: 'Welcome Presentation',
-  // Additional details
-  model: 'Android TV Box Pro',
-  serialNumber: 'ATV-LP-001',
-  installedDate: '2024-01-15',
-  lastUpdate: '2024-09-15',
-  memoryUsage: 65,
-  storageUsage: 42,
-  temperature: 45,
-  powerConsumption: 85,
-}
-
-interface DeviceConfiguration {
-  displaySettings: {
-    brightness: number
-    contrast: number
-    orientation: 'landscape' | 'portrait'
-    sleepMode: boolean
-    sleepTime: string
-  }
-  networkSettings: {
-    wifi: {
-      ssid: string
-      signalStrength: number
-    }
-    ethernet: {
-      enabled: boolean
-      speed: string
-    }
-  }
-  contentSettings: {
-    autoUpdate: boolean
-    cacheSize: number
-    downloadQuality: 'high' | 'medium' | 'low'
-  }
-}
-
-const mockConfiguration: DeviceConfiguration = {
-  displaySettings: {
-    brightness: 80,
-    contrast: 75,
-    orientation: 'landscape',
-    sleepMode: true,
-    sleepTime: '22:00'
-  },
-  networkSettings: {
-    wifi: {
-      ssid: 'DigitalSignage_5G',
-      signalStrength: 85
-    },
-    ethernet: {
-      enabled: false,
-      speed: '1Gbps'
-    }
-  },
-  contentSettings: {
-    autoUpdate: true,
-    cacheSize: 2048,
-    downloadQuality: 'high'
-  }
-}
+// Mock data removed - using React Query hooks
 
 /**
  * Device details page with configuration management
@@ -168,13 +97,17 @@ const mockConfiguration: DeviceConfiguration = {
 export default function DeviceDetailsPage() {
   const router = useRouter()
   const params = useParams()
-  const deviceId = params.deviceId as string
+  const deviceId = parseInt(params.deviceId as string)
 
-  // State management
-  const [device] = useState(mockDevice) // TODO: Replace with React Query
-  const [configuration] = useState(mockConfiguration) // TODO: Replace with React Query
-  const [isLoading] = useState(false)
-  const [error] = useState<Error | null>(null)
+  // React Query hooks for real API data
+  const { data: device, isLoading: deviceLoading, error: deviceError } = useDeviceDetail(deviceId)
+  const { data: configuration, isLoading: configLoading } = useDeviceConfiguration(deviceId)
+  const deactivateDeviceMutation = useDeactivateDevice()
+  const restartDeviceMutation = useRestartDevice()
+
+  // Combined loading state
+  const isLoading = deviceLoading || configLoading
+  const error = deviceError as Error | null
   
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false)
@@ -191,8 +124,14 @@ export default function DeviceDetailsPage() {
   }
 
   const handleRestart = () => {
-    // TODO: Implement with device service and React Query mutation
-    console.log(`Restarting device ${device.name}`)
+    restartDeviceMutation.mutate(deviceId, {
+      onSuccess: () => {
+        console.log(`Device ${device?.name} restarted successfully`)
+      },
+      onError: (error) => {
+        console.error('Failed to restart device:', error)
+      }
+    })
   }
 
   const handleDelete = () => {
@@ -200,13 +139,19 @@ export default function DeviceDetailsPage() {
   }
 
   const confirmDelete = () => {
-    // TODO: Implement with device service and React Query mutation
-    console.log(`Deleting device ${device.name}`)
-    router.push('/devices')
+    deactivateDeviceMutation.mutate(deviceId, {
+      onSuccess: () => {
+        router.push('/devices')
+      },
+      onError: (error) => {
+        console.error('Failed to delete device:', error)
+        setShowDeleteModal(false)
+      }
+    })
   }
 
   const handleConfigurationSave = (newConfig: DeviceConfiguration) => {
-    // TODO: Implement with device service and React Query mutation
+    // TODO: Implement with useUpdateDeviceConfiguration mutation
     console.log('Saving configuration:', newConfig)
     setShowConfigModal(false)
   }
@@ -277,18 +222,24 @@ export default function DeviceDetailsPage() {
                 <DeviceStatusIndicator status={device.status} />
               </h1>
               <p className="text-sm text-gray-600 flex items-center space-x-4 mt-1">
-                <span className="flex items-center space-x-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{device.location}</span>
-                </span>
-                <span className="flex items-center space-x-1">
-                  <Monitor className="h-4 w-4" />
-                  <span>{device.resolution}</span>
-                </span>
-                <span className="flex items-center space-x-1">
-                  <Clock className="h-4 w-4" />
-                  <span>Last seen: {new Date(device.lastSeen).toLocaleString()}</span>
-                </span>
+                {device.location && (
+                  <span className="flex items-center space-x-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>{device.location}</span>
+                  </span>
+                )}
+                {device.displayResolution && (
+                  <span className="flex items-center space-x-1">
+                    <Monitor className="h-4 w-4" />
+                    <span>{device.displayResolution}</span>
+                  </span>
+                )}
+                {device.lastHeartbeat && (
+                  <span className="flex items-center space-x-1">
+                    <Clock className="h-4 w-4" />
+                    <span>Last seen: {new Date(device.lastHeartbeat).toLocaleString()}</span>
+                  </span>
+                )}
               </p>
           </div>
         </div>
@@ -327,8 +278,8 @@ export default function DeviceDetailsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Uptime</p>
-                  <p className="text-2xl font-bold text-gray-900">{device.uptime}h</p>
+                  <p className="text-sm font-medium text-gray-600">Status</p>
+                  <p className="text-2xl font-bold text-gray-900">{device.status}</p>
                 </div>
                 <Activity className="h-8 w-8 text-green-600" />
               </div>
@@ -339,8 +290,8 @@ export default function DeviceDetailsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Memory</p>
-                  <p className="text-2xl font-bold text-gray-900">{mockDevice.memoryUsage}%</p>
+                  <p className="text-sm font-medium text-gray-600">Android Version</p>
+                  <p className="text-2xl font-bold text-gray-900">{device.androidVersion || 'N/A'}</p>
                 </div>
                 <Monitor className="h-8 w-8 text-blue-600" />
               </div>
@@ -351,8 +302,8 @@ export default function DeviceDetailsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Storage</p>
-                  <p className="text-2xl font-bold text-gray-900">{mockDevice.storageUsage}%</p>
+                  <p className="text-sm font-medium text-gray-600">API Level</p>
+                  <p className="text-2xl font-bold text-gray-900">{device.apiLevel || 'N/A'}</p>
                 </div>
                 <Monitor className="h-8 w-8 text-yellow-600" />
               </div>
@@ -363,8 +314,8 @@ export default function DeviceDetailsPage() {
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Temperature</p>
-                  <p className="text-2xl font-bold text-gray-900">{mockDevice.temperature}°C</p>
+                  <p className="text-sm font-medium text-gray-600">Active</p>
+                  <p className="text-2xl font-bold text-gray-900">{device.isActive ? 'Yes' : 'No'}</p>
                 </div>
                 <Power className="h-8 w-8 text-red-600" />
               </div>
@@ -406,57 +357,63 @@ export default function DeviceDetailsPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm font-medium text-gray-600">Model</p>
-                    <p className="text-sm text-gray-900">{mockDevice.model}</p>
+                    <p className="text-sm text-gray-900">{device.model || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Serial Number</p>
-                    <p className="text-sm text-gray-900">{mockDevice.serialNumber}</p>
+                    <p className="text-sm text-gray-900">{device.serialNumber || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">IP Address</p>
-                    <p className="text-sm text-gray-900">{device.ipAddress}</p>
+                    <p className="text-sm text-gray-900">{device.ipAddress || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">MAC Address</p>
-                    <p className="text-sm text-gray-900">{mockDevice.macAddress}</p>
+                    <p className="text-sm text-gray-900">{device.macAddress}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Firmware Version</p>
-                    <p className="text-sm text-gray-900">{device.version}</p>
+                    <p className="text-sm font-medium text-gray-600">Manufacturer</p>
+                    <p className="text-sm text-gray-900">{device.manufacturer || 'N/A'}</p>
                   </div>
                   <div>
                     <p className="text-sm font-medium text-gray-600">Device Group</p>
-                    <Badge variant="info">{device.deviceGroup}</Badge>
+                    <Badge variant="info">{device.deviceGroupId ? `Group ${device.deviceGroupId}` : 'None'}</Badge>
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Network Status */}
+            {/* Network Configuration */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center space-x-2">
                   <Wifi className="h-5 w-5" />
-                  <span>Network Status</span>
+                  <span>Network Configuration</span>
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">WiFi Network</span>
-                    <Badge variant="info">{configuration.networkSettings.wifi.ssid}</Badge>
+                {configuration ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">Network Config</span>
+                      <span className="text-sm text-gray-900">
+                        {configuration.networkConfig ? JSON.parse(configuration.networkConfig).ssid || 'Configured' : 'Not configured'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">Remote Management</span>
+                      <Badge variant={configuration.remoteManagementEnabled ? 'success' : 'warning'}>
+                        {configuration.remoteManagementEnabled ? 'Enabled' : 'Disabled'}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-gray-600">Proxy</span>
+                      <span className="text-sm text-gray-900">{configuration.proxySettings || 'None'}</span>
+                    </div>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Signal Strength</span>
-                    <span className="text-sm text-gray-900">{configuration.networkSettings.wifi.signalStrength}%</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium text-gray-600">Ethernet</span>
-                    <Badge variant={configuration.networkSettings.ethernet.enabled ? 'success' : 'warning'}>
-                      {configuration.networkSettings.ethernet.enabled ? 'Enabled' : 'Disabled'}
-                    </Badge>
-                  </div>
-                </div>
+                ) : (
+                  <p className="text-sm text-gray-500">Loading configuration...</p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -475,71 +432,81 @@ export default function DeviceDetailsPage() {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Display Settings</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Brightness:</span>
-                      <span className="ml-2 font-medium">{configuration.displaySettings.brightness}%</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Contrast:</span>
-                      <span className="ml-2 font-medium">{configuration.displaySettings.contrast}%</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Orientation:</span>
-                      <span className="ml-2 font-medium capitalize">{configuration.displaySettings.orientation}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Sleep Mode:</span>
-                      <Badge variant={configuration.displaySettings.sleepMode ? 'success' : 'warning'} size="sm">
-                        {configuration.displaySettings.sleepMode ? 'Enabled' : 'Disabled'}
-                      </Badge>
+              {configuration ? (
+                <div className="space-y-6">
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Display Settings</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Orientation:</span>
+                        <span className="ml-2 font-medium capitalize">{configuration.displayOrientation}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Resolution:</span>
+                        <span className="ml-2 font-medium">{configuration.resolution || 'Auto'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Refresh Rate:</span>
+                        <span className="ml-2 font-medium">{configuration.refreshRate} Hz</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Screen Timeout:</span>
+                        <span className="ml-2 font-medium">{configuration.screenTimeout}s</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900 mb-3">Content Settings</h4>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">Auto Update:</span>
-                      <Badge variant={configuration.contentSettings.autoUpdate ? 'success' : 'warning'} size="sm">
-                        {configuration.contentSettings.autoUpdate ? 'Enabled' : 'Disabled'}
-                      </Badge>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Cache Size:</span>
-                      <span className="ml-2 font-medium">{configuration.contentSettings.cacheSize} MB</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Download Quality:</span>
-                      <span className="ml-2 font-medium capitalize">{configuration.contentSettings.downloadQuality}</span>
+                  <div>
+                    <h4 className="text-sm font-medium text-gray-900 mb-3">Power & Management</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Power Management:</span>
+                        <Badge variant="info" size="sm">
+                          {configuration.powerManagement}
+                        </Badge>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Remote Management:</span>
+                        <Badge variant={configuration.remoteManagementEnabled ? 'success' : 'warning'} size="sm">
+                          {configuration.remoteManagementEnabled ? 'Enabled' : 'Disabled'}
+                        </Badge>
+                      </div>
                     </div>
                   </div>
+
+                  <div>
+                    <p className="text-xs text-gray-500">
+                      Last updated: {new Date(configuration.updatedAt).toLocaleString()} by {configuration.updatedByUserName}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              ) : (
+                <p className="text-sm text-gray-500">No configuration available</p>
+              )}
             </CardContent>
           </Card>
 
-          {/* Current Content */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Current Content</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Active Presentation</p>
-                  <p className="text-lg font-semibold text-gray-900">{device.currentContent || 'No content assigned'}</p>
+          {/* Status Logs */}
+          {device.recentStatusLogs && device.recentStatusLogs.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Status Logs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {device.recentStatusLogs.slice(0, 5).map((log) => (
+                    <div key={log.id} className="flex items-center justify-between p-2 border-b border-gray-100 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{log.status}</p>
+                        {log.details && <p className="text-xs text-gray-500">{log.details}</p>}
+                      </div>
+                      <span className="text-xs text-gray-500">{new Date(log.timestamp).toLocaleString()}</span>
+                    </div>
+                  ))}
                 </div>
-                <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                  <p className="text-sm text-gray-600">Content management interface will be implemented in a future update.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Configuration Modal */}
