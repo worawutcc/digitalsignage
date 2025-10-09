@@ -137,24 +137,35 @@ export function AssignmentWizardProvider({
 
   // Submission
   const submitWizard = useCallback(async () => {
+    console.log('📋 Submit wizard called');
+    console.log('Data:', JSON.stringify(data, null, 2));
+    
     if (!isStepValid(WizardStep.Review)) {
-      console.error('Please complete all required fields');
+      console.error('❌ Validation failed: Please complete all required fields');
+      alert('Please complete all required fields before submitting.');
       return;
     }
 
     if (!data.content || !data.target || !data.scheduling) {
-      console.error('Missing required data');
+      console.error('❌ Missing required data:', { 
+        hasContent: !!data.content, 
+        hasTarget: !!data.target, 
+        hasScheduling: !!data.scheduling 
+      });
+      alert('Missing required data. Please complete all steps.');
       return;
     }
 
     const firstTargetId = data.target.targetIds[0];
     if (!firstTargetId) {
-      console.error('No target selected');
+      console.error('❌ No target selected');
+      alert('Please select at least one target device or group.');
       return;
     }
 
     try {
-      const response = await createAssignmentMutation.mutateAsync({
+      console.log('🚀 Submitting assignment...');
+      const payload = {
         assignmentType: data.content.assignmentType,
         contentId: data.content.contentId,
         targetType: data.target.targetType,
@@ -162,26 +173,39 @@ export function AssignmentWizardProvider({
         startDate: data.scheduling.startDate,
         endDate: data.scheduling.endDate || null,
         priority: data.scheduling.priority,
-        isEmergencyBroadcast: data.scheduling.isEmergencyBroadcast,
+        isEmergencyBroadcast: data.scheduling.isEmergencyBroadcast || false,
         recurrencePattern: data.scheduling.recurrencePattern || null,
         notes: data.scheduling.notes || null,
-      });
-
-      console.log('Assignment created successfully');
+      };
       
-      if (onSuccess && response?.assignment?.id) {
-        onSuccess(response.assignment.id);
+      console.log('📦 Payload:', JSON.stringify(payload, null, 2));
+      
+      const assignment = await createAssignmentMutation.mutateAsync(payload);
+
+      console.log('✅ Assignment created successfully:', assignment);
+      
+      // Reset wizard first
+      setCurrentStep(WizardStep.ContentSelection);
+      setData(initialData || {});
+      
+      // Then call callbacks (Backend returns Assignment directly, not wrapped)
+      if (onSuccess && assignment?.id) {
+        onSuccess(assignment.id);
       }
       
       if (onClose) {
         onClose();
       }
-      
-      resetWizard();
-    } catch (error) {
-      console.error('Failed to create assignment:', error);
+    } catch (error: any) {
+      console.error('❌ Failed to create assignment:', error);
+      console.error('Error details:', {
+        message: error?.message,
+        response: error?.response?.data,
+        status: error?.response?.status,
+      });
+      alert(`Failed to create assignment: ${error?.response?.data?.message || error?.message || 'Unknown error'}`);
     }
-  }, [data, isStepValid, createAssignmentMutation, onSuccess, onClose]);
+  }, [data, isStepValid, createAssignmentMutation, onSuccess, onClose, initialData]);
 
   // Reset
   const resetWizard = useCallback(() => {

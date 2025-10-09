@@ -162,11 +162,23 @@ public class AssignmentController : ControllerBase
                 });
             }
 
-            _logger.LogInformation(
-                "Creating assignment - Type: {Type}, ContentId: {ContentId}, Target: {TargetType}/{TargetId}",
-                request.AssignmentType, request.ContentId, request.TargetType, request.TargetId);
+            // Get user ID from JWT token
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                return Unauthorized(new ProblemDetails
+                {
+                    Title = "Unauthorized",
+                    Detail = "User ID not found in token",
+                    Status = StatusCodes.Status401Unauthorized
+                });
+            }
 
-            var createdAssignment = await _assignmentService.CreateAssignmentAsync(request, resolveConflicts);
+            _logger.LogInformation(
+                "Creating assignment - Type: {Type}, ContentId: {ContentId}, Target: {TargetType}/{TargetId}, User: {UserId}",
+                request.AssignmentType, request.ContentId, request.TargetType, request.TargetId, userId);
+
+            var createdAssignment = await _assignmentService.CreateAssignmentAsync(request, userId, resolveConflicts);
 
             return CreatedAtAction(
                 nameof(GetAssignment),

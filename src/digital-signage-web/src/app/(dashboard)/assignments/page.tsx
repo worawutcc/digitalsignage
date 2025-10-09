@@ -160,7 +160,10 @@ export default function AssignmentsPage() {
    * Handle create new assignment
    */
   const handleCreate = () => {
+    console.log('🎯 Create Assignment button clicked!');
+    console.log('Current showWizard state:', showWizard);
     setShowWizard(true);
+    console.log('showWizard set to true');
   };
 
   /**
@@ -259,17 +262,26 @@ export default function AssignmentsPage() {
   // Empty state
   if (assignments.length === 0 && !searchQuery && activeFilterCount === 0) {
     return (
-      <div className="container mx-auto py-6">
-        <EmptyState
-          icon={Calendar}
-          title="No assignments yet"
-          description="Get started by creating your first content assignment"
-          action={{
-            label: "Create Assignment",
-            onClick: handleCreate
-          }}
+      <>
+        <div className="container mx-auto py-6">
+          <EmptyState
+            icon={Calendar}
+            title="No assignments yet"
+            description="Get started by creating your first content assignment"
+            action={{
+              label: "Create Assignment",
+              onClick: handleCreate
+            }}
+          />
+        </div>
+        
+        {/* Assignment Creation Wizard - Must be rendered even in empty state */}
+        <AssignmentWizard
+          isOpen={showWizard}
+          onClose={handleWizardClose}
+          onSuccess={handleWizardSuccess}
         />
-      </div>
+      </>
     );
   }
 

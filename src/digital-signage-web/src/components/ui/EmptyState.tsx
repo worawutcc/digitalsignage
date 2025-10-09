@@ -61,7 +61,10 @@ export function EmptyState({
       {action && (
         <Button
           variant={action.variant || 'default'}
-          onClick={action.onClick}
+          onClick={() => {
+            console.log('🔘 EmptyState button clicked!');
+            action.onClick?.();
+          }}
           data-testid="empty-state-action"
         >
           {action.label}
