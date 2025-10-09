@@ -71,6 +71,12 @@ public static class ApplicationServiceExtensions
     // User Schedule Service (Feature 019)
     services.AddScoped<IUserScheduleService, UserScheduleService>();
 
+    // Assignment Services (Feature 032 - Unified Content Assignment System)
+    services.AddScoped<IAssignmentService, AssignmentService>();
+    services.AddScoped<IBulkAssignmentService, BulkAssignmentService>();
+    // TODO: Implement AssignmentAnalyticsService
+    // services.AddScoped<IAssignmentAnalyticsService, AssignmentAnalyticsService>();
+
     // AutoMapper registration (scan all profiles in Application Mappings assembly)
     services.AddAutoMapper(typeof(DigitalSignage.Application.Mappings.UserDeviceAssociationProfile));
 

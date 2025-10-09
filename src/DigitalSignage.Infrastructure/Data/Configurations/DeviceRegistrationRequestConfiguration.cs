@@ -93,6 +93,11 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
                .IsRequired()
                .HasComment("Email or username provided by device during registration");
         
+        builder.Property(e => e.Email)
+               .HasMaxLength(100)
+               .IsRequired()
+               .HasComment("Email address provided by device for automatic user creation");
+        
         builder.Property(e => e.RequestedUserDisplayName)
                .HasMaxLength(200)
                .IsRequired(false)
@@ -116,6 +121,9 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         // Indexes for user matching (Feature 019)
         builder.HasIndex(e => e.RequestedUsername)
                .HasDatabaseName("IX_DeviceRegistrationRequests_RequestedUsername");
+               
+        builder.HasIndex(e => e.Email)
+               .HasDatabaseName("IX_DeviceRegistrationRequests_Email");
         
         // Composite index for pending registration queries
         builder.HasIndex(e => new { e.Status, e.CreatedAt })
@@ -133,6 +141,12 @@ public class DeviceRegistrationRequestConfiguration : IEntityTypeConfiguration<D
         builder.HasOne(e => e.MatchedUser)
                .WithMany()
                .HasForeignKey(e => e.MatchedUserId)
+               .OnDelete(DeleteBehavior.SetNull);
+
+        // Created user relationship (auto-created from email)
+        builder.HasOne(e => e.CreatedUser)
+               .WithMany()
+               .HasForeignKey(e => e.CreatedUserId)
                .OnDelete(DeleteBehavior.SetNull);
 
     }

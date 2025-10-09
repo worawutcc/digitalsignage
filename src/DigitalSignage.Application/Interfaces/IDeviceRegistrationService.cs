@@ -109,4 +109,20 @@ public interface IDeviceRegistrationService
     /// <param name="rejectedByUserId">ID of the admin user performing bulk rejection</param>
     /// <returns>Results of bulk rejection operation</returns>
     Task<BulkRejectionResponseDto> BulkRejectDevicesAsync(BulkRejectionRequestDto request, string rejectedByUserId);
+    
+    /// <summary>
+    /// Approves a device registration request via Dashboard (no PIN required)
+    /// </summary>
+    /// <param name="request">Dashboard approval details</param>
+    /// <param name="approvedByUserId">ID of the admin user approving the request</param>
+    /// <returns>Approval response with device credentials</returns>
+    Task<DeviceApprovalResponseDto> DashboardApproveDeviceAsync(DashboardApproveDeviceRequestDto request, string approvedByUserId);
+    
+    /// <summary>
+    /// Rejects a device registration request via Dashboard (no PIN required)
+    /// </summary>
+    /// <param name="request">Dashboard rejection details</param>
+    /// <param name="rejectedByUserId">ID of the admin user rejecting the request</param>
+    /// <returns>Rejection confirmation</returns>
+    Task<DeviceRejectionResponseDto> DashboardRejectDeviceAsync(DashboardRejectDeviceRequestDto request, string rejectedByUserId);
 }

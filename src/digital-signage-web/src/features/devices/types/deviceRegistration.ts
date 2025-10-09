@@ -49,41 +49,49 @@ export interface GetPendingRegistrationsResponse {
 }
 
 /**
- * Device approval request data
+ * Device approval request data (matches API DashboardApproveDeviceRequestDto)
+ * PIN is NOT required for dashboard approvals - admin is already authenticated via JWT
  */
 export interface ApprovalRequest {
-  registrationId: string
-  customDeviceName?: string
+  registrationId: string // Required to identify the pending registration
+  deviceName: string
   location?: string
   deviceGroupId?: number
-  assignedUserId?: number
-  adminNotes?: string
+  zoneId?: number
+  initialScheduleId?: number
+  tags?: Record<string, any>
+  notes?: string
+  reason?: string // Optional approval reason
 }
 
 /**
- * Device approval response data
+ * Device approval response data (matches API DeviceApprovalResponseDto)
  */
 export interface ApprovalResponse {
-  isSuccess: boolean
+  registrationId: string
   deviceId: number
   deviceKey: string
-  status: 'Approved' | 'Rejected'
+  status: string
   message: string
-  approvedAt: string
-  assignedUser?: {
-    userId: number
-    email: string
-    displayName: string
+  deviceGroup?: {
+    id: number
+    name: string
+    path: string
+    level: number
   }
+  deviceName: string
+  location: string
+  approvedAt: string
+  approvedByUserId: number
 }
 
 /**
- * Device rejection request data
+ * Device rejection request data (matches API RejectDeviceRequestDto)
  */
 export interface RejectionRequest {
-  registrationId: string
+  pin: string
   reason: string
-  adminNotes?: string
+  notes?: string
 }
 
 /**

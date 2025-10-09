@@ -30,6 +30,7 @@ public class DeviceGroup : BaseEntity
     public virtual ICollection<Device> Devices { get; set; } = new List<Device>();
     public virtual ICollection<PlaylistAssignment> PlaylistAssignments { get; set; } = new List<PlaylistAssignment>();
     public virtual ICollection<UserDeviceGroupPermission> UserPermissions { get; set; } = new List<UserDeviceGroupPermission>();
+    public virtual ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
     
     // NEW: Hierarchy helper methods
     public bool IsRootGroup => ParentGroupId == null;

@@ -88,6 +88,9 @@ export function PendingRegistrationsPage() {
   // Handle individual approval
   const handleApprove = async (registration: PendingRegistration, approvalData: ApprovalRequest) => {
     try {
+      console.log('Approving registration via Dashboard (no PIN required):', registration.registrationId)
+      
+      // No PIN needed for dashboard approval - admin is already authenticated
       await approveRegistration.mutateAsync({
         registrationId: registration.registrationId,
         data: approvalData
@@ -95,12 +98,16 @@ export function PendingRegistrationsPage() {
       setSelectedForApproval(null)
     } catch (error) {
       console.error('Failed to approve registration:', error)
+      alert(`Failed to approve registration: ${error}`)
     }
   }
 
   // Handle individual rejection
   const handleReject = async (registration: PendingRegistration, reason: string) => {
     try {
+      console.log('Rejecting registration via Dashboard (no PIN required):', registration.registrationId)
+      
+      // No PIN needed for dashboard rejection - admin is already authenticated
       await rejectRegistration.mutateAsync({
         registrationId: registration.registrationId,
         reason
@@ -442,10 +449,10 @@ export function PendingRegistrationsPage() {
                 <button
                   onClick={() => handleApprove(selectedForApproval, {
                     registrationId: selectedForApproval.registrationId,
-                    customDeviceName: `${selectedForApproval.manufacturer} ${selectedForApproval.deviceModel}`,
-                    ...(selectedForApproval.matchedUser?.userId && {
-                      assignedUserId: selectedForApproval.matchedUser.userId
-                    })
+                    deviceName: `${selectedForApproval.manufacturer} ${selectedForApproval.deviceModel}`,
+                    location: 'Main Floor', // Default location
+                    notes: 'Auto-approved from admin panel',
+                    reason: 'Approved via dashboard'
                   })}
                   className="px-4 py-2 bg-green-500 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-300"
                 >

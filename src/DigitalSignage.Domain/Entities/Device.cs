@@ -52,6 +52,7 @@ public class Device : BaseEntity
     
     public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
     public ICollection<UserDeviceAssociation> UserAssociations { get; set; } = new List<UserDeviceAssociation>();
+    public ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
     
     // Android TV specific relationships
     public DeviceConfiguration? Configuration { get; set; }

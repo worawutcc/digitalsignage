@@ -156,6 +156,13 @@ public class DeviceRegistrationRequest : BaseEntity
     public string RequestedUsername { get; set; } = string.Empty;
 
     /// <summary>
+    /// Email address provided by device during registration for automatic user creation
+    /// </summary>
+    [Required]
+    [StringLength(100)]
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
     /// Optional friendly name provided by device to help admin identify user (Feature 019)
     /// </summary>
     [StringLength(200)]
@@ -165,6 +172,11 @@ public class DeviceRegistrationRequest : BaseEntity
     /// User ID auto-matched by email during registration (Feature 019)
     /// </summary>
     public int? MatchedUserId { get; set; }
+
+    /// <summary>
+    /// User ID created during registration (will be activated upon approval)
+    /// </summary>
+    public int? CreatedUserId { get; set; }
 
     /// <summary>
     /// PIN expiration timestamp
@@ -187,6 +199,11 @@ public class DeviceRegistrationRequest : BaseEntity
     /// User matched by email during registration (Feature 019)
     /// </summary>
     public User? MatchedUser { get; set; }
+
+    /// <summary>
+    /// User created during registration (will be activated upon approval)
+    /// </summary>
+    public User? CreatedUser { get; set; }
 
     /// <summary>
     /// Audit log entries for this registration

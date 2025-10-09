@@ -120,6 +120,14 @@ public class EnhancedDeviceRegistrationRequestDto
     public string MacAddress { get; set; } = string.Empty;
 
     /// <summary>
+    /// Email address for automatic user creation
+    /// </summary>
+    [Required(ErrorMessage = "Email address is required")]
+    [EmailAddress(ErrorMessage = "Invalid email address format")]
+    [StringLength(100, MinimumLength = 3, ErrorMessage = "Email must be between 3 and 100 characters")]
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
     /// Optional hardware specifications (Android TV only)
     /// When provided, enables enhanced device registration with hardware detection
     /// </summary>

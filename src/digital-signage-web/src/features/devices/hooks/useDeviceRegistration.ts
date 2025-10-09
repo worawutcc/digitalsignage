@@ -201,7 +201,7 @@ export function useRejectRegistration() {
   return useMutation({
     mutationFn: ({ registrationId, reason }: { 
       registrationId: string
-      reason: string 
+      reason: string
     }) => deviceRegistrationService.rejectRegistration(registrationId, reason),
     
     onMutate: async ({ registrationId }) => {

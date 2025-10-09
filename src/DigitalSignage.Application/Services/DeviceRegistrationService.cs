@@ -19,6 +19,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
     private readonly IUserRepository _userRepository;
     private readonly IQrCodeService _qrCodeService;
     private readonly IDeviceService _deviceService; // T013-REVISED: For delegation
+    private readonly IDeviceApprovalRepository _deviceApprovalRepository;
     private readonly ILogger<DeviceRegistrationService> _logger;
 
     public DeviceRegistrationService(
@@ -27,6 +28,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         IUserRepository userRepository,
         IQrCodeService qrCodeService,
         IDeviceService deviceService,
+        IDeviceApprovalRepository deviceApprovalRepository,
         ILogger<DeviceRegistrationService> logger)
     {
         _registrationRepository = registrationRepository;
@@ -34,6 +36,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         _userRepository = userRepository;
         _qrCodeService = qrCodeService;
         _deviceService = deviceService;
+        _deviceApprovalRepository = deviceApprovalRepository;
         _logger = logger;
     }    public async Task<InitiateQrRegistrationResponseDto> InitiateQrRegistrationAsync(InitiateQrRegistrationRequestDto request)
     {
@@ -332,6 +335,21 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             throw new InvalidOperationException("Invalid PIN provided");
         }
 
+        // Activate the auto-created user if exists
+        if (registration.CreatedUserId.HasValue)
+        {
+            var createdUser = await _userRepository.GetByIdAsync(registration.CreatedUserId.Value);
+            if (createdUser != null && !createdUser.IsActive)
+            {
+                createdUser.IsActive = true;
+                createdUser.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+                await _userRepository.UpdateAsync(createdUser);
+                
+                _logger.LogInformation("Activated user {UserId} (Email: {Email}) for approved device registration {RegistrationId}", 
+                    createdUser.Id, createdUser.Email, request.RegistrationId);
+            }
+        }
+
         // T013-REVISED: Delegate device creation to DeviceService
         var deviceCreationResult = await _deviceService.CreateDeviceFromRegistrationAsync(
             registration,
@@ -339,6 +357,28 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             request.Location,
             request.DeviceGroupId,
             null); // assignedUserId will be handled later if needed
+
+        // Create DeviceApproval record for audit trail
+        var deviceApproval = new DeviceApproval
+        {
+            DeviceRegistrationRequestId = registration.Id,
+            ApprovedByUserId = int.Parse(approvedByUserId),
+            Status = ApprovalStatus.Approved,
+            DeviceName = request.DeviceName,
+            Location = request.Location ?? string.Empty,
+            DeviceGroupId = request.DeviceGroupId,
+            ZoneId = request.ZoneId,
+            InitialScheduleId = request.InitialScheduleId,
+            Tags = request.Tags != null ? System.Text.Json.JsonSerializer.Serialize(request.Tags) : "{}",
+            Notes = request.Notes ?? "Approved via PIN verification",
+            DeviceKey = deviceCreationResult.DeviceKey,
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        };
+        
+        await _deviceApprovalRepository.CreateAsync(deviceApproval);
+        _logger.LogInformation("Created DeviceApproval record {ApprovalId} for registration {RegistrationId}", 
+            deviceApproval.Id, registration.RegistrationId);
 
         // Update registration status
         registration.Status = RegistrationStatus.Approved;
@@ -375,12 +415,27 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             throw new InvalidOperationException($"Registration request with PIN {request.Pin} is not in pending status");
         }
 
+        // Create DeviceApproval record for rejection tracking
+        var deviceApproval = new DeviceApproval
+        {
+            DeviceRegistrationRequestId = registration.Id,
+            ApprovedByUserId = int.Parse(rejectedByUserId),
+            Status = ApprovalStatus.Rejected,
+            DeviceName = registration.DeviceModel, // Use device model as fallback name
+            Location = string.Empty,
+            Notes = $"{request.Reason}{(string.IsNullOrEmpty(request.Notes) ? "" : $" - {request.Notes}")}",
+            DeviceKey = null, // No device key for rejected devices
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        };
+        
+        await _deviceApprovalRepository.CreateAsync(deviceApproval);
+        _logger.LogInformation("Created DeviceApproval (rejection) record {ApprovalId} for registration {RegistrationId}", 
+            deviceApproval.Id, registration.RegistrationId);
+
         // Update registration status to rejected
         registration.Status = RegistrationStatus.Rejected;
         registration.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
-        
-        // TODO: Create DeviceApproval record for rejection tracking if needed
-        // For now, just update the registration status
         
         await _registrationRepository.UpdateAsync(registration);
 
@@ -758,6 +813,142 @@ public class DeviceRegistrationService : IDeviceRegistrationService
             _logger.LogError(ex, "Error generating approval statistics");
             throw;
         }
+    }
+
+    public async Task<DeviceApprovalResponseDto> DashboardApproveDeviceAsync(DashboardApproveDeviceRequestDto request, string approvedByUserId)
+    {
+        _logger.LogInformation("Dashboard approving device registration {RegistrationId} by user {UserId}", request.RegistrationId, approvedByUserId);
+
+        // Get the registration request
+        var registration = await _registrationRepository.GetByRegistrationIdAsync(request.RegistrationId);
+        if (registration == null)
+        {
+            throw new InvalidOperationException($"Registration request {request.RegistrationId} not found");
+        }
+
+        if (registration.Status != RegistrationStatus.Pending)
+        {
+            throw new InvalidOperationException($"Registration request {request.RegistrationId} is not in pending status");
+        }
+
+        // NOTE: No PIN validation required for Dashboard approval
+        // Admin is already authenticated via JWT
+
+        // Activate the auto-created user if exists
+        if (registration.CreatedUserId.HasValue)
+        {
+            var createdUser = await _userRepository.GetByIdAsync(registration.CreatedUserId.Value);
+            if (createdUser != null && !createdUser.IsActive)
+            {
+                createdUser.IsActive = true;
+                createdUser.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+                await _userRepository.UpdateAsync(createdUser);
+                
+                _logger.LogInformation("Activated user {UserId} (Email: {Email}) for approved device registration {RegistrationId}", 
+                    createdUser.Id, createdUser.Email, request.RegistrationId);
+            }
+        }
+
+        // T013-REVISED: Delegate device creation to DeviceService
+        var deviceCreationResult = await _deviceService.CreateDeviceFromRegistrationAsync(
+            registration,
+            request.DeviceName,
+            request.Location,
+            request.DeviceGroupId,
+            null); // assignedUserId will be handled later if needed
+
+        // Create DeviceApproval record for audit trail (Dashboard approval - no PIN required)
+        var deviceApproval = new DeviceApproval
+        {
+            DeviceRegistrationRequestId = registration.Id,
+            ApprovedByUserId = int.Parse(approvedByUserId),
+            Status = ApprovalStatus.Approved,
+            DeviceName = request.DeviceName,
+            Location = request.Location ?? string.Empty,
+            DeviceGroupId = request.DeviceGroupId,
+            ZoneId = request.ZoneId,
+            InitialScheduleId = request.InitialScheduleId,
+            Tags = "{}",
+            Notes = request.Notes ?? (request.Reason ?? "Approved via admin dashboard (JWT authenticated)"),
+            DeviceKey = deviceCreationResult.DeviceKey,
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        };
+        
+        await _deviceApprovalRepository.CreateAsync(deviceApproval);
+        _logger.LogInformation("Created DeviceApproval record {ApprovalId} for registration {RegistrationId} via Dashboard", 
+            deviceApproval.Id, registration.RegistrationId);
+
+        // Update registration status
+        registration.Status = RegistrationStatus.Approved;
+        registration.ApprovedDeviceId = deviceCreationResult.DeviceId;
+        registration.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        await _registrationRepository.UpdateAsync(registration);
+
+        _logger.LogInformation("Device registration {RegistrationId} approved successfully via Dashboard. Device ID: {DeviceId}", 
+            request.RegistrationId, deviceCreationResult.DeviceId);
+
+        return new DeviceApprovalResponseDto
+        {
+            RegistrationId = request.RegistrationId,
+            DeviceId = deviceCreationResult.DeviceId,
+            DeviceKey = deviceCreationResult.DeviceKey,
+            Status = "Approved",
+            Message = "Device registration approved successfully via Dashboard"
+        };
+    }
+
+    public async Task<DeviceRejectionResponseDto> DashboardRejectDeviceAsync(DashboardRejectDeviceRequestDto request, string rejectedByUserId)
+    {
+        _logger.LogInformation("Dashboard rejecting device registration {RegistrationId} by user {UserId}", request.RegistrationId, rejectedByUserId);
+
+        // Get the registration request
+        var registration = await _registrationRepository.GetByRegistrationIdAsync(request.RegistrationId);
+        if (registration == null)
+        {
+            throw new InvalidOperationException($"Registration request {request.RegistrationId} not found");
+        }
+
+        if (registration.Status != RegistrationStatus.Pending)
+        {
+            throw new InvalidOperationException($"Registration request {request.RegistrationId} is not in pending status");
+        }
+
+        // NOTE: No PIN validation required for Dashboard rejection
+        // Admin is already authenticated via JWT
+
+        // Create DeviceApproval record for rejection tracking (Dashboard rejection - no PIN required)
+        var deviceApproval = new DeviceApproval
+        {
+            DeviceRegistrationRequestId = registration.Id,
+            ApprovedByUserId = int.Parse(rejectedByUserId),
+            Status = ApprovalStatus.Rejected,
+            DeviceName = registration.DeviceModel, // Use device model as fallback name
+            Location = string.Empty,
+            Notes = $"{request.Reason}{(string.IsNullOrEmpty(request.Notes) ? "" : $" - {request.Notes}")} (Rejected via admin dashboard)",
+            DeviceKey = null, // No device key for rejected devices
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        };
+        
+        await _deviceApprovalRepository.CreateAsync(deviceApproval);
+        _logger.LogInformation("Created DeviceApproval (rejection) record {ApprovalId} for registration {RegistrationId} via Dashboard", 
+            deviceApproval.Id, registration.RegistrationId);
+
+        // Update registration status to rejected
+        registration.Status = RegistrationStatus.Rejected;
+        registration.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        
+        await _registrationRepository.UpdateAsync(registration);
+
+        _logger.LogInformation("Device registration {RegistrationId} rejected successfully via Dashboard", request.RegistrationId);
+
+        return new DeviceRejectionResponseDto
+        {
+            RegistrationId = request.RegistrationId,
+            Status = "Rejected",
+            Message = $"Device registration rejected successfully via Dashboard. Reason: {request.Reason}"
+        };
     }
 
 

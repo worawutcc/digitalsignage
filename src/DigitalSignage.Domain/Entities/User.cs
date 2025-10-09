@@ -25,6 +25,11 @@ public class User : BaseEntity
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
     public ICollection<UserDeviceGroupPermission> DeviceGroupPermissions { get; set; } = new List<UserDeviceGroupPermission>();
     public ICollection<UserDeviceAssociation> DeviceAssociations { get; set; } = new List<UserDeviceAssociation>();
+    
+    // Assignment navigation properties
+    public ICollection<Assignment> CreatedAssignments { get; set; } = new List<Assignment>();
+    public ICollection<Assignment> ModifiedAssignments { get; set; } = new List<Assignment>();
+    public ICollection<AssignmentHistory> AssignmentActions { get; set; } = new List<AssignmentHistory>();
 
     // Computed properties
     public string FullName => $"{FirstName} {LastName}".Trim();

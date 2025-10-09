@@ -343,6 +343,136 @@ public class AdminDeviceRegistrationController : ControllerBase
     }
 
     /// <summary>
+    /// Approve a device registration via Dashboard (no PIN required)
+    /// Admin is already authenticated via JWT, so PIN verification is bypassed
+    /// </summary>
+    /// <param name="request">Dashboard approval request with registration ID</param>
+    /// <returns>Approval result with generated device key</returns>
+    [HttpPost("dashboard/approve")]
+    [ProducesResponseType(typeof(DeviceApprovalResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceApprovalResponseDto>> DashboardApproveDevice([FromBody] DashboardApproveDeviceRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for dashboard device approval");
+            return BadRequest(ModelState);
+        }
+
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning("Unable to determine current user for dashboard device approval");
+            return Unauthorized();
+        }
+
+        try
+        {
+            _logger.LogInformation("Admin {UserId} approving device registration {RegistrationId} via Dashboard (no PIN required)", userId, request.RegistrationId);
+            var response = await _deviceRegistrationService.DashboardApproveDeviceAsync(request, userId);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for dashboard device approval: {RegistrationId}", request.RegistrationId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Registration Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation for dashboard device approval: {RegistrationId}", request.RegistrationId);
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid Operation",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error approving device registration {RegistrationId} via Dashboard", request.RegistrationId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while approving the device registration",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Reject a device registration via Dashboard (no PIN required)
+    /// Admin is already authenticated via JWT, so PIN verification is bypassed
+    /// </summary>
+    /// <param name="request">Dashboard rejection request with registration ID</param>
+    /// <returns>Rejection confirmation</returns>
+    [HttpPost("dashboard/reject")]
+    [ProducesResponseType(typeof(DeviceRejectionResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(typeof(ProblemDetails), StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceRejectionResponseDto>> DashboardRejectDevice([FromBody] DashboardRejectDeviceRequestDto request)
+    {
+        if (!ModelState.IsValid)
+        {
+            _logger.LogWarning("Invalid model state for dashboard device rejection");
+            return BadRequest(ModelState);
+        }
+
+        var userId = GetCurrentUserId();
+        if (string.IsNullOrEmpty(userId))
+        {
+            _logger.LogWarning("Unable to determine current user for dashboard device rejection");
+            return Unauthorized();
+        }
+
+        try
+        {
+            _logger.LogInformation("Admin {UserId} rejecting device registration {RegistrationId} via Dashboard (no PIN required)", userId, request.RegistrationId);
+            var response = await _deviceRegistrationService.DashboardRejectDeviceAsync(request, userId);
+            return Ok(response);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for dashboard device rejection: {RegistrationId}", request.RegistrationId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Registration Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation for dashboard device rejection: {RegistrationId}", request.RegistrationId);
+            return BadRequest(new ProblemDetails
+            {
+                Title = "Invalid Operation",
+                Detail = ex.Message,
+                Status = StatusCodes.Status400BadRequest
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rejecting device registration {RegistrationId} via Dashboard", request.RegistrationId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while rejecting the device registration",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
     /// Get current user ID from JWT claims
     /// </summary>
     /// <returns>User ID string or null if not found</returns>

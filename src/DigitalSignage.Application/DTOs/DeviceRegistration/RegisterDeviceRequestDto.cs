@@ -16,6 +16,14 @@ public class RegisterDeviceRequestDto
     public string MacAddress { get; set; } = string.Empty;
 
     /// <summary>
+    /// Email address for automatic user creation
+    /// </summary>
+    [Required]
+    [EmailAddress]
+    [StringLength(100, MinimumLength = 3)]
+    public string Email { get; set; } = string.Empty;
+
+    /// <summary>
     /// Device model name (e.g., "Samsung QN65Q70AAFXZA")
     /// </summary>
     [Required]
