@@ -4,47 +4,42 @@ import { useState } from 'react'
 import { XCircle, MapPin, Clock, AlertCircle, Search, RotateCcw } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { apiClient } from '@/lib/api'
-import { RejectedDevice } from '../types'
-
-/**
- * Fetch rejected devices from API
- */
-const fetchRejectedDevices = async (): Promise<RejectedDevice[]> => {
-  const response = await apiClient.get('/api/device/rejected')
-  return response.data
-}
-
-/**
- * Reconsider (revert to pending) a rejected device
- */
-const reconsiderDevice = async (deviceId: number) => {
-  const response = await apiClient.post(`/api/device/reconsider/${deviceId}`)
-  return response.data
-}
+import { useRejectedDevices, useReconsiderDevice } from '@/features/devices/hooks/useDevices'
+import type { RejectedDevice } from '../types'
 
 /**
  * Rejected Devices Page
  * Displays all rejected device registration requests with rejection reasons
+ * 
+ * @see copilot-instructions-ui.md - React Query for server state management
+ * @see copilot-instructions-ui.md - Service Layer API Calls
+ * 
+ * Note: Uses local RejectedDevice type until API Device type includes rejection fields
  */
 export default function RejectedDevicesPage() {
   const [searchTerm, setSearchTerm] = useState('')
-  const queryClient = useQueryClient()
 
-  const { data: devices = [], isLoading, error } = useQuery<RejectedDevice[], Error>({
-    queryKey: ['rejected-devices'],
-    queryFn: fetchRejectedDevices,
+  // Use custom hooks from service layer
+  // TODO: API Device type needs rejectionReason, rejectedAt, rejectedBy fields
+  const { data: apiDevices = [], isLoading, error } = useRejectedDevices({
     refetchInterval: 60000, // Refresh every 60 seconds
   })
 
-  const reconsiderMutation = useMutation({
-    mutationFn: reconsiderDevice,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['rejected-devices'] })
-      queryClient.invalidateQueries({ queryKey: ['pending-requests'] })
-    },
-  })
+  // Map API Device to RejectedDevice for UI (temporary until API types updated)
+  const devices: RejectedDevice[] = apiDevices.map(device => ({
+    id: device.id,
+    deviceId: device.deviceKey,
+    deviceName: device.name,
+    location: device.location || 'N/A',
+    rejectedAt: device.createdAt, // Temporary: use createdAt as rejectedAt
+    rejectedBy: 'System', // Temporary: hardcoded
+    rejectionReason: 'Registration rejected', // Temporary: hardcoded
+    requestedAt: device.createdAt,
+    deviceModel: device.model || 'Unknown',
+    resolution: device.resolution || 'N/A',
+  }))
+
+  const reconsiderMutation = useReconsiderDevice()
 
   // Filter devices based on search
   const filteredDevices = devices.filter(device =>
@@ -93,7 +88,9 @@ export default function RejectedDevicesPage() {
       {/* Error State */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">Failed to load rejected devices. Please try again.</p>
+          <p className="text-red-800">
+            Failed to load rejected devices: {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
         </div>
       )}
 

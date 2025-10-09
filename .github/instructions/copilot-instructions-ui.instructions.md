@@ -120,6 +120,7 @@ digital_signage/
 ## General Guidelines
 - Use **TypeScript** instead of JavaScript.
 - Follow **Next.js 13+ App Router** structure (`app/` instead of `pages/`).
+- Use **Layout Groups** for shared layouts without URL segments (e.g., `(dashboard)/`).
 - Use **functional components** with React Hooks, no class components.
 - Prefer **async/await** over `.then()`.
 - Use **absolute imports** (`@/components/...`, `@/lib/...`).
@@ -234,6 +235,106 @@ export function useDevices() {
 **Do not import or use `axios` directly in any service file.**
 
 Refer to migration report `/docs/SERVICES-APICLIENT-MIGRATION.md` for audit history and compliance status.
+
+### Layout Groups & Routing Patterns
+
+**CRITICAL: Use Layout Groups for shared layouts without adding URL segments**
+
+#### Layout Group Structure (Current Implementation)
+```
+app/
+├── layout.tsx                    # Root layout (HTML, fonts, providers)
+├── page.tsx                      # "/" → redirect to /dashboard
+├── (dashboard)/                  # Layout group (NOT in URL)
+│   ├── layout.tsx               # Sidebar + AuthWrapper
+│   ├── dashboard/page.tsx       # /dashboard
+│   ├── devices/page.tsx         # /devices
+│   ├── media/
+│   │   ├── page.tsx            # /media
+│   │   └── tags/page.tsx       # /media/tags
+│   ├── playlists/page.tsx      # /playlists
+│   └── schedules/page.tsx      # /schedules
+├── login/page.tsx               # /login (outside layout group)
+└── register/page.tsx            # /register (outside layout group)
+```
+
+#### Layout Group Best Practices
+
+**✅ DO:**
+1. **Use `(dashboard)` layout group for all authenticated pages**
+   - Provides shared Sidebar and AuthWrapper
+   - Clean URLs without `/dashboard` prefix
+   - Layout persists across navigation (performance)
+
+2. **Keep pages simple - NO wrapper components**
+   ```tsx
+   // ✅ CORRECT: pages/dashboard/page.tsx
+   export default function DashboardPage() {
+     return (
+       <div className="space-y-6">
+         <h1>Dashboard</h1>
+         {/* content */}
+       </div>
+     )
+   }
+   ```
+
+3. **Place shared UI in layout.tsx only**
+   ```tsx
+   // ✅ CORRECT: (dashboard)/layout.tsx
+   export default function DashboardLayout({ children }) {
+     return (
+       <AuthWrapper>
+         <div className="flex h-screen">
+           <Sidebar />
+           <main>{children}</main>
+         </div>
+       </AuthWrapper>
+     )
+   }
+   ```
+
+**❌ DON'T:**
+1. **Never wrap pages with AdminLayout or similar components**
+   ```tsx
+   // ❌ WRONG: Creates duplicate Sidebar
+   export default function Page() {
+     return (
+       <AdminLayout>
+         <Content />
+       </AdminLayout>
+     )
+   }
+   ```
+
+2. **Don't add AuthWrapper in individual pages**
+   ```tsx
+   // ❌ WRONG: AuthWrapper should be in layout only
+   export default function Page() {
+     return (
+       <AuthWrapper>
+         <Content />
+       </AuthWrapper>
+     )
+   }
+   ```
+
+3. **Don't create nested layout wrappers**
+   ```tsx
+   // ❌ WRONG: Multiple layout wrappers
+   (dashboard)/
+     ├── layout.tsx        # Has Sidebar
+     └── settings/
+         ├── layout.tsx    # Don't add another Sidebar
+         └── page.tsx
+   ```
+
+#### Layout Group Rules Summary
+- **Single Source of Truth**: Only `(dashboard)/layout.tsx` provides Sidebar
+- **Clean URLs**: Layout groups use `()` to avoid URL segments
+- **Performance**: Persistent layouts don't re-render on navigation
+- **Separation**: Public pages (login/register) outside layout group
+- **No Wrapper Components**: Pages should start with simple div containers
 
 ### State Management Rules
 - **Redux Toolkit**: For all state management (global state)
@@ -530,6 +631,11 @@ NEXTAUTH_URL=http://localhost:3000
 - **Retry Logic**: Automatic retry for failed requests
 
 This frontend connects to the Digital Signage API backend and provides a modern, responsive **admin-only interface** for managing digital signage systems. **No public user features** - only admin dashboard functionality using **clean architecture patterns** with **feature-based organization**.
+
+## References & Documentation
+- [Next.js Route Groups](https://nextjs.org/docs/app/building-your-application/routing/route-groups) - Official guide on layout groups
+- [Next.js Layouts and Templates](https://nextjs.org/docs/app/building-your-application/routing/layouts-and-templates) - Layout patterns
+- [Next.js App Router](https://nextjs.org/docs/app) - Complete App Router documentation
 
 <!-- MANUAL ADDITIONS START -->
 <!-- MANUAL ADDITIONS END -->

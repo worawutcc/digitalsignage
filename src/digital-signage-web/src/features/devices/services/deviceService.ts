@@ -168,6 +168,84 @@ export class DeviceService {
     const response = await apiClient.get(`/api/devices/${deviceId}/metrics?range=${timeRange}`)
     return response.data
   }
+
+  /**
+   * Get all approved devices
+   * @returns Promise with approved devices array
+   */
+  async getApprovedDevices(): Promise<Device[]> {
+    try {
+      const response = await apiClient.get<Device[]>('/api/device/approved')
+      return response.data
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in.')
+      }
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to view approved devices.')
+      }
+      throw new Error('Failed to fetch approved devices.')
+    }
+  }
+
+  /**
+   * Get all rejected devices
+   * @returns Promise with rejected devices array
+   */
+  async getRejectedDevices(): Promise<Device[]> {
+    try {
+      const response = await apiClient.get<Device[]>('/api/device/rejected')
+      return response.data
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in.')
+      }
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to view rejected devices.')
+      }
+      throw new Error('Failed to fetch rejected devices.')
+    }
+  }
+
+  /**
+   * Get all devices (approved + active)
+   * @returns Promise with all devices array
+   */
+  async getAllDevices(): Promise<Device[]> {
+    try {
+      const response = await apiClient.get<Device[]>('/api/device')
+      return response.data
+    } catch (error: any) {
+      if (error.response?.status === 401) {
+        throw new Error('Authentication required. Please log in.')
+      }
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to view devices.')
+      }
+      throw new Error('Failed to fetch devices.')
+    }
+  }
+
+  /**
+   * Reconsider (move back to pending) a rejected device
+   * @param deviceId - Device ID to reconsider
+   */
+  async reconsiderDevice(deviceId: number): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await apiClient.post<{ success: boolean; message: string }>(
+        `/api/device/reconsider/${deviceId}`
+      )
+      return response.data
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        throw new Error('Device not found.')
+      }
+      if (error.response?.status === 403) {
+        throw new Error('You do not have permission to reconsider devices.')
+      }
+      throw new Error('Failed to reconsider device.')
+    }
+  }
 }
 
 export const deviceService = new DeviceService()

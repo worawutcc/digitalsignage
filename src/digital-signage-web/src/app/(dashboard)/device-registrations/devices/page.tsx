@@ -5,21 +5,15 @@ import { useRouter } from 'next/navigation'
 import { Monitor, MapPin, Activity, Search, Filter, Grid, List as ListIcon } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '@/lib/api'
-import { Device, DeviceStatusFilter, ViewMode } from '../types'
-
-/**
- * Fetch all devices from API
- */
-const fetchAllDevices = async (): Promise<Device[]> => {
-  const response = await apiClient.get('/api/device')
-  return response.data
-}
+import { useAllDevices } from '@/features/devices/hooks/useDevices'
+import { DeviceStatusFilter, ViewMode } from '../types'
 
 /**
  * All Devices Page
  * Displays all registered devices (approved + active) with filtering and search
+ * 
+ * @see copilot-instructions-ui.md - React Query for server state management
+ * @see copilot-instructions-ui.md - Service Layer API Calls
  */
 export default function AllDevicesPage() {
   const router = useRouter()
@@ -27,16 +21,15 @@ export default function AllDevicesPage() {
   const [statusFilter, setStatusFilter] = useState<DeviceStatusFilter>('all')
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
 
-  const { data: devices = [], isLoading, error } = useQuery<Device[], Error>({
-    queryKey: ['all-devices'],
-    queryFn: fetchAllDevices,
+  // Use custom hook from service layer
+  const { data: devices = [], isLoading, error } = useAllDevices({
     refetchInterval: 30000, // Refresh every 30 seconds
   })
 
   // Filter devices
   const filteredDevices = devices.filter(device => {
-    const matchesSearch = device.deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.location.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      device.location?.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesStatus = statusFilter === 'all' || device.status.toLowerCase() === statusFilter
     return matchesSearch && matchesStatus
   })
@@ -109,7 +102,9 @@ export default function AllDevicesPage() {
       {/* Error State */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">Failed to load devices. Please try again.</p>
+          <p className="text-red-800">
+            Failed to load devices: {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
         </div>
       )}
 
@@ -142,8 +137,8 @@ export default function AllDevicesPage() {
                       <Monitor className={`h-6 w-6 ${device.status === 'Online' ? 'text-green-600' : 'text-gray-600'}`} />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{device.deviceName}</h3>
-                      <p className="text-sm text-gray-500">{device.deviceId}</p>
+                      <h3 className="font-semibold text-gray-900">{device.name}</h3>
+                      <p className="text-sm text-gray-500">{device.deviceKey}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -157,12 +152,14 @@ export default function AllDevicesPage() {
                 <div className="space-y-2">
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">{device.location}</span>
+                    <span className="truncate">{device.location || 'N/A'}</span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Activity className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>Last: {new Date(device.lastHeartbeat).toLocaleString()}</span>
-                  </div>
+                  {device.lastHeartbeat && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Activity className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span>Last: {new Date(device.lastHeartbeat).toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -195,12 +192,12 @@ export default function AllDevicesPage() {
                       <div className="flex items-center">
                         <Monitor className="h-5 w-5 text-gray-400 mr-3" />
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{device.deviceName}</div>
-                          <div className="text-sm text-gray-500">{device.deviceId}</div>
+                          <div className="text-sm font-medium text-gray-900">{device.name}</div>
+                          <div className="text-sm text-gray-500">{device.deviceKey}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{device.location}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{device.location || 'N/A'}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         device.status === 'Online'
@@ -211,10 +208,10 @@ export default function AllDevicesPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {new Date(device.lastHeartbeat).toLocaleString()}
+                      {device.lastHeartbeat ? new Date(device.lastHeartbeat).toLocaleString() : 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {device.deviceModel}
+                      {device.model || 'Unknown'}
                     </td>
                   </tr>
                 ))}

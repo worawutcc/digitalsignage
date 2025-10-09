@@ -67,4 +67,29 @@ public interface IDeviceService
         string? location = null,
         int? deviceGroupId = null,
         int? assignedUserId = null);
+
+    /// <summary>
+    /// Get all approved devices with their status
+    /// </summary>
+    /// <returns>List of approved devices</returns>
+    Task<List<DeviceResponseDto>> GetApprovedDevicesAsync();
+
+    /// <summary>
+    /// Get all rejected devices with rejection details
+    /// </summary>
+    /// <returns>List of rejected devices with rejection information</returns>
+    Task<List<DeviceResponseDto>> GetRejectedDevicesAsync();
+
+    /// <summary>
+    /// Get all devices (both approved and active)
+    /// </summary>
+    /// <returns>List of all devices</returns>
+    Task<List<DeviceResponseDto>> GetAllDevicesAsync();
+
+    /// <summary>
+    /// Reconsider a rejected device (move back to pending)
+    /// </summary>
+    /// <param name="deviceId">Device ID to reconsider</param>
+    /// <returns>Response with success status</returns>
+    Task<ReconsiderDeviceResponseDto> ReconsiderDeviceAsync(int deviceId);
 }

@@ -34,6 +34,126 @@ public class DeviceController : ControllerBase
     }
 
     /// <summary>
+    /// Get all approved devices
+    /// </summary>
+    /// <returns>List of approved devices with status</returns>
+    [HttpGet("approved")]
+    [ProducesResponseType(typeof(List<DeviceResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<DeviceResponseDto>>> GetApprovedDevices()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving all approved devices");
+            var devices = await _deviceService.GetApprovedDevicesAsync();
+            return Ok(devices);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving approved devices");
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving approved devices",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get all rejected devices
+    /// </summary>
+    /// <returns>List of rejected devices with rejection details</returns>
+    [HttpGet("rejected")]
+    [ProducesResponseType(typeof(List<DeviceResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<DeviceResponseDto>>> GetRejectedDevices()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving all rejected devices");
+            var devices = await _deviceService.GetRejectedDevicesAsync();
+            return Ok(devices);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving rejected devices");
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving rejected devices",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Get all devices (both approved and active)
+    /// </summary>
+    /// <returns>List of all devices</returns>
+    [HttpGet]
+    [ProducesResponseType(typeof(List<DeviceResponseDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<List<DeviceResponseDto>>> GetAllDevices()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving all devices");
+            var devices = await _deviceService.GetAllDevicesAsync();
+            return Ok(devices);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving all devices");
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving devices",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
+    /// Reconsider a rejected device (move back to pending)
+    /// </summary>
+    /// <param name="deviceId">Device ID to reconsider</param>
+    /// <returns>Success response</returns>
+    [HttpPost("reconsider/{deviceId}")]
+    [ProducesResponseType(typeof(ReconsiderDeviceResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<ReconsiderDeviceResponseDto>> ReconsiderDevice(int deviceId)
+    {
+        try
+        {
+            _logger.LogInformation("Reconsidering device {DeviceId}", deviceId);
+            var response = await _deviceService.ReconsiderDeviceAsync(deviceId);
+            return Ok(response);
+        }
+        catch (KeyNotFoundException ex)
+        {
+            _logger.LogWarning(ex, "Device {DeviceId} not found", deviceId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Device Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reconsidering device {DeviceId}", deviceId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while reconsidering the device",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
     /// Get users associated with a device
     /// </summary>
     /// <param name="deviceId">Device ID</param>

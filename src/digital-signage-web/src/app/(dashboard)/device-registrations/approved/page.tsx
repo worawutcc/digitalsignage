@@ -5,36 +5,28 @@ import { useRouter } from 'next/navigation'
 import { Monitor, MapPin, Clock, Activity, Info, MoreVertical, Trash2, Search } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { useQuery } from '@tanstack/react-query'
-import { apiClient } from '@/lib/api'
-import { ApprovedDevice } from '../types'
-
-/**
- * Fetch approved devices from API
- */
-const fetchApprovedDevices = async (): Promise<ApprovedDevice[]> => {
-  const response = await apiClient.get('/api/device/approved')
-  return response.data
-}
+import { useApprovedDevices } from '@/features/devices/hooks/useDevices'
 
 /**
  * Approved Devices Page
  * Displays all approved Android TV devices with status monitoring
+ * 
+ * @see copilot-instructions-ui.md - React Query for server state management
+ * @see copilot-instructions-ui.md - Service Layer API Calls
  */
 export default function ApprovedDevicesPage() {
   const router = useRouter()
   const [searchTerm, setSearchTerm] = useState('')
 
-  const { data: devices = [], isLoading, error } = useQuery<ApprovedDevice[], Error>({
-    queryKey: ['approved-devices'],
-    queryFn: fetchApprovedDevices,
+  // Use custom hook from service layer
+  const { data: devices = [], isLoading, error } = useApprovedDevices({
     refetchInterval: 30000, // Refresh every 30 seconds
   })
 
   // Filter devices based on search
   const filteredDevices = devices.filter(device =>
-    device.deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    device.location.toLowerCase().includes(searchTerm.toLowerCase())
+    device.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    device.location?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const handleViewDetails = (deviceId: number) => {
@@ -75,7 +67,9 @@ export default function ApprovedDevicesPage() {
       {/* Error State */}
       {error && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <p className="text-red-800">Failed to load approved devices. Please try again.</p>
+          <p className="text-red-800">
+            Failed to load approved devices: {error instanceof Error ? error.message : 'Unknown error'}
+          </p>
         </div>
       )}
 
@@ -106,8 +100,8 @@ export default function ApprovedDevicesPage() {
                       <Monitor className={`h-6 w-6 ${device.status === 'Online' ? 'text-green-600' : 'text-gray-600'}`} />
                     </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">{device.deviceName}</h3>
-                      <p className="text-sm text-gray-500">{device.deviceId}</p>
+                      <h3 className="font-semibold text-gray-900">{device.name}</h3>
+                      <p className="text-sm text-gray-500">{device.deviceKey}</p>
                     </div>
                   </div>
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -123,19 +117,21 @@ export default function ApprovedDevicesPage() {
                 <div className="space-y-3">
                   <div className="flex items-center text-sm text-gray-600">
                     <MapPin className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span className="truncate">{device.location}</span>
+                    <span className="truncate">{device.location || 'N/A'}</span>
                   </div>
-                  <div className="flex items-center text-sm text-gray-600">
-                    <Activity className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>Last heartbeat: {new Date(device.lastHeartbeat).toLocaleString()}</span>
-                  </div>
+                  {device.lastHeartbeat && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <Activity className="h-4 w-4 mr-2 flex-shrink-0" />
+                      <span>Last heartbeat: {new Date(device.lastHeartbeat).toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex items-center text-sm text-gray-600">
                     <Clock className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>Approved: {new Date(device.approvedAt).toLocaleDateString()}</span>
+                    <span>Registered: {new Date(device.createdAt).toLocaleDateString()}</span>
                   </div>
                   <div className="flex items-center text-sm text-gray-600">
                     <Info className="h-4 w-4 mr-2 flex-shrink-0" />
-                    <span>{device.deviceModel} • {device.resolution}</span>
+                    <span>{device.model || 'Unknown'}</span>
                   </div>
                 </div>
 

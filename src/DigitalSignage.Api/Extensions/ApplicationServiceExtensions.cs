@@ -51,6 +51,9 @@ public static class ApplicationServiceExtensions
         // QR Code Services
         services.AddScoped<IQrCodeService, QrCodeService>();
         
+        // Content Delivery Service
+        services.AddScoped<IContentDeliveryService, ContentDeliveryService>();
+        
         // Infrastructure Services
         services.AddHttpContextAccessor();
         services.AddScoped<IUserContext, UserContext>();

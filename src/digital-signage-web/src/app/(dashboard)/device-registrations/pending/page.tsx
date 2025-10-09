@@ -1,5 +1,6 @@
 import { Metadata } from 'next'
 import { PendingRegistrationsPage } from '@/features/devices/components/PendingRegistrationsPage'
+import { RefreshButton } from '@/features/devices/components/RefreshButton'
 
 /**
  * Pending Device Registrations Admin Page
@@ -34,12 +35,9 @@ export default function AdminPendingRegistrationsPage() {
             
             {/* Quick Actions */}
             <div className="flex space-x-3">
-              <button 
+              <RefreshButton 
                 className="inline-flex items-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
-                onClick={() => window.location.reload()}
-              >
-                Refresh
-              </button>
+              />
             </div>
           </div>
         </div>
