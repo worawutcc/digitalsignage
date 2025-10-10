@@ -12,4 +12,10 @@ public interface IDashboardService
     /// </summary>
     /// <returns>Dashboard statistics including devices, playlists, media, and users</returns>
     Task<DashboardStatsDto> GetStatsAsync();
+
+    /// <summary>
+    /// Get real-time device status grid for dashboard display
+    /// </summary>
+    /// <returns>Device status grid with current device states</returns>
+    Task<DeviceStatusGridDto> GetDeviceStatusAsync();
 }

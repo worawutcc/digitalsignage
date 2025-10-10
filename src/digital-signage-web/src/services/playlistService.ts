@@ -31,7 +31,7 @@ export class PlaylistService {
    */
   static async getAll(): Promise<PlaylistDto[]> {
     const response = await apiClient.get<PlaylistDto[]>('/api/playlist')
-    return response.data
+    return Array.isArray(response.data) ? response.data : []
   }
 
   /**
@@ -39,7 +39,7 @@ export class PlaylistService {
    */
   static async getByUserId(userId: number): Promise<PlaylistDto[]> {
     const response = await apiClient.get<PlaylistDto[]>(`/api/playlist/user/${userId}`)
-    return response.data
+    return Array.isArray(response.data) ? response.data : []
   }
 
   /**

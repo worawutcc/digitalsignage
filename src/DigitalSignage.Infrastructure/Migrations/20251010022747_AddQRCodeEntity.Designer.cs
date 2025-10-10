@@ -3,6 +3,7 @@ using System;
 using DigitalSignage.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DigitalSignage.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251010022747_AddQRCodeEntity")]
+    partial class AddQRCodeEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -446,7 +449,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_Device_UpdatedAt");
 
-                    b.ToTable("Devices", (string)null);
+                    b.ToTable("Devices");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceApproval", b =>
@@ -546,7 +549,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_DeviceApproval_UpdatedAt");
 
-                    b.ToTable("DeviceApprovals", (string)null);
+                    b.ToTable("DeviceApprovals");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceCapability", b =>
@@ -813,7 +816,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("IX_DeviceGroups_ParentGroupId_Name");
 
-                    b.ToTable("DeviceGroups", (string)null);
+                    b.ToTable("DeviceGroups");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceGroupAuditLog", b =>
@@ -1235,7 +1238,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("Status", "CreatedAt")
                         .HasDatabaseName("IX_DeviceRegistrationRequests_Status_CreatedAt");
 
-                    b.ToTable("DeviceRegistrationRequests", (string)null);
+                    b.ToTable("DeviceRegistrationRequests");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceStatusLog", b =>
@@ -1475,7 +1478,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("ServiceInstanceId", "CreatedAt");
 
-                    b.ToTable("HealthCheckResults", (string)null);
+                    b.ToTable("HealthCheckResults");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Media", b =>
@@ -1918,7 +1921,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("DeviceId", "PlaylistId")
                         .IsUnique();
 
-                    b.ToTable("PlaybackStates", (string)null);
+                    b.ToTable("PlaybackStates");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Playlist", b =>
@@ -1996,7 +1999,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_Playlist_UpdatedAt");
 
-                    b.ToTable("Playlists", (string)null);
+                    b.ToTable("Playlists");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.PlaylistAssignment", b =>
@@ -2106,7 +2109,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("PlaylistId", "DeviceId");
 
-                    b.ToTable("PlaylistAssignments", null, t =>
+                    b.ToTable("PlaylistAssignments", t =>
                         {
                             t.HasCheckConstraint("CK_PlaylistAssignment_Device_Or_Group", "(\"DeviceId\" IS NOT NULL AND \"DeviceGroupId\" IS NULL) OR (\"DeviceId\" IS NULL AND \"DeviceGroupId\" IS NOT NULL)");
                         });
@@ -2195,7 +2198,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("PlaylistId", "OrderIndex")
                         .IsUnique();
 
-                    b.ToTable("PlaylistItems", (string)null);
+                    b.ToTable("PlaylistItems");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.QRCode", b =>
@@ -2353,7 +2356,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RefreshTokens", (string)null);
+                    b.ToTable("RefreshTokens");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.RegistrationAuditLog", b =>
@@ -2439,7 +2442,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("UserId");
 
-                    b.ToTable("RegistrationAuditLogs", (string)null);
+                    b.ToTable("RegistrationAuditLogs");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.RegistrationRecord", b =>
@@ -2619,7 +2622,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_Scene_UpdatedAt");
 
-                    b.ToTable("Scenes", (string)null);
+                    b.ToTable("Scenes");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.SceneItem", b =>
@@ -2722,7 +2725,7 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("SceneId", "ZIndex");
 
-                    b.ToTable("SceneItems", (string)null);
+                    b.ToTable("SceneItems");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Schedule", b =>
@@ -2810,7 +2813,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_Schedule_UpdatedAt");
 
-                    b.ToTable("Schedules", (string)null);
+                    b.ToTable("Schedules");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.ScheduleMedia", b =>
@@ -2870,7 +2873,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("ScheduleId", "Order")
                         .IsUnique();
 
-                    b.ToTable("ScheduleMedias", (string)null);
+                    b.ToTable("ScheduleMedias");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Service", b =>
@@ -2989,7 +2992,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("Name", "Version")
                         .IsUnique();
 
-                    b.ToTable("Services", (string)null);
+                    b.ToTable("Services");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.ServiceInstance", b =>
@@ -3098,7 +3101,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("ServiceId", "InstanceId")
                         .IsUnique();
 
-                    b.ToTable("ServiceInstances", (string)null);
+                    b.ToTable("ServiceInstances");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.User", b =>
@@ -3193,7 +3196,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("Username")
                         .IsUnique();
 
-                    b.ToTable("Users", (string)null);
+                    b.ToTable("Users");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.UserDeviceAssociation", b =>
@@ -3261,7 +3264,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("UserId", "DeviceId")
                         .IsUnique();
 
-                    b.ToTable("UserDeviceAssociations", (string)null);
+                    b.ToTable("UserDeviceAssociations");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.UserDeviceGroupPermission", b =>

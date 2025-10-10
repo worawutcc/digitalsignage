@@ -1,455 +1,358 @@
 'use client';
 
-// Force dynamic rendering to avoid prerendering issues
+// Force dynamic rendering for dynamic content
 export const dynamic = 'force-dynamic';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { 
-  User, 
-  Lock, 
-  Mail, 
-  Phone, 
-  Calendar,
-  Shield,
+  Settings as SettingsIcon,
+  Monitor,
+  Shield, 
+  Image,
   CheckCircle,
   AlertCircle,
-  Loader2
+  Loader2,
+  RotateCcw,
+  Save
 } from 'lucide-react';
-import { useUserProfile, useUpdateProfile, useChangePassword } from '@/hooks/useSettings';
-import type { UpdateProfileRequest, ChangePasswordRequest } from '@/types/settings';
+import { 
+  useSettings, 
+  useSettingsByCategory, 
+  useUpdateSettings, 
+  useResetSettings,
+  useCanModifySettings 
+} from '@/hooks/useSettings';
+import type { SystemSetting } from '@/services/settingsService';
 
 /**
- * Profile update form schema
+ * Available setting categories with icons and labels
  */
-const profileSchema = z.object({
-  firstName: z.string()
-    .min(1, 'First name is required')
-    .max(100, 'First name must be less than 100 characters'),
-  lastName: z.string()
-    .min(1, 'Last name is required')
-    .max(100, 'Last name must be less than 100 characters'),
-});
+const SETTING_CATEGORIES = [
+  { key: 'General', label: 'General', icon: SettingsIcon },
+  { key: 'Display', label: 'Display', icon: Monitor },  
+  { key: 'Security', label: 'Security', icon: Shield },
+  { key: 'Media', label: 'Media', icon: Image },
+] as const;
 
 /**
- * Password change form schema
+ * Dynamic schema builder for settings form
  */
-const passwordSchema = z.object({
-  currentPassword: z.string().min(1, 'Current password is required'),
-  newPassword: z.string()
-    .min(8, 'Password must be at least 8 characters')
-    .max(100, 'Password must be less than 100 characters'),
-  confirmPassword: z.string().min(1, 'Please confirm your password'),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ['confirmPassword'],
-});
-
-type ProfileFormData = z.infer<typeof profileSchema>;
-type PasswordFormData = z.infer<typeof passwordSchema>;
+const createSettingsSchema = (settings: SystemSetting[]) => {
+  const schemaFields: Record<string, z.ZodTypeAny> = {};
+  
+  settings.forEach(setting => {
+    if (setting.isReadOnly) return;
+    
+    let field: z.ZodTypeAny;
+    
+    switch (setting.dataType) {
+      case 'string':
+        field = z.string().min(1, `${setting.displayName} is required`);
+        break;
+      case 'number':
+        field = z.number().min(0, `${setting.displayName} must be positive`);
+        break;
+      case 'boolean':
+        field = z.boolean();
+        break;
+      default:
+        field = z.string();
+    }
+    
+    schemaFields[setting.key] = field;
+  });
+  
+  return z.object(schemaFields);
+};
 
 /**
- * Settings page with profile management and password change
+ * Settings page component for system configuration management
  * 
  * Features:
- * - View current user profile from GET /api/users/profile
- * - Update profile (firstName, lastName) via PUT /api/users/profile
- * - Change password via POST /api/users/change-password
- * - React Hook Form + Zod validation
- * - Loading and error states
- * - Success/error messages
+ * - Category-based settings organization (General, Display, Security, Media)
+ * - Dynamic form generation based on setting data types
+ * - Real-time validation and saving
+ * - Reset to defaults functionality
+ * - Read-only setting protection
+ * - Admin permission checking
  */
 export default function SettingsPage() {
-  const [editMode, setEditMode] = useState(false);
-  const [showPasswordForm, setShowPasswordForm] = useState(false);
+  const [activeCategory, setActiveCategory] = useState('General');
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Fetch user profile
-  const { data: profile, isLoading: profileLoading, error: profileError } = useUserProfile();
+  // Fetch settings data
+  const { data: allSettings, isLoading: allSettingsLoading } = useSettings();
+  const { data: categorySettings, isLoading: categoryLoading } = useSettingsByCategory(activeCategory);
+  
+  // Mutations
+  const updateSettings = useUpdateSettings();
+  const resetSettings = useResetSettings();
+  const canModify = useCanModifySettings();
 
-  // Update profile mutation
-  const updateProfile = useUpdateProfile();
+  // Dynamic form based on current category settings
+  const form = useForm<Record<string, any>>(
+    categorySettings 
+      ? { resolver: zodResolver(createSettingsSchema(categorySettings)) }
+      : {}
+  );
 
-  // Change password mutation
-  const changePassword = useChangePassword();
+  // Update form values when category settings load
+  useEffect(() => {
+    if (categorySettings) {
+      const formData: Record<string, any> = {};
+      categorySettings.forEach(setting => {
+        let value: any = setting.value;
+        
+        // Convert string values to appropriate types for form
+        if (setting.dataType === 'number') {
+          value = parseFloat(value) || 0;
+        } else if (setting.dataType === 'boolean') {
+          value = value === 'true';
+        }
+        
+        formData[setting.key] = value;
+      });
+      
+      form.reset(formData);
+    }
+  }, [categorySettings, form]);
 
-  // Profile form
-  const profileForm = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
-    defaultValues: {
-      firstName: '',
-      lastName: '',
-    },
-  });
-
-  // Password form
-  const passwordForm = useForm<PasswordFormData>({
-    resolver: zodResolver(passwordSchema),
-  });
-
-  // Update form values when profile loads
-  if (profile && !editMode && !profileForm.formState.isDirty) {
-    const [firstName, lastName] = profile.fullName.split(' ', 2);
-    profileForm.reset({
-      firstName: firstName || '',
-      lastName: lastName || profile.fullName,
-    });
-  }
-
-  // Handle profile update
-  const handleProfileUpdate = async (data: ProfileFormData) => {
+  // Handle form submission
+  const handleSaveSettings = async (formData: Record<string, any>) => {
+    if (!categorySettings) return;
+    
     setSuccessMessage(null);
     setErrorMessage(null);
-
+    
     try {
-      await updateProfile.mutateAsync(data);
-      setSuccessMessage('Profile updated successfully');
-      setEditMode(false);
+      const settingsToUpdate = categorySettings
+        .filter(setting => !setting.isReadOnly)
+        .map(setting => ({
+          key: setting.key,
+          value: String(formData[setting.key])
+        }));
+      
+      await updateSettings.mutateAsync({
+        settings: settingsToUpdate
+      });
+      
+      setSuccessMessage(`${activeCategory} settings saved successfully`);
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error: any) {
-      setErrorMessage(error?.response?.data?.message || 'Failed to update profile');
+      setErrorMessage(error?.response?.data?.message || 'Failed to save settings');
       setTimeout(() => setErrorMessage(null), 5000);
     }
   };
 
-  // Handle password change
-  const handlePasswordChange = async (data: PasswordFormData) => {
+  // Handle reset to defaults
+  const handleResetCategory = async () => {
+    if (!window.confirm(`Reset all ${activeCategory} settings to default values?`)) {
+      return;
+    }
+    
     setSuccessMessage(null);
     setErrorMessage(null);
-
+    
     try {
-      const passwordData: ChangePasswordRequest = {
-        currentPassword: data.currentPassword,
-        newPassword: data.newPassword,
-      };
-      await changePassword.mutateAsync(passwordData);
-      setSuccessMessage('Password changed successfully');
-      setShowPasswordForm(false);
-      passwordForm.reset();
+      await resetSettings.mutateAsync(activeCategory);
+      setSuccessMessage(`${activeCategory} settings reset to defaults`);
       setTimeout(() => setSuccessMessage(null), 5000);
     } catch (error: any) {
-      setErrorMessage(error?.response?.data?.message || 'Failed to change password');
+      setErrorMessage(error?.response?.data?.message || 'Failed to reset settings');
       setTimeout(() => setErrorMessage(null), 5000);
     }
+  };
+
+  // Render setting input based on data type
+  const renderSettingInput = (setting: SystemSetting) => {
+    const fieldName = setting.key;
+    const isDisabled = setting.isReadOnly || !canModify;
+    
+    if (setting.dataType === 'boolean') {
+      return (
+        <div className="flex items-center space-x-3">
+          <input
+            {...form.register(fieldName)}
+            type="checkbox"
+            disabled={isDisabled}
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 disabled:opacity-50"
+          />
+          <span className="text-sm text-gray-600">
+            {setting.description || 'Enable this option'}
+          </span>
+        </div>
+      );
+    }
+    
+    if (setting.dataType === 'number') {
+      return (
+        <input
+          {...form.register(fieldName, { valueAsNumber: true })}
+          type="number"
+          disabled={isDisabled}
+          className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-50 disabled:text-gray-500"
+          placeholder={setting.description}
+        />
+      );
+    }
+    
+    // Default to string input
+    return (
+      <input
+        {...form.register(fieldName)}
+        type="text"
+        disabled={isDisabled}
+        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-50 disabled:text-gray-500"
+        placeholder={setting.description}
+      />
+    );
   };
 
   // Loading state
-  if (profileLoading) {
+  if (allSettingsLoading || categoryLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading profile...</p>
+          <p className="text-gray-600">Loading settings...</p>
         </div>
       </div>
     );
-  }
-
-  // Error state
-  if (profileError) {
-    return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-        <div className="flex items-center">
-          <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
-          <div>
-            <h3 className="text-sm font-medium text-red-800">Error loading profile</h3>
-            <p className="text-sm text-red-700 mt-1">
-              {(profileError as any)?.response?.data?.message || 'Failed to load user profile'}
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (!profile) {
-    return null;
   }
 
   return (
     <div className="space-y-6">
-      <div>
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
-          <p className="text-gray-600 mt-2">Manage your account settings and preferences</p>
+      {/* Header */}
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900">System Settings</h1>
+        <p className="text-gray-600 mt-2">Configure system-wide preferences and behaviors</p>
+      </div>
+
+      {/* Success/Error Messages */}
+      {successMessage && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
+            <p className="text-sm text-green-800 font-medium">{successMessage}</p>
+          </div>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
+            <p className="text-sm text-red-800 font-medium">{errorMessage}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-6">
+        {/* Category Navigation */}
+        <div className="w-64 flex-shrink-0">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-1">
+            <nav className="space-y-1">
+              {SETTING_CATEGORIES.map((category) => {
+                const IconComponent = category.icon;
+                const isActive = activeCategory === category.key;
+                
+                return (
+                  <button
+                    key={category.key}
+                    onClick={() => setActiveCategory(category.key)}
+                    className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                      isActive
+                        ? 'bg-blue-100 text-blue-700 border-blue-200'
+                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                    }`}
+                  >
+                    <IconComponent className="mr-3 h-5 w-5" />
+                    {category.label}
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
         </div>
 
-        {/* Success/Error Messages */}
-        {successMessage && (
-          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <CheckCircle className="h-5 w-5 text-green-600 mr-3" />
-              <p className="text-sm text-green-800 font-medium">{successMessage}</p>
-            </div>
-          </div>
-        )}
-
-        {errorMessage && (
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
-            <div className="flex items-center">
-              <AlertCircle className="h-5 w-5 text-red-600 mr-3" />
-              <p className="text-sm text-red-800 font-medium">{errorMessage}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Profile Information */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-2 rounded-lg mr-3">
-                <User className="h-5 w-5 text-blue-600" />
+        {/* Settings Form */}
+        <div className="flex-1">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {activeCategory} Settings
+                </h2>
+                {canModify && (
+                  <button
+                    onClick={handleResetCategory}
+                    disabled={resetSettings.isPending}
+                    className="inline-flex items-center px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reset to Defaults
+                  </button>
+                )}
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Profile Information</h3>
             </div>
-            {!editMode && (
-              <button
-                onClick={() => setEditMode(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                Edit Profile
-              </button>
-            )}
-          </div>
 
-          {!editMode ? (
-            <div className="space-y-4">
-              <div className="flex items-center">
-                <User className="h-5 w-5 text-gray-400 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-500">Full Name</p>
-                  <p className="text-base font-medium text-gray-900">{profile.fullName}</p>
-                </div>
+            <form onSubmit={form.handleSubmit(handleSaveSettings)} className="p-6">
+              <div className="space-y-6">
+                {categorySettings?.map((setting) => (
+                  <div key={setting.key}>
+                    <label className="block text-sm font-medium text-gray-700">
+                      {setting.displayName}
+                      {setting.isReadOnly && (
+                        <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">
+                          Read-only
+                        </span>
+                      )}
+                    </label>
+                    
+                    {renderSettingInput(setting)}
+                    
+                    {setting.description && setting.dataType !== 'boolean' && (
+                      <p className="mt-1 text-sm text-gray-500">{setting.description}</p>
+                    )}
+                    
+                    {form.formState.errors[setting.key] && (
+                      <p className="mt-1 text-sm text-red-600">
+                        {String(form.formState.errors[setting.key]?.message || 'Invalid value')}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
-              <div className="flex items-center">
-                <Mail className="h-5 w-5 text-gray-400 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-500">Email</p>
-                  <p className="text-base font-medium text-gray-900">{profile.email}</p>
-                </div>
-              </div>
-              {profile.phoneNumber && (
-                <div className="flex items-center">
-                  <Phone className="h-5 w-5 text-gray-400 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">Phone</p>
-                    <p className="text-base font-medium text-gray-900">{profile.phoneNumber}</p>
+
+              {canModify && (
+                <div className="mt-8 pt-6 border-t border-gray-200">
+                  <div className="flex justify-end">
+                    <button
+                      type="submit"
+                      disabled={updateSettings.isPending || !form.formState.isDirty}
+                      className="inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                    >
+                      {updateSettings.isPending ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="h-4 w-4 mr-2" />
+                          Save Changes
+                        </>
+                      )}
+                    </button>
                   </div>
                 </div>
               )}
-              <div className="flex items-center">
-                <Shield className="h-5 w-5 text-gray-400 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-500">Role</p>
-                  <p className="text-base font-medium text-gray-900">{profile.role}</p>
-                </div>
-              </div>
-              <div className="flex items-center">
-                <Calendar className="h-5 w-5 text-gray-400 mr-3" />
-                <div>
-                  <p className="text-sm text-gray-500">Member Since</p>
-                  <p className="text-base font-medium text-gray-900">
-                    {new Date(profile.createdAt).toLocaleDateString('en-US', {
-                      year: 'numeric',
-                      month: 'long',
-                      day: 'numeric'
-                    })}
-                  </p>
-                </div>
-              </div>
-              {profile.lastLoginAt && (
-                <div className="flex items-center">
-                  <Calendar className="h-5 w-5 text-gray-400 mr-3" />
-                  <div>
-                    <p className="text-sm text-gray-500">Last Login</p>
-                    <p className="text-base font-medium text-gray-900">
-                      {new Date(profile.lastLoginAt).toLocaleDateString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <form onSubmit={profileForm.handleSubmit(handleProfileUpdate)} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  First Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  {...profileForm.register('firstName')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter first name"
-                />
-                {profileForm.formState.errors.firstName && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {profileForm.formState.errors.firstName.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Last Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  {...profileForm.register('lastName')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Enter last name"
-                />
-                {profileForm.formState.errors.lastName && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {profileForm.formState.errors.lastName.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex space-x-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={updateProfile.isPending}
-                  className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {updateProfile.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditMode(false);
-                    profileForm.reset();
-                  }}
-                  disabled={updateProfile.isPending}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-              </div>
             </form>
-          )}
-        </div>
-
-        {/* Security Settings */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-2 rounded-lg mr-3">
-                <Lock className="h-5 w-5 text-green-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">Security</h3>
-            </div>
-            {!showPasswordForm && (
-              <button
-                onClick={() => setShowPasswordForm(true)}
-                className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors"
-              >
-                Change Password
-              </button>
-            )}
           </div>
-
-          {!showPasswordForm ? (
-            <p className="text-gray-600">
-              Keep your account secure by regularly updating your password.
-            </p>
-          ) : (
-            <form onSubmit={passwordForm.handleSubmit(handlePasswordChange)} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Current Password <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  {...passwordForm.register('currentPassword')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Enter current password"
-                />
-                {passwordForm.formState.errors.currentPassword && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {passwordForm.formState.errors.currentPassword.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  New Password <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  {...passwordForm.register('newPassword')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Enter new password (min 8 characters)"
-                />
-                {passwordForm.formState.errors.newPassword && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {passwordForm.formState.errors.newPassword.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Confirm New Password <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="password"
-                  {...passwordForm.register('confirmPassword')}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
-                  placeholder="Confirm new password"
-                />
-                {passwordForm.formState.errors.confirmPassword && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {passwordForm.formState.errors.confirmPassword.message}
-                  </p>
-                )}
-              </div>
-
-              <div className="flex space-x-3 pt-2">
-                <button
-                  type="submit"
-                  disabled={changePassword.isPending}
-                  className="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
-                >
-                  {changePassword.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Changing...
-                    </>
-                  ) : (
-                    'Change Password'
-                  )}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowPasswordForm(false);
-                    passwordForm.reset();
-                  }}
-                  disabled={changePassword.isPending}
-                  className="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          )}
         </div>
       </div>
     </div>

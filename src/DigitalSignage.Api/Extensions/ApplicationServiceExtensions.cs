@@ -31,6 +31,8 @@ public static class ApplicationServiceExtensions
         services.AddScoped<IScheduleService, ScheduleService>();
         services.AddScoped<IAnalyticsService, AnalyticsService>();
         services.AddScoped<IReportsService, ReportsService>();
+        services.AddScoped<IQRCodeService, QRCodeService>();
+        services.AddScoped<ISettingService, SettingService>();
         
         // Device Registration Services
         services.AddScoped<IPinGenerationService, PinGenerationService>();
@@ -76,6 +78,10 @@ public static class ApplicationServiceExtensions
     services.AddScoped<IBulkAssignmentService, BulkAssignmentService>();
     // TODO: Implement AssignmentAnalyticsService
     // services.AddScoped<IAssignmentAnalyticsService, AssignmentAnalyticsService>();
+
+    // QR Code Services (Feature T020)
+    services.AddScoped<IQRCodeService, QRCodeService>();
+    services.AddScoped<IQRCodeRepository, DigitalSignage.Infrastructure.Repositories.QRCodeRepository>();
 
     // AutoMapper registration (scan all profiles in Application Mappings assembly)
     services.AddAutoMapper(typeof(DigitalSignage.Application.Mappings.UserDeviceAssociationProfile));

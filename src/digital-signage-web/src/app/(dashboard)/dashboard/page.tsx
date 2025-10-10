@@ -23,8 +23,10 @@ import {
   Plus
 } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { cn } from '@/lib/utils'
+import { dashboardService, type DashboardSummary } from '@/services/dashboardService'
+import { useQuery } from '@tanstack/react-query'
 
 /**
  * Admin Dashboard - Central Hub for Digital Signage Management
@@ -98,29 +100,47 @@ function AdminActionCard({ href, icon, title, description, status, count, badge 
 }
 
 export default function DashboardPage() {
-  const [isRefreshing, setIsRefreshing] = useState(false)
-
-  // Mock data for admin dashboard
-  const adminStats = {
-    totalDevices: 156,
-    activeDevices: 142,
-    offlineDevices: 8,
-    pendingRegistrations: 5,
-    totalMedia: 1247,
-    totalPlaylists: 45,
-    activeSchedules: 12,
-    systemUptime: '99.8%',
-    avgResponseTime: '120ms',
-    storageUsed: 78,
-    criticalAlerts: 0,
-    warningAlerts: 2,
-  }
+  // Fetch dashboard summary from backend
+  const { data: summary, isLoading, error, refetch } = useQuery({
+    queryKey: ['dashboard', 'summary'],
+    queryFn: () => dashboardService.getSummary(),
+    refetchInterval: 30000, // Auto-refresh every 30 seconds
+  })
 
   const handleRefreshStats = async () => {
-    setIsRefreshing(true)
-    setTimeout(() => {
-      setIsRefreshing(false)
-    }, 1000)
+    await refetch()
+  }
+
+  // Default values while loading
+  const adminStats = {
+    totalDevices: summary?.totalDevices ?? 0,
+    onlineDevices: summary?.onlineDevices ?? 0,
+    offlineDevices: summary?.offlineDevices ?? 0,
+    totalMedia: summary?.totalMedia ?? 0,
+    totalPlaylists: summary?.totalPlaylists ?? 0,
+    activeSchedules: summary?.activeSchedules ?? 0,
+    pendingRegistrations: summary?.pendingRegistrations ?? 0,
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Failed to Load Dashboard</h2>
+            <p className="text-sm text-gray-600 mb-4">
+              {error instanceof Error ? error.message : 'An error occurred while fetching dashboard data'}
+            </p>
+            <Button onClick={() => refetch()} className="flex items-center gap-2 mx-auto">
+              <RefreshCw className="h-4 w-4" />
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -131,6 +151,7 @@ export default function DashboardPage() {
           <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
           <p className="text-sm text-gray-600 mt-1">
             Central hub for managing your digital signage system
+            {isLoading && <span className="ml-2 text-blue-600">(Loading...)</span>}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -139,10 +160,10 @@ export default function DashboardPage() {
               variant="outline"
               size="sm"
               onClick={handleRefreshStats}
-              disabled={isRefreshing}
+              disabled={isLoading}
               className="flex items-center gap-2"
             >
-              <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
+              <RefreshCw className={cn("h-4 w-4", isLoading && "animate-spin")} />
               Refresh
             </Button>
           <Link href="/media/upload">
@@ -156,18 +177,16 @@ export default function DashboardPage() {
 
       {/* Quick Stats Overview */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="bg-white rounded-lg p-6 shadow-sm border">
+          <div className="bg-white rounded-lg p-6 shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Total Devices</p>
                 <p className="text-2xl font-bold text-gray-900">{adminStats.totalDevices}</p>
-                <p className="text-xs text-green-600">{adminStats.activeDevices} active</p>
+                <p className="text-xs text-green-600">{adminStats.onlineDevices} online</p>
               </div>
               <Monitor className="h-8 w-8 text-blue-500" />
             </div>
-          </div>
-
-          <div className="bg-white rounded-lg p-6 shadow-sm border">
+          </div>          <div className="bg-white rounded-lg p-6 shadow-sm border">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-gray-600">Media Files</p>
@@ -210,7 +229,7 @@ export default function DashboardPage() {
               icon={<Monitor className="h-6 w-6 text-blue-600" />}
               title="Device Management"
               description="Monitor devices, check status, and manage connections"
-              count={adminStats.activeDevices}
+              count={adminStats.onlineDevices}
               status="success"
             />
 
@@ -280,38 +299,22 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* System Health Status */}
+        {/* System Status Summary */}
         <div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">System Health</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">System Status</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="rounded-lg bg-white p-6 shadow-sm border">
               <div className="flex items-center space-x-3">
                 <div className="p-2 rounded-full text-green-600 bg-green-100">
                   <Activity className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">System Uptime</h4>
+                  <h4 className="text-sm font-medium text-gray-900">Online Devices</h4>
                   <div className="flex items-center mt-1">
                     <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
-                    <span className="text-lg font-semibold text-gray-900">{adminStats.systemUptime}</span>
+                    <span className="text-lg font-semibold text-gray-900">{adminStats.onlineDevices} / {adminStats.totalDevices}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Last 30 days</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg bg-white p-6 shadow-sm border">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-full text-green-600 bg-green-100">
-                  <Wifi className="h-5 w-5" />
-                </div>
-                <div>
-                  <h4 className="text-sm font-medium text-gray-900">Response Time</h4>
-                  <div className="flex items-center mt-1">
-                    <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
-                    <span className="text-lg font-semibold text-gray-900">{adminStats.avgResponseTime}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-1">Average API response</p>
+                  <p className="text-xs text-gray-500 mt-1">Currently active</p>
                 </div>
               </div>
             </div>
@@ -320,36 +323,42 @@ export default function DashboardPage() {
               <div className="flex items-center space-x-3">
                 <div className={cn(
                   "p-2 rounded-full",
-                  adminStats.storageUsed > 80 ? "text-yellow-600 bg-yellow-100" : "text-green-600 bg-green-100"
+                  adminStats.offlineDevices > 0 ? "text-yellow-600 bg-yellow-100" : "text-green-600 bg-green-100"
                 )}>
-                  <HardDrive className="h-5 w-5" />
+                  <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Storage Usage</h4>
+                  <h4 className="text-sm font-medium text-gray-900">Offline Devices</h4>
                   <div className="flex items-center mt-1">
                     <div className={cn(
                       "h-2 w-2 rounded-full mr-2",
-                      adminStats.storageUsed > 80 ? "bg-yellow-500" : "bg-green-500"
+                      adminStats.offlineDevices > 0 ? "bg-yellow-500" : "bg-green-500"
                     )}></div>
-                    <span className="text-lg font-semibold text-gray-900">{adminStats.storageUsed}%</span>
+                    <span className="text-lg font-semibold text-gray-900">{adminStats.offlineDevices}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Of total capacity</p>
+                  <p className="text-xs text-gray-500 mt-1">Need attention</p>
                 </div>
               </div>
             </div>
 
             <div className="rounded-lg bg-white p-6 shadow-sm border">
               <div className="flex items-center space-x-3">
-                <div className="p-2 rounded-full text-green-600 bg-green-100">
-                  <Database className="h-5 w-5" />
+                <div className={cn(
+                  "p-2 rounded-full",
+                  adminStats.pendingRegistrations > 0 ? "text-orange-600 bg-orange-100" : "text-green-600 bg-green-100"
+                )}>
+                  <Shield className="h-5 w-5" />
                 </div>
                 <div>
-                  <h4 className="text-sm font-medium text-gray-900">Database</h4>
+                  <h4 className="text-sm font-medium text-gray-900">Pending Approvals</h4>
                   <div className="flex items-center mt-1">
-                    <div className="h-2 w-2 rounded-full mr-2 bg-green-500"></div>
-                    <span className="text-lg font-semibold text-gray-900">Healthy</span>
+                    <div className={cn(
+                      "h-2 w-2 rounded-full mr-2",
+                      adminStats.pendingRegistrations > 0 ? "bg-orange-500" : "bg-green-500"
+                    )}></div>
+                    <span className="text-lg font-semibold text-gray-900">{adminStats.pendingRegistrations}</span>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">All connections active</p>
+                  <p className="text-xs text-gray-500 mt-1">Device registrations</p>
                 </div>
               </div>
             </div>

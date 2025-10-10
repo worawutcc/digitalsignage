@@ -60,6 +60,70 @@ public class DashboardService : IDashboardService
             throw;
         }
     }
+
+    /// <summary>
+    /// Get real-time device status grid data
+    /// </summary>
+    public async Task<DeviceStatusGridDto> GetDeviceStatusAsync()
+    {
+        try
+        {
+            var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+            // Query all devices with their current assignments
+            var devices = await _context.Set<Domain.Entities.Device>()
+                .Include(d => d.Assignments.Where(a => 
+                    a.StartDate <= now && 
+                    (a.EndDate == null || a.EndDate >= now)))
+                .Where(d => d.DeactivatedAt == null)
+                .OrderBy(d => d.Name)
+                .ToListAsync();
+
+            var deviceItems = devices.Select(d =>
+            {
+                // Get the highest priority active assignment
+                var activeAssignment = d.Assignments
+                    .OrderBy(a => a.Priority)
+                    .FirstOrDefault();
+
+                string currentContent = "No Assignment";
+                if (activeAssignment != null)
+                {
+                    currentContent = activeAssignment.AssignmentType switch
+                    {
+                        Domain.Enums.AssignmentType.Schedule => $"Schedule #{activeAssignment.ContentId}",
+                        Domain.Enums.AssignmentType.Playlist => $"Playlist #{activeAssignment.ContentId}",
+                        Domain.Enums.AssignmentType.Media => $"Media #{activeAssignment.ContentId}",
+                        Domain.Enums.AssignmentType.Emergency => $"Emergency #{activeAssignment.ContentId}",
+                        _ => "Unknown"
+                    };
+                }
+
+                return new DeviceStatusItemDto
+                {
+                    Id = d.Id,
+                    Name = d.Name,
+                    Status = d.Status.ToString(),
+                    LastHeartbeat = d.LastHeartbeat,
+                    CurrentContent = currentContent,
+                    Location = d.Location
+                };
+            }).ToList();
+
+            _logger.LogInformation("Retrieved device status grid with {DeviceCount} devices", deviceItems.Count);
+
+            return new DeviceStatusGridDto
+            {
+                Devices = deviceItems,
+                Timestamp = now
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving device status grid");
+            throw;
+        }
+    }
 }
 
 

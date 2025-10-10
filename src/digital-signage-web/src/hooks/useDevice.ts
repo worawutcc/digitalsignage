@@ -7,6 +7,7 @@ import {
   RegistrationRecord,
   DeviceRegistrationRequest,
   DeviceApprovalRequest,
+  DeviceRejectionRequest,
   UpdateDeviceConfigurationRequest,
   DeviceFilters 
 } from '@/types/api'
@@ -233,8 +234,7 @@ export const useApproveDeviceRegistration = () => {
   return useMutation({
     mutationFn: (data: DeviceApprovalRequest) => deviceApi.approveDeviceRegistration(data),
     onSuccess: (response, variables) => {
-      const action = variables.approve ? 'approved' : 'rejected'
-      toast.success(`Device registration ${action} successfully`)
+      toast.success('Device registration approved successfully')
       
       // Invalidate relevant queries
       queryClient.invalidateQueries({ queryKey: deviceQueryKeys.pendingRegistrations() })
@@ -242,7 +242,26 @@ export const useApproveDeviceRegistration = () => {
       queryClient.invalidateQueries({ queryKey: deviceQueryKeys.statistics() })
     },
     onError: (error: any) => {
-      toast.error(error.response?.data?.message || 'Failed to process device registration')
+      toast.error(error.response?.data?.message || 'Failed to approve device registration')
+    },
+  })
+}
+
+export const useRejectDeviceRegistration = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: (data: DeviceRejectionRequest) => deviceApi.rejectDeviceRegistration(data),
+    onSuccess: (response, variables) => {
+      toast.success('Device registration rejected successfully')
+      
+      // Invalidate relevant queries
+      queryClient.invalidateQueries({ queryKey: deviceQueryKeys.pendingRegistrations() })
+      queryClient.invalidateQueries({ queryKey: deviceQueryKeys.lists() })
+      queryClient.invalidateQueries({ queryKey: deviceQueryKeys.statistics() })
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Failed to reject device registration')
     },
   })
 }

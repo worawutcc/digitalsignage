@@ -53,6 +53,9 @@ public class AppDbContext : DbContext
     public DbSet<DeviceGroupAuditLog> DeviceGroupAuditLogs { get; set; }
     public DbSet<UserDeviceAssociation> UserDeviceAssociations { get; set; }
     
+    // QR Code Management entities
+    public DbSet<QRCode> QRCodes { get; set; }
+    
     // User-based content entities (Feature 019)
     public DbSet<UserSchedule> UserSchedules { get; set; }
     
@@ -109,6 +112,9 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new PermissionAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new DeviceGroupAuditLogConfiguration());
         modelBuilder.ApplyConfiguration(new UserDeviceAssociationConfiguration());
+        
+        // QR Code Management configurations
+        modelBuilder.ApplyConfiguration(new QRCodeConfiguration());
         
         // User-based content configurations (Feature 019)
         modelBuilder.ApplyConfiguration(new UserScheduleConfiguration());
