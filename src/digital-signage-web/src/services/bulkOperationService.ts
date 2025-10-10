@@ -100,65 +100,127 @@ export class BulkOperationService {
    * Start a new bulk operation
    */
   async startBulkOperation(request: BulkOperationRequest): Promise<BulkOperation> {
-    const response = await apiClient.post<{ success: boolean; data: BulkOperation }>(
-      this.basePath,
-      request
-    );
-    return response.data.data;
+    try {
+      const response = await apiClient.post<{ success: boolean; data: BulkOperation }>(
+        this.basePath,
+        request
+      );
+      
+      if (!response.data?.data) {
+        throw new Error('Invalid bulk operation response structure');
+      }
+      
+      console.log('[BulkOperationService] Bulk operation started:', response.data.data.id, request.type);
+      return response.data.data;
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to start bulk operation:', error);
+      throw error;
+    }
   }
 
   /**
    * Get bulk operation status and progress
    */
   async getBulkOperationStatus(operationId: string): Promise<BulkOperationProgress> {
-    const response = await apiClient.get<{ success: boolean; data: BulkOperationProgress }>(
-      `${this.basePath}/${operationId}/status`
-    );
-    return response.data.data;
+    try {
+      const response = await apiClient.get<{ success: boolean; data: BulkOperationProgress }>(
+        `${this.basePath}/${operationId}/status`
+      );
+      
+      if (!response.data?.data) {
+        throw new Error('Invalid bulk operation status response structure');
+      }
+      
+      console.log('[BulkOperationService] Bulk operation status retrieved:', operationId, response.data.data.status);
+      return response.data.data;
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to get bulk operation status:', operationId, error);
+      throw error;
+    }
   }
 
   /**
    * Get bulk operation results
    */
   async getBulkOperationResult(operationId: string): Promise<BulkOperationResult> {
-    const response = await apiClient.get<{ success: boolean; data: BulkOperationResult }>(
-      `${this.basePath}/${operationId}/result`
-    );
-    return response.data.data;
+    try {
+      const response = await apiClient.get<{ success: boolean; data: BulkOperationResult }>(
+        `${this.basePath}/${operationId}/result`
+      );
+      
+      if (!response.data?.data) {
+        throw new Error('Invalid bulk operation result response structure');
+      }
+      
+      console.log('[BulkOperationService] Bulk operation result retrieved:', operationId, response.data.data.summary);
+      return response.data.data;
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to get bulk operation result:', operationId, error);
+      throw error;
+    }
   }
 
   /**
    * Cancel running bulk operation
    */
   async cancelBulkOperation(operationId: string, reason?: string): Promise<void> {
-    await apiClient.post(`${this.basePath}/${operationId}/cancel`, {
-      reason: reason || 'User cancelled'
-    });
+    try {
+      await apiClient.post(`${this.basePath}/${operationId}/cancel`, {
+        reason: reason || 'User cancelled'
+      });
+      console.log('[BulkOperationService] Bulk operation cancelled:', operationId, reason);
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to cancel bulk operation:', operationId, error);
+      throw error;
+    }
   }
 
   /**
    * Pause running bulk operation
    */
   async pauseBulkOperation(operationId: string): Promise<void> {
-    await apiClient.post(`${this.basePath}/${operationId}/pause`);
+    try {
+      await apiClient.post(`${this.basePath}/${operationId}/pause`);
+      console.log('[BulkOperationService] Bulk operation paused:', operationId);
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to pause bulk operation:', operationId, error);
+      throw error;
+    }
   }
 
   /**
    * Resume paused bulk operation
    */
   async resumeBulkOperation(operationId: string): Promise<void> {
-    await apiClient.post(`${this.basePath}/${operationId}/resume`);
+    try {
+      await apiClient.post(`${this.basePath}/${operationId}/resume`);
+      console.log('[BulkOperationService] Bulk operation resumed:', operationId);
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to resume bulk operation:', operationId, error);
+      throw error;
+    }
   }
 
   /**
    * Retry failed items in bulk operation
    */
   async retryFailedItems(operationId: string, targetIds?: string[]): Promise<BulkOperation> {
-    const response = await apiClient.post<{ success: boolean; data: BulkOperation }>(
-      `${this.basePath}/${operationId}/retry`,
-      { targetIds }
-    );
-    return response.data.data;
+    try {
+      const response = await apiClient.post<{ success: boolean; data: BulkOperation }>(
+        `${this.basePath}/${operationId}/retry`,
+        { targetIds }
+      );
+      
+      if (!response.data?.data) {
+        throw new Error('Invalid retry response structure');
+      }
+      
+      console.log('[BulkOperationService] Bulk operation retry initiated:', operationId, targetIds?.length || 'all failed items');
+      return response.data.data;
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to retry bulk operation items:', operationId, error);
+      throw error;
+    }
   }
 
   /**
@@ -190,52 +252,68 @@ export class BulkOperationService {
       successRate: number;
     };
   }> {
-    const params = new URLSearchParams();
-    
-    if (options?.status?.length) {
-      options.status.forEach(status => params.append('status', status));
-    }
-    
-    if (options?.type?.length) {
-      options.type.forEach(type => params.append('type', type));
-    }
-    
-    if (options?.startDate) params.append('startDate', options.startDate);
-    if (options?.endDate) params.append('endDate', options.endDate);
-    if (options?.userId) params.append('userId', options.userId);
-    if (options?.page) params.append('page', options.page.toString());
-    if (options?.limit) params.append('limit', options.limit.toString());
-    if (options?.sortBy) params.append('sortBy', options.sortBy);
-    if (options?.sortOrder) params.append('sortOrder', options.sortOrder);
+    try {
+      const params = new URLSearchParams();
+      
+      if (options?.status?.length) {
+        options.status.forEach(status => params.append('status', status));
+      }
+      
+      if (options?.type?.length) {
+        options.type.forEach(type => params.append('type', type));
+      }
+      
+      if (options?.startDate) params.append('startDate', options.startDate);
+      if (options?.endDate) params.append('endDate', options.endDate);
+      if (options?.userId) params.append('userId', options.userId);
+      if (options?.page) params.append('page', options.page.toString());
+      if (options?.limit) params.append('limit', options.limit.toString());
+      if (options?.sortBy) params.append('sortBy', options.sortBy);
+      if (options?.sortOrder) params.append('sortOrder', options.sortOrder);
 
-    const response = await apiClient.get<{
-      success: boolean;
-      data: {
-        operations: BulkOperation[];
-        pagination: {
-          page: number;
-          limit: number;
-          total: number;
-          totalPages: number;
+      const response = await apiClient.get<{
+        success: boolean;
+        data: {
+          operations: BulkOperation[];
+          pagination: {
+            page: number;
+            limit: number;
+            total: number;
+            totalPages: number;
+          };
+          aggregations: {
+            totalOperations: number;
+            operationsByStatus: Record<BulkOperationStatus, number>;
+            operationsByType: Record<BulkOperationType, number>;
+            averageCompletionTime: number;
+            successRate: number;
+          };
         };
-        aggregations: {
-          totalOperations: number;
-          operationsByStatus: Record<BulkOperationStatus, number>;
-          operationsByType: Record<BulkOperationType, number>;
-          averageCompletionTime: number;
-          successRate: number;
-        };
-      };
-    }>(`${this.basePath}?${params.toString()}`);
-    
-    return response.data.data;
+      }>(`${this.basePath}?${params.toString()}`);
+      
+      if (!response.data?.data) {
+        throw new Error('Invalid bulk operations list response structure');
+      }
+      
+      console.log('[BulkOperationService] Bulk operations list retrieved:', response.data.data.operations.length);
+      return response.data.data;
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to get bulk operations:', error);
+      throw error;
+    }
   }
 
   /**
    * Delete completed bulk operation (cleanup)
    */
   async deleteBulkOperation(operationId: string): Promise<void> {
-    await apiClient.delete(`${this.basePath}/${operationId}`);
+    try {
+      await apiClient.delete(`${this.basePath}/${operationId}`);
+      console.log('[BulkOperationService] Bulk operation deleted:', operationId);
+    } catch (error) {
+      console.error('[BulkOperationService] Failed to delete bulk operation:', operationId, error);
+      throw error;
+    }
   }
 
   /**
