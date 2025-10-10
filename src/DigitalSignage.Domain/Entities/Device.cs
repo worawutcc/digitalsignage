@@ -50,7 +50,11 @@ public class Device : BaseEntity
     /// </summary>
     public User? DeactivatedByUser { get; set; }
     
-    public ICollection<Schedule> Schedules { get; set; } = new List<Schedule>();
+    /// <summary>
+    /// Many-to-many: Schedules assigned to this device
+    /// </summary>
+    public ICollection<ScheduleDevice> ScheduleDevices { get; set; } = new List<ScheduleDevice>();
+    
     public ICollection<UserDeviceAssociation> UserAssociations { get; set; } = new List<UserDeviceAssociation>();
     public ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
     

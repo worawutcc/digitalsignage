@@ -70,6 +70,15 @@ public class PlaybackStateConfiguration : IEntityTypeConfiguration<PlaybackState
          .HasColumnName("last_sync_at")
          .HasColumnType("timestamp without time zone");
 
+        // Foreign Keys
+        builder.Property(ps => ps.DeviceId)
+            .HasColumnName("device_id")
+            .IsRequired();
+
+        builder.Property(ps => ps.PlaylistId)
+            .HasColumnName("playlist_id")
+            .IsRequired();
+
         // Indexes
         builder.HasIndex(ps => new { ps.DeviceId, ps.PlaylistId })
             .IsUnique(); // One playback state per device-playlist combination

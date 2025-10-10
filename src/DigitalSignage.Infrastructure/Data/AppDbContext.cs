@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<DeviceGroup> DeviceGroups { get; set; }
     public DbSet<Media> Medias { get; set; }
     public DbSet<Schedule> Schedules { get; set; }
+    public DbSet<ScheduleDevice> ScheduleDevices { get; set; }
     public DbSet<ScheduleMedia> ScheduleMedias { get; set; }
     public DbSet<RefreshToken> RefreshTokens { get; set; }
     
@@ -82,6 +83,7 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new MediaConfiguration());
         modelBuilder.ApplyConfiguration(new ScheduleConfiguration());
         modelBuilder.ApplyConfiguration(new ScheduleMediaConfiguration());
+        modelBuilder.ApplyConfiguration(new ScheduleDeviceConfiguration());
         
         // Playlist management configurations
         modelBuilder.ApplyConfiguration(new PlaylistConfiguration());

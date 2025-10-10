@@ -41,6 +41,10 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
             .HasColumnName("is_looped")
             .HasDefaultValue(false);
 
+        // Foreign Keys
+        builder.Property(p => p.CreatedByUserId)
+            .HasColumnName("created_by_user_id");
+
         // Indexes
         builder.HasIndex(p => p.Name);
         builder.HasIndex(p => p.Status);

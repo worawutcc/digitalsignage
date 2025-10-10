@@ -717,13 +717,13 @@ export function ScheduleBuilder({
                           type="number"
                           {...register(`content.${index}.duration`, { valueAsNumber: true })}
                           min={1}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                           placeholder="15"
                         />
                         <span className="text-xs text-gray-600">sec</span>
                         <select
                           {...register(`content.${index}.transition`)}
-                          className="px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                         >
                           <option value="none">None</option>
                           <option value="fade">Fade</option>

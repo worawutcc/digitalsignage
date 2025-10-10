@@ -144,11 +144,13 @@ public class AnalyticsService : IAnalyticsService
                     ? GetTimeAgo(device.LastHeartbeat.Value)
                     : "Never";
 
-                var isOnline = device.IsActive && device.LastHeartbeat.HasValue && 
+                var isOnline = device.IsActive && device.IsActive && device.LastHeartbeat.HasValue && 
                               device.LastHeartbeat.Value > now.AddMinutes(-5);
 
+                // Filter schedules that are assigned to this device via ScheduleDevices navigation
                 var deviceSchedules = schedules
-                    .Where(s => s.DeviceId == device.Id)
+                    .Where(s => s.ScheduleDevices != null && 
+                               s.ScheduleDevices.Any(sd => sd.DeviceId == device.Id && sd.IsActive))
                     .ToList();
 
                 var views = deviceSchedules.Sum(s => s.ScheduleMedias?.Count ?? 0);

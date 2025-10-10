@@ -80,14 +80,19 @@ public class ContentDeliveryService : IContentDeliveryService
         {
             _logger.LogDebug("Checking device group schedules for group {GroupId}", device.DeviceGroupId);
             
-            // Note: This assumes DeviceGroupSchedule entity exists - adjust if needed
+            // Query ScheduleDevice junction table to get schedule IDs for this device
+            var deviceScheduleIds = await _context.Set<ScheduleDevice>()
+                .Where(sd => sd.DeviceId == device.Id && sd.IsActive)
+                .Select(sd => sd.ScheduleId)
+                .ToListAsync();
+
             var deviceGroupSchedules = await _context.Set<Schedule>()
                 .Include(s => s.ScheduleMedias)
                     .ThenInclude(sm => sm.Media)
-                .Where(s => s.Status == ScheduleStatus.Active &&
+                .Where(s => deviceScheduleIds.Contains(s.Id) &&
+                           s.Status == ScheduleStatus.Active &&
                            s.StartDate <= now &&
-                           s.EndDate >= now &&
-                           s.DeviceId == device.Id) // Schedules assigned to this device
+                           s.EndDate >= now)
                 .OrderByDescending(s => s.Id)
                 .AsNoTracking()
                 .FirstOrDefaultAsync();

@@ -44,7 +44,7 @@ public class ScheduleService : IScheduleService
     }
     
     /// <summary>
-    /// Create a new schedule and broadcast event
+    /// Create a new schedule with multiple devices and broadcast event
     /// </summary>
     public async Task<int> CreateScheduleAsync(
         string name, 
@@ -52,11 +52,18 @@ public class ScheduleService : IScheduleService
         DateTime endDate, 
         TimeSpan startTime, 
         TimeSpan endTime, 
-        int deviceId, 
+        int[] deviceIds, 
         int[] mediaIds)
     {
-        // Check for conflicts before creating
-        var hasConflicts = await HasConflictsAsync(deviceId, startDate, endDate, startTime, endTime);
+        // Check for conflicts on all devices before creating
+        foreach (var deviceId in deviceIds)
+        {
+            var hasConflicts = await HasConflictsAsync(deviceId, startDate, endDate, startTime, endTime);
+            if (hasConflicts)
+            {
+                throw new InvalidOperationException($"Schedule conflicts with existing schedules on device {deviceId}");
+            }
+        }
         
         var schedule = new Schedule
         {
@@ -65,12 +72,23 @@ public class ScheduleService : IScheduleService
             EndDate = endDate,
             StartTime = startTime,
             EndTime = endTime,
-            DeviceId = deviceId,
-            Status = ScheduleStatus.Active
+            Status = ScheduleStatus.Active,
+            Priority = 5 // Default priority
         };
         
         _context.Set<Schedule>().Add(schedule);
         await _context.SaveChangesAsync();
+        
+        // Add device associations (many-to-many)
+        foreach (var deviceId in deviceIds)
+        {
+            _context.Set<ScheduleDevice>().Add(new ScheduleDevice
+            {
+                ScheduleId = schedule.Id,
+                DeviceId = deviceId,
+                IsActive = true
+            });
+        }
         
         // Add media associations
         foreach (var mediaId in mediaIds)
@@ -94,36 +112,31 @@ public class ScheduleService : IScheduleService
                 ScheduleId = schedule.Id,
                 Action = "created",
                 ScheduleName = schedule.Name,
-                AffectedDeviceIds = new[] { deviceId }
+                AffectedDeviceIds = deviceIds
             }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
         
-        _logger.LogInformation("Schedule created: {ScheduleId} - {ScheduleName}", schedule.Id, schedule.Name);
-        
-        // Broadcast conflict warning if detected
-        if (hasConflicts)
-        {
-            var conflictingSchedules = await GetConflictingSchedulesAsync(deviceId, startDate, endDate, startTime, endTime, schedule.Id);
-            
-            await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
-            {
-                Type = "schedule_conflict_detected",
-                Payload = SerializePayload(new ScheduleConflictPayload
-                {
-                    ScheduleId = schedule.Id,
-                    ConflictType = "overlap",
-                    ConflictingScheduleIds = conflictingSchedules.ToArray(),
-                    Message = $"Schedule '{schedule.Name}' overlaps with {conflictingSchedules.Length} existing schedule(s)"
-                }),
-                Timestamp = DateTime.UtcNow.ToString("o")
-            });
-            
-            _logger.LogWarning("Schedule conflict detected: {ScheduleId} overlaps with {ConflictCount} schedules", 
-                schedule.Id, conflictingSchedules.Length);
-        }
+        _logger.LogInformation("Schedule created: {ScheduleId} - {ScheduleName} with {DeviceCount} devices", 
+            schedule.Id, schedule.Name, deviceIds.Length);
         
         return schedule.Id;
+    }
+    
+    /// <summary>
+    /// Create a new schedule with single device (backward compatibility)
+    /// </summary>
+    public async Task<int> CreateScheduleAsync(
+        string name, 
+        DateTime startDate, 
+        DateTime endDate, 
+        TimeSpan startTime, 
+        TimeSpan endTime, 
+        int deviceId, 
+        int[] mediaIds)
+    {
+        // Delegate to multi-device version
+        return await CreateScheduleAsync(name, startDate, endDate, startTime, endTime, new[] { deviceId }, mediaIds);
     }
     
     /// <summary>
@@ -154,19 +167,27 @@ public class ScheduleService : IScheduleService
         
         await _context.SaveChangesAsync();
         
-        // Get all media IDs in this schedule
+        // Get all media IDs and affected devices
         var mediaIds = await _context.Set<ScheduleMedia>()
             .Where(sm => sm.ScheduleId == scheduleId)
             .Select(sm => sm.MediaId)
             .ToArrayAsync();
         
-        // Notify devices about content update
-        await _deviceNotificationService.NotifyDeviceContentUpdateAsync(
-            schedule.DeviceId,
-            scheduleId,
-            scheduleChanged: true,
-            userAssignmentChanged: false,
-            mediaIds);
+        var affectedDeviceIds = await _context.Set<ScheduleDevice>()
+            .Where(sd => sd.ScheduleId == scheduleId && sd.IsActive)
+            .Select(sd => sd.DeviceId)
+            .ToArrayAsync();
+        
+        // Notify all affected devices about content update
+        foreach (var deviceId in affectedDeviceIds)
+        {
+            await _deviceNotificationService.NotifyDeviceContentUpdateAsync(
+                deviceId,
+                scheduleId,
+                scheduleChanged: true,
+                userAssignmentChanged: false,
+                mediaIds);
+        }
         
         // Broadcast schedule_updated event for admin dashboard
         await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
@@ -177,12 +198,13 @@ public class ScheduleService : IScheduleService
                 ScheduleId = schedule.Id,
                 Action = "updated",
                 ScheduleName = schedule.Name,
-                AffectedDeviceIds = new[] { schedule.DeviceId }
+                AffectedDeviceIds = affectedDeviceIds
             }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
         
-        _logger.LogInformation("Schedule updated: {ScheduleId} - {ScheduleName}", schedule.Id, schedule.Name);
+        _logger.LogInformation("Schedule updated: {ScheduleId} - {ScheduleName} affecting {DeviceCount} devices", 
+            schedule.Id, schedule.Name, affectedDeviceIds.Length);
     }
     
     /// <summary>
@@ -200,7 +222,12 @@ public class ScheduleService : IScheduleService
         }
         
         var scheduleName = schedule.Name;
-        var deviceId = schedule.DeviceId;
+        
+        // Get affected devices before deletion
+        var affectedDeviceIds = await _context.Set<ScheduleDevice>()
+            .Where(sd => sd.ScheduleId == scheduleId)
+            .Select(sd => sd.DeviceId)
+            .ToArrayAsync();
         
         _context.Set<Schedule>().Remove(schedule);
         await _context.SaveChangesAsync();
@@ -214,12 +241,13 @@ public class ScheduleService : IScheduleService
                 ScheduleId = scheduleId,
                 Action = "deleted",
                 ScheduleName = scheduleName,
-                AffectedDeviceIds = new[] { deviceId }
+                AffectedDeviceIds = affectedDeviceIds
             }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
         
-        _logger.LogInformation("Schedule deleted: {ScheduleId} - {ScheduleName}", scheduleId, scheduleName);
+        _logger.LogInformation("Schedule deleted: {ScheduleId} - {ScheduleName} from {DeviceCount} devices", 
+            scheduleId, scheduleName, affectedDeviceIds.Length);
     }
     
     /// <summary>
@@ -238,7 +266,7 @@ public class ScheduleService : IScheduleService
     }
     
     /// <summary>
-    /// Get conflicting schedule IDs
+    /// Get conflicting schedule IDs for a specific device
     /// </summary>
     private async Task<int[]> GetConflictingSchedulesAsync(
         int deviceId, 
@@ -248,8 +276,14 @@ public class ScheduleService : IScheduleService
         TimeSpan endTime, 
         int? excludeScheduleId = null)
     {
+        // Get all active schedules for this device via junction table
+        var deviceScheduleIds = await _context.Set<ScheduleDevice>()
+            .Where(sd => sd.DeviceId == deviceId && sd.IsActive)
+            .Select(sd => sd.ScheduleId)
+            .ToListAsync();
+        
         var query = _context.Set<Schedule>()
-            .Where(s => s.DeviceId == deviceId && s.Status == ScheduleStatus.Active);
+            .Where(s => deviceScheduleIds.Contains(s.Id) && s.Status == ScheduleStatus.Active);
         
         if (excludeScheduleId.HasValue)
         {
@@ -326,7 +360,8 @@ public class ScheduleService : IScheduleService
             _logger.LogInformation("Getting all schedules");
 
             var schedules = await _context.Set<Schedule>()
-                .Include(s => s.Device)
+                .Include(s => s.ScheduleDevices)
+                    .ThenInclude(sd => sd.Device)
                 .Include(s => s.ScheduleMedias)
                 .OrderByDescending(s => s.UpdatedAt)
                 .ToListAsync();
@@ -367,7 +402,8 @@ public class ScheduleService : IScheduleService
             _logger.LogInformation("Getting schedule {ScheduleId}", scheduleId);
 
             var schedule = await _context.Set<Schedule>()
-                .Include(s => s.Device)
+                .Include(s => s.ScheduleDevices)
+                    .ThenInclude(sd => sd.Device)
                 .Include(s => s.ScheduleMedias)
                 .FirstOrDefaultAsync(s => s.Id == scheduleId);
 
@@ -459,7 +495,12 @@ public class ScheduleService : IScheduleService
             }
             if (deviceId.HasValue)
             {
-                query = query.Where(s => s.DeviceId == deviceId.Value);
+                // Filter by device via junction table
+                var scheduleIds = await _context.Set<ScheduleDevice>()
+                    .Where(sd => sd.DeviceId == deviceId.Value && sd.IsActive)
+                    .Select(sd => sd.ScheduleId)
+                    .ToListAsync();
+                query = query.Where(s => scheduleIds.Contains(s.Id));
             }
             if (isActive.HasValue)
             {
@@ -499,6 +540,12 @@ public class ScheduleService : IScheduleService
         schedule.Status = previous == ScheduleStatus.Active ? ScheduleStatus.Draft : ScheduleStatus.Active;
         await _context.SaveChangesAsync();
 
+        // Get affected devices
+        var affectedDeviceIds = await _context.Set<ScheduleDevice>()
+            .Where(sd => sd.ScheduleId == scheduleId && sd.IsActive)
+            .Select(sd => sd.DeviceId)
+            .ToArrayAsync();
+
         await _eventBroadcaster.BroadcastAsync(new RealtimeEventDto
         {
             Type = "schedule_updated",
@@ -507,7 +554,7 @@ public class ScheduleService : IScheduleService
                 ScheduleId = schedule.Id,
                 Action = "status_toggled",
                 ScheduleName = schedule.Name,
-                AffectedDeviceIds = new[] { schedule.DeviceId }
+                AffectedDeviceIds = affectedDeviceIds
             }),
             Timestamp = DateTime.UtcNow.ToString("o")
         });
@@ -581,13 +628,28 @@ public class ScheduleService : IScheduleService
     {
         try
         {
-            var query = _context.Set<Schedule>().Where(s => s.DeviceId == deviceId);
+            // Query ScheduleDevice junction table to get schedule IDs for this device
+            var scheduleIds = await _context.Set<ScheduleDevice>()
+                .Where(sd => sd.DeviceId == deviceId && sd.IsActive)
+                .Select(sd => sd.ScheduleId)
+                .ToListAsync();
+
+            IQueryable<Schedule> query = _context.Set<Schedule>()
+                .Where(s => scheduleIds.Contains(s.Id));
+
             if (onlyActive)
             {
                 var now = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
                 query = query.Where(s => s.Status == ScheduleStatus.Active && s.StartDate <= now && s.EndDate >= now);
             }
-            var list = await query.OrderBy(s => s.StartDate).ThenBy(s => s.StartTime).ToListAsync();
+
+            var list = await query
+                .Include(s => s.ScheduleDevices)
+                    .ThenInclude(sd => sd.Device)
+                .OrderBy(s => s.StartDate)
+                .ThenBy(s => s.StartTime)
+                .ToListAsync();
+
             return list.Select(MapScheduleToDto).ToList();
         }
         catch (Exception ex)

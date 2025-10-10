@@ -64,6 +64,26 @@ public class SceneItemConfiguration : IEntityTypeConfiguration<SceneItem>
             .HasColumnName("use_custom_duration")
             .HasDefaultValue(false);
 
+        // Foreign Keys
+        builder.Property(si => si.SceneId)
+            .HasColumnName("scene_id")
+            .IsRequired();
+
+        builder.Property(si => si.MediaId)
+            .HasColumnName("media_id")
+            .IsRequired();
+
+        // Check if DurationSeconds exists in entity
+        try
+        {
+            builder.Property(si => si.DurationSeconds)
+                .HasColumnName("duration_seconds");
+        }
+        catch
+        {
+            // Property doesn't exist, skip
+        }
+
         // Indexes
         builder.HasIndex(si => new { si.SceneId, si.ZIndex });
         builder.HasIndex(si => si.MediaId);

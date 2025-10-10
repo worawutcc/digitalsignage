@@ -134,9 +134,10 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
                .HasForeignKey(e => e.DeactivatedBy)
                .OnDelete(DeleteBehavior.SetNull);
 
-        builder.HasMany(e => e.Schedules)
-               .WithOne(s => s.Device)
-               .HasForeignKey(s => s.DeviceId)
+        // Many-to-many with schedules (configured in ScheduleDeviceConfiguration)
+        builder.HasMany(e => e.ScheduleDevices)
+               .WithOne(sd => sd.Device)
+               .HasForeignKey(sd => sd.DeviceId)
                .OnDelete(DeleteBehavior.Cascade);
     }
 }

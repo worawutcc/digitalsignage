@@ -7,7 +7,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DigitalSignage.Infrastructure.Migrations
 {
     /// <inheritdoc />
-    public partial class FinalSnakeCasePostgreSQLSchema : Migration
+    public partial class InitialCreatePostgreSQLSnakeCase : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
@@ -65,6 +65,32 @@ namespace DigitalSignage.Infrastructure.Migrations
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_qr_codes", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "schedules",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    start_date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    end_date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    StartTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    EndTime = table.Column<TimeSpan>(type: "interval", nullable: false),
+                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    IsRecurring = table.Column<bool>(type: "boolean", nullable: false),
+                    recurrence_pattern = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
+                    is_default = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false, comment: "Marks this schedule as a fallback when user has no assigned schedules"),
+                    priority = table.Column<int>(type: "integer", nullable: false, defaultValue: 5, comment: "Priority level 1-10 for schedule conflict resolution, higher = more important"),
+                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
+                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    updated_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_schedules", x => x.id);
                 });
 
             migrationBuilder.CreateTable(
@@ -162,6 +188,38 @@ namespace DigitalSignage.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "schedule_medias",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    order = table.Column<int>(type: "integer", nullable: false),
+                    duration_seconds = table.Column<int>(type: "integer", nullable: false),
+                    schedule_id = table.Column<int>(type: "integer", nullable: false),
+                    media_id = table.Column<int>(type: "integer", nullable: false),
+                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
+                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    updated_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_schedule_medias", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_schedule_medias_medias_media_id",
+                        column: x => x.media_id,
+                        principalTable: "medias",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_schedule_medias_schedules_schedule_id",
+                        column: x => x.schedule_id,
+                        principalTable: "schedules",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "service_instances",
                 columns: table => new
                 {
@@ -243,7 +301,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     is_looped = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     LoopCount = table.Column<int>(type: "integer", nullable: true),
                     priority = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    CreatedByUserId = table.Column<int>(type: "integer", nullable: true),
+                    created_by_user_id = table.Column<int>(type: "integer", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
                     updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -253,8 +311,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_playlists", x => x.id);
                     table.ForeignKey(
-                        name: "FK_playlists_users_CreatedByUserId",
-                        column: x => x.CreatedByUserId,
+                        name: "FK_playlists_users_created_by_user_id",
+                        column: x => x.created_by_user_id,
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
@@ -272,10 +330,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                     width = table.Column<int>(type: "integer", nullable: false, defaultValue: 1920),
                     height = table.Column<int>(type: "integer", nullable: false, defaultValue: 1080),
                     background_color = table.Column<string>(type: "character varying(7)", maxLength: 7, nullable: true),
-                    BackgroundImageId = table.Column<int>(type: "integer", nullable: true),
+                    background_image_id = table.Column<int>(type: "integer", nullable: true),
                     is_template = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     template_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: true),
-                    CreatedByUserId = table.Column<int>(type: "integer", nullable: true),
+                    created_by_user_id = table.Column<int>(type: "integer", nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
                     updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -285,17 +343,54 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_scenes", x => x.id);
                     table.ForeignKey(
-                        name: "FK_scenes_medias_BackgroundImageId",
-                        column: x => x.BackgroundImageId,
+                        name: "FK_scenes_medias_background_image_id",
+                        column: x => x.background_image_id,
                         principalTable: "medias",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_scenes_users_CreatedByUserId",
-                        column: x => x.CreatedByUserId,
+                        name: "FK_scenes_users_created_by_user_id",
+                        column: x => x.created_by_user_id,
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "user_schedules",
+                columns: table => new
+                {
+                    Id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    user_id = table.Column<int>(type: "integer", nullable: false),
+                    schedule_id = table.Column<int>(type: "integer", nullable: false),
+                    assigned_by_user_id = table.Column<int>(type: "integer", nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
+                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    updated_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_user_schedules", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_user_schedules_schedules_schedule_id",
+                        column: x => x.schedule_id,
+                        principalTable: "schedules",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_user_schedules_users_assigned_by_user_id",
+                        column: x => x.assigned_by_user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_user_schedules_users_user_id",
+                        column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
@@ -546,8 +641,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    PlaylistId = table.Column<int>(type: "integer", nullable: false),
-                    MediaId = table.Column<int>(type: "integer", nullable: false),
+                    playlist_id = table.Column<int>(type: "integer", nullable: false),
+                    media_id = table.Column<int>(type: "integer", nullable: false),
                     order_index = table.Column<int>(type: "integer", nullable: false),
                     duration_seconds = table.Column<int>(type: "integer", nullable: false),
                     use_custom_duration = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
@@ -565,14 +660,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_playlist_items", x => x.id);
                     table.ForeignKey(
-                        name: "FK_playlist_items_medias_MediaId",
-                        column: x => x.MediaId,
+                        name: "FK_playlist_items_medias_media_id",
+                        column: x => x.media_id,
                         principalTable: "medias",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_playlist_items_playlists_PlaylistId",
-                        column: x => x.PlaylistId,
+                        name: "FK_playlist_items_playlists_playlist_id",
+                        column: x => x.playlist_id,
                         principalTable: "playlists",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -584,8 +679,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    SceneId = table.Column<int>(type: "integer", nullable: false),
-                    MediaId = table.Column<int>(type: "integer", nullable: false),
+                    scene_id = table.Column<int>(type: "integer", nullable: false),
+                    media_id = table.Column<int>(type: "integer", nullable: false),
                     x = table.Column<int>(type: "integer", nullable: false),
                     y = table.Column<int>(type: "integer", nullable: false),
                     width = table.Column<int>(type: "integer", nullable: false),
@@ -596,7 +691,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                     animation_in = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     animation_out = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
                     animation_duration = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
-                    DurationSeconds = table.Column<int>(type: "integer", nullable: false),
+                    duration_seconds = table.Column<int>(type: "integer", nullable: false),
                     use_custom_duration = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
@@ -607,14 +702,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_scene_items", x => x.id);
                     table.ForeignKey(
-                        name: "FK_scene_items_medias_MediaId",
-                        column: x => x.MediaId,
+                        name: "FK_scene_items_medias_media_id",
+                        column: x => x.media_id,
                         principalTable: "medias",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_scene_items_scenes_SceneId",
-                        column: x => x.SceneId,
+                        name: "FK_scene_items_scenes_scene_id",
+                        column: x => x.scene_id,
                         principalTable: "scenes",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -884,8 +979,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    DeviceId = table.Column<int>(type: "integer", nullable: false),
-                    PlaylistId = table.Column<int>(type: "integer", nullable: false),
+                    device_id = table.Column<int>(type: "integer", nullable: false),
+                    playlist_id = table.Column<int>(type: "integer", nullable: false),
                     current_item_index = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     current_position_seconds = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     total_duration_seconds = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
@@ -908,14 +1003,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     table.PrimaryKey("PK_playback_states", x => x.id);
                     table.ForeignKey(
-                        name: "FK_playback_states_devices_DeviceId",
-                        column: x => x.DeviceId,
+                        name: "FK_playback_states_devices_device_id",
+                        column: x => x.device_id,
                         principalTable: "devices",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                     table.ForeignKey(
-                        name: "FK_playback_states_playlists_PlaylistId",
-                        column: x => x.PlaylistId,
+                        name: "FK_playback_states_playlists_playlist_id",
+                        column: x => x.playlist_id,
                         principalTable: "playlists",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -933,8 +1028,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                     priority = table.Column<int>(type: "integer", nullable: false, defaultValue: 0),
                     start_date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
                     end_date = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
-                    StartTime = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
-                    EndTime = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
+                    start_time = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
+                    end_time = table.Column<TimeOnly>(type: "time without time zone", nullable: true),
                     is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     is_recurring = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
                     recurrence_pattern = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: true),
@@ -976,19 +1071,19 @@ namespace DigitalSignage.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "RefreshTokens",
+                name: "refresh_tokens",
                 columns: table => new
                 {
-                    Id = table.Column<int>(type: "integer", nullable: false)
+                    id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    TokenValue = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
-                    UserId = table.Column<int>(type: "integer", nullable: false),
-                    DeviceId = table.Column<int>(type: "integer", nullable: true),
-                    IsRevoked = table.Column<bool>(type: "boolean", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
-                    RevokedAt = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
-                    ReplacedByToken = table.Column<string>(type: "text", nullable: true),
-                    CreatedByIp = table.Column<string>(type: "text", nullable: true),
+                    token_value = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: false),
+                    user_id = table.Column<int>(type: "integer", nullable: false),
+                    device_id = table.Column<int>(type: "integer", nullable: true),
+                    is_revoked = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false),
+                    expires_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
+                    revoked_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: true),
+                    replaced_by_token = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    created_by_ip = table.Column<string>(type: "character varying(45)", maxLength: 45, nullable: true),
                     created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
                     updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -996,16 +1091,16 @@ namespace DigitalSignage.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.PrimaryKey("PK_refresh_tokens", x => x.id);
                     table.ForeignKey(
-                        name: "FK_RefreshTokens_devices_DeviceId",
-                        column: x => x.DeviceId,
+                        name: "FK_refresh_tokens_devices_device_id",
+                        column: x => x.device_id,
                         principalTable: "devices",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
                     table.ForeignKey(
-                        name: "FK_RefreshTokens_users_UserId",
-                        column: x => x.UserId,
+                        name: "FK_refresh_tokens_users_user_id",
+                        column: x => x.user_id,
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
@@ -1049,21 +1144,15 @@ namespace DigitalSignage.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
-                name: "schedules",
+                name: "schedule_devices",
                 columns: table => new
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
                         .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    start_date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
-                    end_date = table.Column<DateTime>(type: "timestamp without time zone", nullable: false),
-                    StartTime = table.Column<TimeSpan>(type: "interval", nullable: false),
-                    EndTime = table.Column<TimeSpan>(type: "interval", nullable: false),
-                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    IsRecurring = table.Column<bool>(type: "boolean", nullable: false),
-                    recurrence_pattern = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: true),
-                    is_default = table.Column<bool>(type: "boolean", nullable: false, defaultValue: false, comment: "Marks this schedule as a fallback when user has no assigned schedules"),
-                    DeviceId = table.Column<int>(type: "integer", nullable: false),
+                    schedule_id = table.Column<int>(type: "integer", nullable: false),
+                    device_id = table.Column<int>(type: "integer", nullable: false),
+                    device_priority = table.Column<int>(type: "integer", nullable: true),
+                    is_active = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
                     created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
                     updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
@@ -1071,11 +1160,17 @@ namespace DigitalSignage.Infrastructure.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_schedules", x => x.id);
+                    table.PrimaryKey("PK_schedule_devices", x => x.id);
                     table.ForeignKey(
-                        name: "FK_schedules_devices_DeviceId",
-                        column: x => x.DeviceId,
+                        name: "FK_schedule_devices_devices_device_id",
+                        column: x => x.device_id,
                         principalTable: "devices",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_schedule_devices_schedules_schedule_id",
+                        column: x => x.schedule_id,
+                        principalTable: "schedules",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
@@ -1143,6 +1238,57 @@ namespace DigitalSignage.Infrastructure.Migrations
                     table.ForeignKey(
                         name: "FK_assignment_histories_users_user_id",
                         column: x => x.user_id,
+                        principalTable: "users",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
+                name: "device_approvals",
+                columns: table => new
+                {
+                    id = table.Column<int>(type: "integer", nullable: false)
+                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
+                    device_registration_request_id = table.Column<int>(type: "integer", nullable: false),
+                    approved_by_user_id = table.Column<int>(type: "integer", nullable: false),
+                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
+                    device_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
+                    location = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    device_group_id = table.Column<int>(type: "integer", nullable: true),
+                    zone_id = table.Column<int>(type: "integer", nullable: true),
+                    initial_schedule_id = table.Column<int>(type: "integer", nullable: true),
+                    tags = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
+                    notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
+                    device_key = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
+                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
+                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
+                    updated_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_device_approvals", x => x.id);
+                    table.ForeignKey(
+                        name: "FK_device_approvals_device_groups_device_group_id",
+                        column: x => x.device_group_id,
+                        principalTable: "device_groups",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_device_approvals_device_registration_requests_device_regist~",
+                        column: x => x.device_registration_request_id,
+                        principalTable: "device_registration_requests",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_device_approvals_schedules_initial_schedule_id",
+                        column: x => x.initial_schedule_id,
+                        principalTable: "schedules",
+                        principalColumn: "id",
+                        onDelete: ReferentialAction.SetNull);
+                    table.ForeignKey(
+                        name: "FK_device_approvals_users_approved_by_user_id",
+                        column: x => x.approved_by_user_id,
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Restrict);
@@ -1218,126 +1364,6 @@ namespace DigitalSignage.Infrastructure.Migrations
                         principalTable: "users",
                         principalColumn: "id",
                         onDelete: ReferentialAction.SetNull);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "device_approvals",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    device_registration_request_id = table.Column<int>(type: "integer", nullable: false),
-                    approved_by_user_id = table.Column<int>(type: "integer", nullable: false),
-                    status = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
-                    device_name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
-                    location = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
-                    device_group_id = table.Column<int>(type: "integer", nullable: true),
-                    zone_id = table.Column<int>(type: "integer", nullable: true),
-                    initial_schedule_id = table.Column<int>(type: "integer", nullable: true),
-                    tags = table.Column<string>(type: "character varying(1000)", maxLength: 1000, nullable: false),
-                    notes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: false),
-                    device_key = table.Column<string>(type: "character varying(255)", maxLength: 255, nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
-                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    updated_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_device_approvals", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_device_approvals_device_groups_device_group_id",
-                        column: x => x.device_group_id,
-                        principalTable: "device_groups",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_device_approvals_device_registration_requests_device_regist~",
-                        column: x => x.device_registration_request_id,
-                        principalTable: "device_registration_requests",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_device_approvals_schedules_initial_schedule_id",
-                        column: x => x.initial_schedule_id,
-                        principalTable: "schedules",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_device_approvals_users_approved_by_user_id",
-                        column: x => x.approved_by_user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Restrict);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "schedule_medias",
-                columns: table => new
-                {
-                    id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    order = table.Column<int>(type: "integer", nullable: false),
-                    duration_seconds = table.Column<int>(type: "integer", nullable: false),
-                    schedule_id = table.Column<int>(type: "integer", nullable: false),
-                    media_id = table.Column<int>(type: "integer", nullable: false),
-                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
-                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    updated_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_schedule_medias", x => x.id);
-                    table.ForeignKey(
-                        name: "FK_schedule_medias_medias_media_id",
-                        column: x => x.media_id,
-                        principalTable: "medias",
-                        principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_schedule_medias_schedules_schedule_id",
-                        column: x => x.schedule_id,
-                        principalTable: "schedules",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                });
-
-            migrationBuilder.CreateTable(
-                name: "user_schedules",
-                columns: table => new
-                {
-                    Id = table.Column<int>(type: "integer", nullable: false)
-                        .Annotation("Npgsql:ValueGenerationStrategy", NpgsqlValueGenerationStrategy.IdentityByDefaultColumn),
-                    user_id = table.Column<int>(type: "integer", nullable: false),
-                    schedule_id = table.Column<int>(type: "integer", nullable: false),
-                    assigned_by_user_id = table.Column<int>(type: "integer", nullable: true),
-                    created_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    created_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1),
-                    updated_at = table.Column<DateTime>(type: "timestamp without time zone", nullable: false, defaultValueSql: "CURRENT_TIMESTAMP"),
-                    updated_by = table.Column<int>(type: "integer", nullable: false, defaultValue: -1)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_user_schedules", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_user_schedules_schedules_schedule_id",
-                        column: x => x.schedule_id,
-                        principalTable: "schedules",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_user_schedules_users_assigned_by_user_id",
-                        column: x => x.assigned_by_user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.SetNull);
-                    table.ForeignKey(
-                        name: "FK_user_schedules_users_user_id",
-                        column: x => x.user_id,
-                        principalTable: "users",
-                        principalColumn: "id",
-                        onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
@@ -1969,9 +1995,9 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "updated_at");
 
             migrationBuilder.CreateIndex(
-                name: "IX_playback_states_DeviceId_PlaylistId",
+                name: "IX_playback_states_device_id_playlist_id",
                 table: "playback_states",
-                columns: new[] { "DeviceId", "PlaylistId" },
+                columns: new[] { "device_id", "playlist_id" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -1980,9 +2006,9 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "is_synced");
 
             migrationBuilder.CreateIndex(
-                name: "IX_playback_states_PlaylistId",
+                name: "IX_playback_states_playlist_id",
                 table: "playback_states",
-                column: "PlaylistId");
+                column: "playlist_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_playback_states_status",
@@ -2055,14 +2081,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "updated_at");
 
             migrationBuilder.CreateIndex(
-                name: "IX_playlist_items_MediaId",
+                name: "IX_playlist_items_media_id",
                 table: "playlist_items",
-                column: "MediaId");
+                column: "media_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_playlist_items_PlaylistId_order_index",
+                name: "IX_playlist_items_playlist_id_order_index",
                 table: "playlist_items",
-                columns: new[] { "PlaylistId", "order_index" },
+                columns: new[] { "playlist_id", "order_index" },
                 unique: true);
 
             migrationBuilder.CreateIndex(
@@ -2086,9 +2112,9 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "updated_at");
 
             migrationBuilder.CreateIndex(
-                name: "IX_playlists_CreatedByUserId",
+                name: "IX_playlists_created_by_user_id",
                 table: "playlists",
-                column: "CreatedByUserId");
+                column: "created_by_user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_playlists_name",
@@ -2131,30 +2157,40 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "type");
 
             migrationBuilder.CreateIndex(
+                name: "IX_refresh_tokens_device_id",
+                table: "refresh_tokens",
+                column: "device_id");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_RefreshToken_CreatedAt",
-                table: "RefreshTokens",
+                table: "refresh_tokens",
                 column: "created_at");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshToken_UpdatedAt",
-                table: "RefreshTokens",
+                table: "refresh_tokens",
                 column: "updated_at");
 
             migrationBuilder.CreateIndex(
-                name: "IX_RefreshTokens_DeviceId",
-                table: "RefreshTokens",
-                column: "DeviceId");
+                name: "IX_RefreshTokens_ExpiresAt",
+                table: "refresh_tokens",
+                column: "expires_at");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_IsRevoked",
+                table: "refresh_tokens",
+                column: "is_revoked");
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_TokenValue",
-                table: "RefreshTokens",
-                column: "TokenValue",
+                table: "refresh_tokens",
+                column: "token_value",
                 unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_RefreshTokens_UserId",
-                table: "RefreshTokens",
-                column: "UserId");
+                table: "refresh_tokens",
+                column: "user_id");
 
             migrationBuilder.CreateIndex(
                 name: "ix_registration_audit_logs_action",
@@ -2207,14 +2243,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "updated_at");
 
             migrationBuilder.CreateIndex(
-                name: "IX_scene_items_MediaId",
+                name: "IX_scene_items_media_id",
                 table: "scene_items",
-                column: "MediaId");
+                column: "media_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_scene_items_SceneId_z_index",
+                name: "IX_scene_items_scene_id_z_index",
                 table: "scene_items",
-                columns: new[] { "SceneId", "z_index" });
+                columns: new[] { "scene_id", "z_index" });
 
             migrationBuilder.CreateIndex(
                 name: "IX_SceneItem_CreatedAt",
@@ -2237,14 +2273,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "updated_at");
 
             migrationBuilder.CreateIndex(
-                name: "IX_scenes_BackgroundImageId",
+                name: "IX_scenes_background_image_id",
                 table: "scenes",
-                column: "BackgroundImageId");
+                column: "background_image_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_scenes_CreatedByUserId",
+                name: "IX_scenes_created_by_user_id",
                 table: "scenes",
-                column: "CreatedByUserId");
+                column: "created_by_user_id");
 
             migrationBuilder.CreateIndex(
                 name: "IX_scenes_is_template",
@@ -2265,6 +2301,47 @@ namespace DigitalSignage.Infrastructure.Migrations
                 name: "IX_scenes_template_name",
                 table: "scenes",
                 column: "template_name");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_schedule_devices_device_active",
+                table: "schedule_devices",
+                columns: new[] { "device_id", "is_active" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_schedule_devices_device_id",
+                table: "schedule_devices",
+                column: "device_id");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_schedule_devices_is_active",
+                table: "schedule_devices",
+                column: "is_active");
+
+            migrationBuilder.CreateIndex(
+                name: "ix_schedule_devices_schedule_active",
+                table: "schedule_devices",
+                columns: new[] { "schedule_id", "is_active" });
+
+            migrationBuilder.CreateIndex(
+                name: "ix_schedule_devices_schedule_id",
+                table: "schedule_devices",
+                column: "schedule_id");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScheduleDevice_CreatedAt",
+                table: "schedule_devices",
+                column: "created_at");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ScheduleDevice_UpdatedAt",
+                table: "schedule_devices",
+                column: "updated_at");
+
+            migrationBuilder.CreateIndex(
+                name: "uq_schedule_devices_schedule_id_device_id",
+                table: "schedule_devices",
+                columns: new[] { "schedule_id", "device_id" },
+                unique: true);
 
             migrationBuilder.CreateIndex(
                 name: "IX_schedule_medias_media_id",
@@ -2298,14 +2375,14 @@ namespace DigitalSignage.Infrastructure.Migrations
                 column: "updated_at");
 
             migrationBuilder.CreateIndex(
-                name: "IX_schedules_DeviceId",
-                table: "schedules",
-                column: "DeviceId");
-
-            migrationBuilder.CreateIndex(
                 name: "IX_Schedules_IsDefault",
                 table: "schedules",
                 column: "is_default");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Schedules_Priority",
+                table: "schedules",
+                column: "priority");
 
             migrationBuilder.CreateIndex(
                 name: "ix_service_instances_endpoint_url",
@@ -2566,7 +2643,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                 name: "qr_codes");
 
             migrationBuilder.DropTable(
-                name: "RefreshTokens");
+                name: "refresh_tokens");
 
             migrationBuilder.DropTable(
                 name: "registration_audit_logs");
@@ -2576,6 +2653,9 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             migrationBuilder.DropTable(
                 name: "scene_items");
+
+            migrationBuilder.DropTable(
+                name: "schedule_devices");
 
             migrationBuilder.DropTable(
                 name: "schedule_medias");
@@ -2617,10 +2697,10 @@ namespace DigitalSignage.Infrastructure.Migrations
                 name: "services");
 
             migrationBuilder.DropTable(
-                name: "medias");
+                name: "devices");
 
             migrationBuilder.DropTable(
-                name: "devices");
+                name: "medias");
 
             migrationBuilder.DropTable(
                 name: "device_groups");

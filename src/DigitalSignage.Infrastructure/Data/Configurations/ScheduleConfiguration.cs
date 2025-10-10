@@ -37,6 +37,13 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
                .HasDefaultValue(false)
                .HasComment("Marks this schedule as a fallback when user has no assigned schedules");
         
+        // Configure Priority for conflict resolution
+        builder.Property(e => e.Priority)
+               .HasColumnName("priority")
+               .IsRequired()
+               .HasDefaultValue(5)
+               .HasComment("Priority level 1-10 for schedule conflict resolution, higher = more important");
+        
         // Configure enum conversion
         builder.Property(e => e.Status)
                .HasColumnName("status")
@@ -57,6 +64,10 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
         // Configure index for IsDefault (Feature 019)
         builder.HasIndex(e => e.IsDefault)
                .HasDatabaseName("IX_Schedules_IsDefault");
+        
+        // Configure index for Priority
+        builder.HasIndex(e => e.Priority)
+               .HasDatabaseName("IX_Schedules_Priority");
 
         // Navigation properties
         builder.HasMany(e => e.UserSchedules)
@@ -64,10 +75,10 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
                .HasForeignKey(us => us.ScheduleId)
                .OnDelete(DeleteBehavior.Cascade);
         
-        // Existing navigation properties
-        builder.HasOne(e => e.Device)
-               .WithMany(d => d.Schedules)
-               .HasForeignKey(e => e.DeviceId)
+        // Many-to-many with devices (configured in ScheduleDeviceConfiguration)
+        builder.HasMany(e => e.ScheduleDevices)
+               .WithOne(sd => sd.Schedule)
+               .HasForeignKey(sd => sd.ScheduleId)
                .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasMany(e => e.ScheduleMedias)
