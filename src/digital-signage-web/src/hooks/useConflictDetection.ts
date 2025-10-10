@@ -177,11 +177,13 @@ export function useConflictDetection(options: UseConflictDetectionOptions = {}) 
     onSuccess: (resolvedConflict) => {
       queryClient.invalidateQueries({ queryKey: ['conflicts'] })
       
-      toast({
-        title: 'Conflict Resolved',
-        description: `Successfully resolved ${resolvedConflict.type} conflict`,
-        variant: 'success',
-      })
+      if (resolvedConflict) {
+        toast({
+          title: 'Conflict Resolved',
+          description: `Successfully resolved ${resolvedConflict.type} conflict`,
+          variant: 'success',
+        })
+      }
     },
     onError: (error) => {
       toast({
