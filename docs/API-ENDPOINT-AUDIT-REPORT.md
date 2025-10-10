@@ -9,10 +9,10 @@
 ## Executive Summary
 
 ### Scope
-- **Total Service Files**: TBD (Target: ~31 files)
-- **Total Service Methods**: TBD (Target: ~100+ methods)
-- **Total API Endpoints**: TBD (Target: ~60+ endpoints)
-- **Total API Calls**: TBD
+- **Total Service Files**: 31 files
+- **Total Service Methods**: TBD (awaiting audit)
+- **Total API Endpoints**: 31 backend controllers
+- **Total API Calls**: 193
 
 ### Findings
 - **Total Issues**: 0 (awaiting discovery phase)
@@ -183,15 +183,25 @@
 ## Appendix
 
 ### Service File Inventory
-*See docs/SERVICE-FILE-DOMAINS.md for complete listing.*
+**Complete Listing**: See `docs/SERVICE-FILE-DOMAINS.md`
+
+**Summary**:
+- Auth Domain: 4 service files
+- Content Domain: 8 service files
+- Devices Domain: 7 service files
+- Analytics Domain: 7 service files
+- API Helpers: 4 service files
+- Index: 1 file (exports only, excluded from audit)
 
 ### Backend Controller Mapping
-*To be populated during T007.*
+**Total Backend Controllers**: 31
+
+See `docs/SERVICE-FILE-DOMAINS.md` for complete service-to-controller mapping by domain.
 
 ### Guideline Pattern References
 *See copilot-instructions-ui.instructions.md for full patterns.*
 
 ---
 
-**Last Updated**: 2025-01-10 (Phase 3.1 Setup Complete)  
-**Next Update**: After Phase 3.2 Discovery completion
+**Last Updated**: 2025-01-10 (Phase 3.2 Discovery Complete)  
+**Next Update**: After Phase 3.3 Auth Domain Audit completion
