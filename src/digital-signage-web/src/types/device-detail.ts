@@ -33,15 +33,15 @@ export interface DeviceDetail {
 export interface DeviceConfiguration {
   id: number
   deviceId: number
-  displayOrientation: 'Landscape' | 'Portrait' | 'ReversePortrait' | 'ReverseLandscape'
-  resolution: string | null
+  displayOrientation: 'landscape' | 'portrait'
+  resolution?: string
   refreshRate: number
   screenTimeout: number
-  powerManagement: 'AlwaysOn' | 'Scheduled' | 'Auto'
-  networkConfig: string | null
-  appPermissions: string | null
+  powerManagement: string
+  networkConfig?: string
+  appPermissions?: string
   remoteManagementEnabled: boolean
-  proxySettings: string | null
+  proxySettings?: string
   updatedAt: string
   updatedBy: number
   updatedByUserName: string

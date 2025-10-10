@@ -29,8 +29,39 @@ export class DeviceService {
    * Get all devices
    */
   async getAll(): Promise<Device[]> {
-    const response = await apiClient.get<Device[]>('/api/devices')
-    return response.data
+    try {
+      const response = await apiClient.get<{ items: Device[]; totalCount: number }>('/api/devices')
+      
+      // ✅ DEBUG: Log API response structure
+      console.log('📦 Devices API response:', response.data)
+      
+      // ✅ GUARD: Verify response structure
+      const devicesArray = Array.isArray(response.data.items) ? response.data.items : []
+      
+      // ✅ MAP: Add fallback values for optional fields
+      return devicesArray.map((device: any) => ({
+        id: device.id,
+        name: device.name || 'Untitled Device',
+        deviceKey: device.deviceKey || '',
+        macAddress: device.macAddress || 'N/A',
+        ipAddress: device.ipAddress || 'N/A',
+        location: device.location || 'Unknown Location',
+        status: device.status || 'Offline',
+        manufacturer: device.manufacturer || undefined,
+        model: device.model || 'Unknown Model',
+        displayResolution: device.displayResolution || '1920x1080',
+        lastHeartbeat: device.lastHeartbeat || undefined,
+        createdAt: device.createdAt || new Date().toISOString(),
+        isActive: device.isActive ?? true,
+        // Legacy fields
+        resolution: device.resolution || device.displayResolution || '1920x1080',
+        deviceGroupId: device.deviceGroupId || undefined,
+      }))
+    } catch (error) {
+      // ✅ ERROR HANDLING: Always return empty array
+      console.error('❌ Failed to fetch devices:', error)
+      return []
+    }
   }
 
   /**

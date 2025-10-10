@@ -34,7 +34,7 @@ import {
   PlaylistItemDto,
   CreatePlaylistItemRequest,
   TransitionEffect
-} from '@/types/playlist'
+} from '@/features/playlists/types'
 
 /**
  * Props for PlaylistItemBuilder component

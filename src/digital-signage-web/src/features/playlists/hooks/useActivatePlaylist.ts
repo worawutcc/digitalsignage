@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlaylistService } from '@/services/playlistService';
+import { PlaylistService } from '../services/playlistService';
 
 export function useActivatePlaylist() {
   const queryClient = useQueryClient();

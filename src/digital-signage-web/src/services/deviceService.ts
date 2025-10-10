@@ -4,7 +4,7 @@ export interface Device {
   id: number
   name: string
   location: string
-  status: 'Online' | 'Offline' | 'Maintenance'
+  status: 'Pending' | 'Registered' | 'Online' | 'Offline' | 'Error' | 'Maintenance' | 'Inactive' // API returns enum as string
   lastSeen: string
   ipAddress: string
   macAddress: string
@@ -69,6 +69,8 @@ export class DeviceService {
    * Get all devices
    * 
    * Retrieves complete list of registered devices from the API.
+   * Backend returns PagedResult<DeviceResponseDto> with structure:
+   * { items: Device[], pageNumber: number, pageSize: number, totalCount: number, totalPages: number }
    * 
    * @returns Promise resolving to array of Device objects
    * 
@@ -82,7 +84,19 @@ export class DeviceService {
    */
   static async getAll(): Promise<Device[]> {
     const response = await apiClient.get('/api/devices')
-    return Array.isArray(response.data) ? response.data : []
+    
+    // API returns PagedResult with items array
+    if (response.data && Array.isArray(response.data.items)) {
+      return response.data.items
+    }
+    
+    // Fallback: direct array (for backwards compatibility)
+    if (Array.isArray(response.data)) {
+      return response.data
+    }
+    
+    // No data found
+    return []
   }
 
   /**

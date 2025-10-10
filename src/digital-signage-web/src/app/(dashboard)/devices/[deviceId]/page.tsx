@@ -23,7 +23,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
 import { useDeviceDetail, useDeviceConfiguration, useDeactivateDevice, useRestartDevice } from '@/hooks/useDeviceDetail'
-import type { DeviceConfiguration } from '@/types/device-detail'
+import { DeviceConfigurationModal } from '@/features/devices/components/DeviceConfigurationModal'
 
 /**
  * Device status indicator component
@@ -101,13 +101,16 @@ export default function DeviceDetailsPage() {
 
   // React Query hooks for real API data
   const { data: device, isLoading: deviceLoading, error: deviceError } = useDeviceDetail(deviceId)
-  const { data: configuration, isLoading: configLoading } = useDeviceConfiguration(deviceId)
+  const { data: configuration, isLoading: configLoading, error: configError, refetch: refetchConfiguration } = useDeviceConfiguration(deviceId)
   const deactivateDeviceMutation = useDeactivateDevice()
   const restartDeviceMutation = useRestartDevice()
 
-  // Combined loading state
-  const isLoading = deviceLoading || configLoading
+  // Combined loading state (only device loading blocks page, config can be optional)
+  const isLoading = deviceLoading
   const error = deviceError as Error | null
+  
+  // Check if configuration not found (404)
+  const isConfigNotFound = configError && (configError as any).response?.status === 404
   
   // Modal states
   const [showEditModal, setShowEditModal] = useState(false)
@@ -150,10 +153,12 @@ export default function DeviceDetailsPage() {
     })
   }
 
-  const handleConfigurationSave = (newConfig: DeviceConfiguration) => {
-    // TODO: Implement with useUpdateDeviceConfiguration mutation
-    console.log('Saving configuration:', newConfig)
+  const handleConfigurationSuccess = () => {
+    // Close modal
     setShowConfigModal(false)
+    // Refetch configuration to show updated data (React Query handles this automatically via mutation)
+    // But we can also manually trigger if needed:
+    refetchConfiguration()
   }
 
   // Loading state
@@ -392,7 +397,20 @@ export default function DeviceDetailsPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {configuration ? (
+                {configLoading ? (
+                  <div className="flex items-center justify-center py-4">
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                    <span className="ml-2 text-sm text-gray-500">Loading configuration...</span>
+                  </div>
+                ) : isConfigNotFound ? (
+                  <div className="text-center py-4">
+                    <Settings className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-sm text-gray-500 mb-3">No network configuration found</p>
+                    <Button size="sm" variant="outline" onClick={() => setShowConfigModal(true)}>
+                      Configure Device
+                    </Button>
+                  </div>
+                ) : configuration ? (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-gray-600">Network Config</span>
@@ -412,7 +430,7 @@ export default function DeviceDetailsPage() {
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-gray-500">Loading configuration...</p>
+                  <p className="text-sm text-gray-500">Unable to load configuration</p>
                 )}
               </CardContent>
             </Card>
@@ -426,13 +444,31 @@ export default function DeviceDetailsPage() {
                   <Settings className="h-5 w-5" />
                   <span>Android TV Configuration</span>
                 </div>
-                <Button onClick={() => setShowConfigModal(true)}>
-                  Edit Configuration
-                </Button>
+                {configuration && !configLoading && (
+                  <Button onClick={() => setShowConfigModal(true)}>
+                    Edit Configuration
+                  </Button>
+                )}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {configuration ? (
+              {configLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                  <span className="ml-3 text-sm text-gray-500">Loading configuration...</span>
+                </div>
+              ) : isConfigNotFound ? (
+                <div className="text-center py-8">
+                  <Settings className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+                  <h4 className="text-sm font-medium text-gray-900 mb-1">No configuration available</h4>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Configure display settings, power management, and network options for this device.
+                  </p>
+                  <Button onClick={() => setShowConfigModal(true)}>
+                    Create Configuration
+                  </Button>
+                </div>
+              ) : configuration ? (
                 <div className="space-y-6">
                   <div>
                     <h4 className="text-sm font-medium text-gray-900 mb-3">Display Settings</h4>
@@ -481,7 +517,16 @@ export default function DeviceDetailsPage() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-500">No configuration available</p>
+                <div className="text-center py-8">
+                  <AlertCircle className="h-12 w-12 text-red-400 mx-auto mb-3" />
+                  <h4 className="text-sm font-medium text-gray-900 mb-1">Unable to load configuration</h4>
+                  <p className="text-sm text-gray-500 mb-4">
+                    An error occurred while loading the device configuration.
+                  </p>
+                  <Button variant="outline" onClick={() => window.location.reload()}>
+                    Retry
+                  </Button>
+                </div>
               )}
             </CardContent>
           </Card>
@@ -508,33 +553,6 @@ export default function DeviceDetailsPage() {
             </Card>
           )}
         </div>
-
-        {/* Configuration Modal */}
-        <Modal
-          isOpen={showConfigModal}
-          onClose={() => setShowConfigModal(false)}
-          title="Edit Device Configuration"
-          size="lg"
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Configuration editing interface will be implemented when the AndroidTVConfigurationForm component is available.
-            </p>
-            <div className="flex justify-end space-x-3">
-              <Button
-                variant="outline"
-                onClick={() => setShowConfigModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={() => setShowConfigModal(false)}
-              >
-                Save Configuration
-              </Button>
-            </div>
-          </div>
-        </Modal>
 
         {/* Delete Confirmation Modal */}
         <Modal
@@ -563,6 +581,18 @@ export default function DeviceDetailsPage() {
             </div>
           </div>
         </Modal>
+
+        {/* Device Configuration Modal */}
+        {showConfigModal && (
+          <DeviceConfigurationModal
+            isOpen={showConfigModal}
+            onClose={() => setShowConfigModal(false)}
+            deviceId={deviceId}
+            deviceName={device.name}
+            {...(configuration && { configuration })}
+            onSuccess={handleConfigurationSuccess}
+          />
+        )}
       </div>
     </div>
   )

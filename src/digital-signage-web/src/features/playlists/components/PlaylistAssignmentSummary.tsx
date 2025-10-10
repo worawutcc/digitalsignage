@@ -1,6 +1,6 @@
 import React from 'react'
 import { usePlaylistAssignmentSummary } from '../hooks/usePlaylistAssignmentSummary'
-import type { PlaylistAssignmentSummary } from '@/types/playlist'
+import type { PlaylistAssignmentSummary } from '../types'
 import { Loader2, AlertCircle, Monitor } from 'lucide-react'
 
 export interface PlaylistAssignmentSummaryProps {

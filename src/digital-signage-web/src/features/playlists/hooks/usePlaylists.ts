@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { PlaylistService } from '@/services/playlistService';
-import type { PlaylistDto, CreatePlaylistRequest, UpdatePlaylistRequest } from '@/types/playlist';
+import { PlaylistService } from '../services/playlistService';
+import type { PlaylistDto, CreatePlaylistRequest, UpdatePlaylistRequest } from '../types';
 
 export function usePlaylists() {
   return useQuery<PlaylistDto[]>({

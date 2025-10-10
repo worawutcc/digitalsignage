@@ -5,14 +5,15 @@
  */
 
 import { apiClient } from '@/lib/api'
-import {
+import type {
   PlaylistDto,
   CreatePlaylistRequest,
+  CreatePlaylistItemRequest,
   UpdatePlaylistRequest,
   PlaylistFilterOptions,
   PlaylistStatistics,
   PlaylistAssignmentSummary
-} from '@/types/playlist'
+} from '../types'
 
 /**
  * Playlist Service
@@ -333,7 +334,7 @@ export class PlaylistService {
         errors.push('Playlist must have at least one item')
       }
 
-      request.playlistItems.forEach((item, index) => {
+      request.playlistItems.forEach((item: CreatePlaylistItemRequest, index: number) => {
         if (!item.mediaId) {
           errors.push(`Item ${index + 1}: Media ID is required`)
         }
@@ -353,4 +354,5 @@ export class PlaylistService {
   }
 }
 
+export const playlistService = new PlaylistService()
 export default PlaylistService

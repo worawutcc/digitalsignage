@@ -42,6 +42,33 @@ export const useDeviceConfiguration = (deviceId: number) => {
 }
 
 /**
+ * Hook to create device configuration
+ */
+export const useCreateDeviceConfiguration = () => {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ 
+      deviceId, 
+      config 
+    }: { 
+      deviceId: number; 
+      config: DeviceConfigurationUpdate 
+    }) => deviceDetailService.createConfiguration(deviceId, config),
+    onSuccess: (_, { deviceId }) => {
+      // Invalidate configuration query to refetch
+      queryClient.invalidateQueries({ 
+        queryKey: deviceDetailKeys.configuration(deviceId) 
+      })
+      // Also invalidate device detail as it may have changed
+      queryClient.invalidateQueries({ 
+        queryKey: deviceDetailKeys.detail(deviceId) 
+      })
+    },
+  })
+}
+
+/**
  * Hook to update device configuration
  */
 export const useUpdateDeviceConfiguration = () => {

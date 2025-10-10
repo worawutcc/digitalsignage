@@ -237,7 +237,7 @@ export default function DevicesPage(): React.JSX.Element {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => window.location.reload()}
+                    onClick={() => refetchDevices()}
                     className="bg-red-50 border-red-300 text-red-700 hover:bg-red-100"
                   >
                     Try Again
@@ -249,7 +249,30 @@ export default function DevicesPage(): React.JSX.Element {
         )}
 
         {/* Device List */}
-        <div>Device list placeholder</div>
+        {isLoadingDevices ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Loading devices...</p>
+            </div>
+          </div>
+        ) : devices.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-lg border border-gray-200">
+            <p className="text-gray-500 mb-4">No devices found</p>
+            <Button onClick={() => router.push('/devices/register')}>
+              <Plus className="h-4 w-4 mr-2" />
+              Add Your First Device
+            </Button>
+          </div>
+        ) : (
+          <DeviceList
+            devices={devices}
+            onDeviceSelect={handleDeviceSelect}
+            onDeviceEdit={handleDeviceEdit}
+            onDeviceRestart={handleDeviceRestart}
+            onDeviceDelete={handleDeviceDelete}
+          />
+        )}
 
         {/* Add/Edit Device Modal */}
         <Modal
