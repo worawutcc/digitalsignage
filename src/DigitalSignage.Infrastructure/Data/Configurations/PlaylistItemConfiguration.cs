@@ -12,25 +12,36 @@ public class PlaylistItemConfiguration : IEntityTypeConfiguration<PlaylistItem>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
+        builder.ToTable("playlist_items");
+        
         builder.HasKey(pi => pi.Id);
+        
+        builder.Property(pi => pi.Id)
+               .HasColumnName("id");
 
         builder.Property(pi => pi.OrderIndex)
+            .HasColumnName("order_index")
             .IsRequired();
 
         builder.Property(pi => pi.DurationSeconds)
+            .HasColumnName("duration_seconds")
             .IsRequired();
 
         builder.Property(pi => pi.UseCustomDuration)
+            .HasColumnName("use_custom_duration")
             .HasDefaultValue(false);
 
         builder.Property(pi => pi.TransitionEffect)
+            .HasColumnName("transition_effect")
             .HasConversion<int>()
             .HasDefaultValue(TransitionEffect.Cut);
 
         builder.Property(pi => pi.TransitionDurationMs)
+            .HasColumnName("transition_duration_ms")
             .HasDefaultValue(0);
 
         builder.Property(pi => pi.IsConditional)
+            .HasColumnName("is_conditional")
             .HasDefaultValue(false);
 
         // Indexes

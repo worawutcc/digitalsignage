@@ -9,7 +9,8 @@
 
 import { LucideIcon } from 'lucide-react'
 
-export type DeviceStatusType = 'Online' | 'Offline' | 'Error' | 'Maintenance'
+// Matches DeviceStatus enum from backend: Pending, Registered, Online, Offline, Error, Maintenance, Inactive
+export type DeviceStatusType = 'Pending' | 'Registered' | 'Online' | 'Offline' | 'Error' | 'Maintenance' | 'Inactive'
 export type DeviceStatusSize = 'sm' | 'md' | 'lg'
 
 export interface DeviceStatusProps {

@@ -11,25 +11,35 @@ public class DeviceGroupConfiguration : IEntityTypeConfiguration<DeviceGroup>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
 
+        builder.ToTable("device_groups");
+
         builder.HasKey(dg => dg.Id);
+        
+        builder.Property(dg => dg.Id)
+               .HasColumnName("id");
 
         builder.Property(dg => dg.Name)
+            .HasColumnName("name")
             .IsRequired()
             .HasMaxLength(200);
 
         builder.Property(dg => dg.Description)
+            .HasColumnName("description")
             .HasMaxLength(1000)
             .HasDefaultValue(string.Empty);
 
         builder.Property(dg => dg.IsActive)
+            .HasColumnName("is_active")
             .HasDefaultValue(true);
 
         // Hierarchical properties
         builder.Property(dg => dg.ParentGroupId)
+            .HasColumnName("parent_group_id")
             .IsRequired(false);
 
         // Computed column for Path - will be updated by application logic
         builder.Property(dg => dg.Path)
+            .HasColumnName("path")
             .HasMaxLength(2000)
             .HasDefaultValue(string.Empty);
 

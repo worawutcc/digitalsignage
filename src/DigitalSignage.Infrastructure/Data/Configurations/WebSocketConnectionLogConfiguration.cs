@@ -11,23 +11,27 @@ public class WebSocketConnectionLogConfiguration : IEntityTypeConfiguration<WebS
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
-        builder.ToTable("WebSocketConnectionLogs");
+        builder.ToTable("web_socket_connection_logs");
         
         builder.HasKey(w => w.Id);
         
         builder.Property(w => w.ConnectionId)
+            .HasColumnName("connection_id")
             .IsRequired()
             .HasMaxLength(128);
         
         builder.Property(w => w.IpAddress)
+            .HasColumnName("ip_address")
             .IsRequired()
             .HasMaxLength(45); // IPv6 max length
         
         builder.Property(w => w.UserAgent)
+            .HasColumnName("user_agent")
             .IsRequired()
             .HasMaxLength(512);
         
         builder.Property(w => w.DisconnectionReason)
+            .HasColumnName("disconnection_reason")
             .HasMaxLength(256);
         
         // Configure DisconnectedAt as timestamp without time zone

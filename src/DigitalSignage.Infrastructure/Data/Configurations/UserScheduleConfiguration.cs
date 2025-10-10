@@ -15,10 +15,20 @@ public class UserScheduleConfiguration : IEntityTypeConfiguration<UserSchedule>
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
 
         // Table name
-        builder.ToTable("UserSchedules");
+        builder.ToTable("user_schedules");
         
         // Primary key
         builder.HasKey(us => us.Id);
+        
+        // Configure foreign key properties with snake_case column names
+        builder.Property(us => us.UserId)
+               .HasColumnName("user_id");
+               
+        builder.Property(us => us.ScheduleId)
+               .HasColumnName("schedule_id");
+               
+        builder.Property(us => us.AssignedByUserId)
+               .HasColumnName("assigned_by_user_id");
         
         // Foreign key relationships
         builder.HasOne(us => us.User)

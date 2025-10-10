@@ -19,13 +19,15 @@ public class HardwareDetectionJobConfiguration : IEntityTypeConfiguration<Hardwa
         builder.HasKey(e => e.Id);
 
         // Table name
-        builder.ToTable("HardwareDetectionJobs");
+        builder.ToTable("hardware_detection_jobs");
 
-        // Properties configuration
+        // Properties configuration with snake_case column names
         builder.Property(e => e.DeviceRegistrationRequestId)
+            .HasColumnName("device_registration_request_id")
             .IsRequired();
 
         builder.Property(e => e.Status)
+            .HasColumnName("status")
             .IsRequired()
             .HasConversion<string>()
             .HasMaxLength(20)
@@ -33,25 +35,31 @@ public class HardwareDetectionJobConfiguration : IEntityTypeConfiguration<Hardwa
 
         // Timestamp configuration for PostgreSQL
         builder.Property(e => e.StartedAt)
+            .HasColumnName("started_at")
             .IsRequired()
             .HasColumnType("timestamp without time zone")
             .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
         builder.Property(e => e.CompletedAt)
+            .HasColumnName("completed_at")
             .HasColumnType("timestamp without time zone");
 
         builder.Property(e => e.ErrorMessage)
+            .HasColumnName("error_message")
             .HasMaxLength(1000);
 
         builder.Property(e => e.RetryCount)
+            .HasColumnName("retry_count")
             .IsRequired()
             .HasDefaultValue(0);
 
         builder.Property(e => e.ProfileCreated)
+            .HasColumnName("profile_created")
             .IsRequired()
             .HasDefaultValue(false);
 
-        builder.Property(e => e.DeviceHardwareProfileId);
+        builder.Property(e => e.DeviceHardwareProfileId)
+            .HasColumnName("device_hardware_profile_id");
 
         // Relationships
         builder.HasOne(e => e.DeviceRegistrationRequest)

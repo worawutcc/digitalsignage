@@ -37,6 +37,7 @@ public static class ApplicationServiceExtensions
         // Device Registration Services
         services.AddScoped<IPinGenerationService, PinGenerationService>();
         services.AddScoped<IDeviceRegistrationService, DeviceRegistrationService>();
+        services.AddScoped<IDeviceConfigurationService, DeviceConfigurationService>();
         
     // Enhanced Device Registration (replacing placeholder with production implementation)
     services.AddScoped<IEnhancedDeviceRegistrationService, EnhancedDeviceRegistrationService>();

@@ -131,34 +131,8 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new AssignmentConfiguration());
         modelBuilder.ApplyConfiguration(new AssignmentHistoryConfiguration());
 
-        // Configure RefreshToken manually since it doesn't have a separate configuration class yet
-        modelBuilder.Entity<RefreshToken>(entity =>
-        {
-            BaseEntityConfiguration.ConfigureBaseEntity(entity);
-            
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.TokenValue).HasMaxLength(255).IsRequired();
-            
-            // Configure DateTime properties to use timestamp without time zone
-            entity.Property(e => e.ExpiresAt)
-                  .HasColumnType("timestamp without time zone")
-                  .IsRequired();
-                  
-            entity.Property(e => e.RevokedAt)
-                  .HasColumnType("timestamp without time zone");
-
-            entity.HasOne(e => e.User)
-                  .WithMany(u => u.RefreshTokens)
-                  .HasForeignKey(e => e.UserId)
-                  .OnDelete(DeleteBehavior.Cascade);
-
-            entity.HasOne(e => e.Device)
-                  .WithMany()
-                  .HasForeignKey(e => e.DeviceId)
-                  .OnDelete(DeleteBehavior.SetNull);
-
-            entity.HasIndex(e => e.TokenValue).IsUnique();
-        });
+        // Refresh Token configuration
+        modelBuilder.ApplyConfiguration(new RefreshTokenConfiguration());
     }
 
     /// <summary>

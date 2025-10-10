@@ -1,11 +1,11 @@
 // @ts-nocheck
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useForm, useFieldArray } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { Plus, X, Calendar, Clock, Target, Film, FileImage, Play } from 'lucide-react'
+import { Plus, X, Calendar, Clock, Target, Film, FileImage, Play, CheckCircle2, AlertCircle, Search, FileText } from 'lucide-react'
 import type {
   CreateScheduleRequest,
   TimeSlot,
@@ -16,6 +16,8 @@ import type {
 import { ConflictDetection } from './ConflictDetection'
 import { useValidateSchedule } from '../hooks/useSchedules'
 import { useMediaScheduleIntegration } from '@/hooks/useMediaScheduleIntegration'
+import { useDevices } from '@/features/devices/hooks/useDevices'
+import { useMedia } from '@/hooks/useMedia'
 import { Button } from '@/components/ui/Button'
 
 // Validation schema
@@ -46,8 +48,8 @@ const scheduleSchema = z.object({
   targetDevices: z
     .array(
       z.object({
-        id: z.string().optional(),
-        groupId: z.string().optional(),
+        deviceId: z.number(),  // Device ID as number
+        groupId: z.number().optional(),
         name: z.string(),
         type: z.enum(['specific', 'group']),
       })
@@ -56,8 +58,8 @@ const scheduleSchema = z.object({
   content: z
     .array(
       z.object({
-        id: z.string(),
-        mediaId: z.string(),
+        id: z.string(),  // Local form field ID
+        mediaId: z.number(),  // Media ID as number
         mediaName: z.string(),
         order: z.number(),
         duration: z.number().min(1, 'Duration must be at least 1 second'),
@@ -97,7 +99,16 @@ export function ScheduleBuilder({
   className = '',
 }: ScheduleBuilderProps) {
   const [activeTab, setActiveTab] = useState<'basic' | 'time' | 'targets' | 'content'>('basic')
+  const [deviceSearch, setDeviceSearch] = useState('')
+  const [mediaSearch, setMediaSearch] = useState('')
   const validateMutation = useValidateSchedule()
+  
+  // Fetch devices and media
+  const devicesResult = useDevices()
+  const devices = Array.isArray(devicesResult?.devices) ? devicesResult.devices : []
+  const devicesLoading = devicesResult?.isLoading || false
+  
+  const { data: mediaFiles = [], isLoading: mediaLoading } = useMedia()
 
   const {
     register,
@@ -161,39 +172,54 @@ export function ScheduleBuilder({
 
   const formData = watch()
 
-  // Real-time validation
-  useEffect(() => {
-    if (
-      formData.name &&
-      formData.startDate &&
-      formData.endDate &&
-      formData.timeSlots.length > 0 &&
-      formData.targetDevices.length > 0
-    ) {
-      const timer = setTimeout(() => {
-        validateMutation.mutate({
-          name: formData.name,
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          timeSlots: formData.timeSlots,
-          targetDevices: formData.targetDevices as TargetDevice[],
-          priority: formData.priority,
-        })
-      }, 1000)
-      return () => clearTimeout(timer)
+  // Tab validation status
+  const tabValidation = useMemo(() => {
+    return {
+      basic: !!(formData.name && formData.startDate && formData.endDate),
+      time: formData.timeSlots?.length > 0,
+      targets: formData.targetDevices?.length > 0,
+      content: formData.content?.length > 0,
     }
-    return undefined
-  }, [
-    formData.name,
-    formData.startDate,
-    formData.endDate,
-    formData.timeSlots,
-    formData.targetDevices,
-    formData.priority,
-    validateMutation,
-  ])
+  }, [formData.name, formData.startDate, formData.endDate, formData.timeSlots, formData.targetDevices, formData.content])
+
+  const isFormValid = useMemo(() => {
+    return tabValidation.basic && tabValidation.time && tabValidation.targets && tabValidation.content
+  }, [tabValidation])
+
+  // Real-time validation (disabled to avoid 405 error)
+  // useEffect(() => {
+  //   if (
+  //     formData.name &&
+  //     formData.startDate &&
+  //     formData.endDate &&
+  //     formData.timeSlots.length > 0 &&
+  //     formData.targetDevices.length > 0
+  //   ) {
+  //     const timer = setTimeout(() => {
+  //       validateMutation.mutate({
+  //         name: formData.name,
+  //         startDate: formData.startDate,
+  //         endDate: formData.endDate,
+  //         timeSlots: formData.timeSlots,
+  //         targetDevices: formData.targetDevices as TargetDevice[],
+  //         priority: formData.priority,
+  //       })
+  //     }, 1000)
+  //     return () => clearTimeout(timer)
+  //   }
+  //   return undefined
+  // }, [
+  //   formData.name,
+  //   formData.startDate,
+  //   formData.endDate,
+  //   formData.timeSlots,
+  //   formData.targetDevices,
+  //   formData.priority,
+  //   validateMutation,
+  // ])
 
   const onSubmit = (data: ScheduleFormData) => {
+    console.log('💾 Form submitted with data:', data)
     onSave(data as CreateScheduleRequest)
   }
 
@@ -203,18 +229,19 @@ export function ScheduleBuilder({
       <div className="border-b border-gray-200">
         <nav className="flex -mb-px">
           {[
-            { id: 'basic', label: 'Basic Info', icon: Calendar },
-            { id: 'time', label: 'Time Slots', icon: Clock },
-            { id: 'targets', label: 'Target Devices', icon: Target },
-            { id: 'content', label: 'Content', icon: Film },
+            { id: 'basic', label: 'Basic Info', icon: Calendar, key: 'basic' as const },
+            { id: 'time', label: 'Time Slots', icon: Clock, key: 'time' as const },
+            { id: 'targets', label: 'Target Devices', icon: Target, key: 'targets' as const },
+            { id: 'content', label: 'Content', icon: Film, key: 'content' as const },
           ].map((tab) => {
             const Icon = tab.icon
+            const isValid = tabValidation[tab.key]
             return (
               <button
                 key={tab.id}
                 type="button"
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 ${
+                className={`flex items-center gap-2 px-6 py-4 text-sm font-medium border-b-2 relative ${
                   activeTab === tab.id
                     ? 'border-blue-600 text-blue-600'
                     : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -222,6 +249,12 @@ export function ScheduleBuilder({
               >
                 <Icon className="h-4 w-4" />
                 {tab.label}
+                {/* Validation Indicator */}
+                {isValid ? (
+                  <CheckCircle2 className="h-4 w-4 text-green-500" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-yellow-500" />
+                )}
               </button>
             )
           })}
@@ -421,48 +454,100 @@ export function ScheduleBuilder({
         {/* Target Devices Tab */}
         {activeTab === 'targets' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-900">Target Devices</h3>
-              <button
-                type="button"
-                onClick={() =>
-                  appendTargetDevice({
-                    id: '',
-                    name: '',
-                    type: 'specific',
-                  })
-                }
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md"
-              >
-                <Plus className="h-4 w-4" />
-                Add Target
-              </button>
+              <div className="text-sm text-gray-600">
+                {targetDeviceFields.length} device{targetDeviceFields.length !== 1 ? 's' : ''} selected
+              </div>
             </div>
 
-            {targetDeviceFields.map((field, index) => (
-              <div key={field.id} className="flex items-center gap-3 p-3 border border-gray-200 rounded-lg">
-                <input
-                  type="text"
-                  {...register(`targetDevices.${index}.name`)}
-                  placeholder="Device or group name"
-                  className="flex-1 px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm"
-                />
-                <select
-                  {...register(`targetDevices.${index}.type`)}
-                  className="px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm"
-                >
-                  <option value="specific">Specific Device</option>
-                  <option value="group">Device Group</option>
-                </select>
-                <button
-                  type="button"
-                  onClick={() => removeTargetDevice(index)}
-                  className="text-red-600 hover:text-red-700"
-                >
-                  <X className="h-4 w-4" />
-                </button>
+            {/* Device Search & Selection */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <input
+                type="text"
+                value={deviceSearch}
+                onChange={(e) => setDeviceSearch(e.target.value)}
+                placeholder="Search devices..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+              />
+            </div>
+
+            {devicesLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Loading devices...</p>
               </div>
-            ))}
+            ) : devices.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                <Target className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">No devices available</p>
+                <p className="text-xs text-gray-500 mt-1">Add devices first to create schedules</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-96 overflow-y-auto">
+                {Array.isArray(devices) && devices
+                  .filter(device => 
+                    device.name?.toLowerCase().includes(deviceSearch.toLowerCase()) ||
+                    device.deviceId?.toLowerCase().includes(deviceSearch.toLowerCase())
+                  )
+                  .map((device) => {
+                    const deviceId = device.id  // Keep as number
+                    const isSelected = targetDeviceFields.some(
+                      (field) => field.deviceId === deviceId
+                    )
+                    
+                    return (
+                      <label
+                        key={device.id}
+                        className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-blue-50 border-blue-300'
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              // Check if already exists before adding
+                              const exists = targetDeviceFields.some(
+                                (field) => field.deviceId === deviceId
+                              )
+                              
+                              if (!exists) {
+                                appendTargetDevice({
+                                  deviceId: deviceId,
+                                  name: device.name || '',
+                                  type: 'specific',
+                                })
+                              }
+                            } else {
+                              const index = targetDeviceFields.findIndex(
+                                (field) => field.deviceId === deviceId
+                              )
+                              if (index !== -1) {
+                                removeTargetDevice(index)
+                              }
+                            }
+                          }}
+                          className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900">{device.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {device.deviceId} • {device.status || 'Unknown'}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle2 className="h-5 w-5 text-blue-600" />
+                        )}
+                      </label>
+                    )
+                  })}
+              </div>
+            )}
 
             {errors.targetDevices && (
               <p className="text-sm text-red-600">{errors.targetDevices.message}</p>
@@ -473,80 +558,173 @@ export function ScheduleBuilder({
         {/* Content Tab */}
         {activeTab === 'content' && (
           <div className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-semibold text-gray-900">Content Items</h3>
-              <button
-                type="button"
-                onClick={() =>
-                  appendContent({
-                    id: crypto.randomUUID(),
-                    mediaId: '',
-                    mediaName: '',
-                    order: contentFields.length + 1,
-                    duration: 15,
-                    transition: 'fade',
-                  })
-                }
-                className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-md"
-              >
-                <Plus className="h-4 w-4" />
-                Add Content
-              </button>
+              <div className="text-sm text-gray-600">
+                {contentFields.length} item{contentFields.length !== 1 ? 's' : ''} selected
+              </div>
             </div>
 
-            {contentFields.map((field, index) => (
-              <div key={field.id} className="p-4 border border-gray-200 rounded-lg">
-                <div className="flex items-start justify-between mb-3">
-                  <h4 className="text-sm font-medium text-gray-700">Item {index + 1}</h4>
-                  <button
-                    type="button"
-                    onClick={() => removeContent(index)}
-                    className="text-red-600 hover:text-red-700"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
+            {/* Media Search & Filter */}
+            <div className="space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  value={mediaSearch}
+                  onChange={(e) => setMediaSearch(e.target.value)}
+                  placeholder="Search media..."
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+                />
+              </div>
+            </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="col-span-2">
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Media Name
-                    </label>
-                    <input
-                      type="text"
-                      {...register(`content.${index}.mediaName`)}
-                      placeholder="Enter media name"
-                      className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600 text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Duration (seconds)
-                    </label>
-                    <input
-                      type="number"
-                      {...register(`content.${index}.duration`, { valueAsNumber: true })}
-                      min={1}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
-                      Transition
-                    </label>
-                    <select
-                      {...register(`content.${index}.transition`)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                    >
-                      <option value="none">None</option>
-                      <option value="fade">Fade</option>
-                      <option value="slide">Slide</option>
-                      <option value="zoom">Zoom</option>
-                    </select>
-                  </div>
+            {mediaLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="mt-2 text-sm text-gray-600">Loading media files...</p>
+              </div>
+            ) : mediaFiles.length === 0 ? (
+              <div className="text-center py-8 bg-gray-50 rounded-lg border border-gray-200">
+                <FileText className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                <p className="text-sm text-gray-600">No media files available</p>
+                <p className="text-xs text-gray-500 mt-1">Upload media first to create schedules</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3 max-h-96 overflow-y-auto">
+                {Array.isArray(mediaFiles) && mediaFiles
+                  .filter(media => 
+                    media.name?.toLowerCase().includes(mediaSearch.toLowerCase()) ||
+                    media.type?.toLowerCase().includes(mediaSearch.toLowerCase())
+                  )
+                  .map((media) => {
+                    const mediaId = media.id  // Keep as number
+                    const isSelected = contentFields.some(
+                      (field) => field.mediaId === mediaId
+                    )
+                    
+                    return (
+                      <label
+                        key={media.id}
+                        className={`relative flex flex-col p-3 border rounded-lg cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'bg-blue-50 border-blue-300'
+                            : 'bg-white border-gray-200 hover:bg-gray-50'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              appendContent({
+                                id: crypto.randomUUID(),
+                                mediaId: mediaId,  // Store as number
+                                mediaName: media.name || '',
+                                order: contentFields.length + 1,
+                                duration: 15,
+                                transition: 'fade',
+                              })
+                            } else {
+                              const index = contentFields.findIndex(
+                                (field) => field.mediaId === mediaId
+                              )
+                              if (index !== -1) {
+                                removeContent(index)
+                              }
+                            }
+                          }}
+                          className="absolute top-3 right-3 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
+                        
+                        {/* Media Preview */}
+                        <div className="aspect-video bg-gray-100 rounded-md mb-2 overflow-hidden">
+                          {media.type?.toLowerCase().includes('image') ? (
+                            <img
+                              src={media.url || '/placeholder-image.svg'}
+                              alt={media.name || 'Media'}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : media.type?.toLowerCase().includes('video') ? (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                              <Play className="h-8 w-8 text-gray-400" />
+                            </div>
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                              <FileText className="h-8 w-8 text-gray-400" />
+                            </div>
+                          )}
+                        </div>
+                        
+                        {/* Media Info */}
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 truncate mb-1">
+                            {media.name}
+                          </p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span className="px-2 py-0.5 bg-gray-100 rounded">
+                              {media.type}
+                            </span>
+                            {media.size && (
+                              <span>{(media.size / 1024 / 1024).toFixed(1)} MB</span>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {isSelected && (
+                          <CheckCircle2 className="absolute top-3 right-3 h-5 w-5 text-blue-600 bg-white rounded-full" />
+                        )}
+                      </label>
+                    )
+                  })}
+              </div>
+            )}
+
+            {/* Selected Content Configuration */}
+            {contentFields.length > 0 && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="text-sm font-semibold text-gray-900 mb-4">
+                  Configure Selected Items ({contentFields.length})
+                </h4>
+                <div className="space-y-3">
+                  {contentFields.map((field, index) => (
+                    <div key={field.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {field.mediaName || `Item ${index + 1}`}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="number"
+                          {...register(`content.${index}.duration`, { valueAsNumber: true })}
+                          min={1}
+                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                          placeholder="15"
+                        />
+                        <span className="text-xs text-gray-600">sec</span>
+                        <select
+                          {...register(`content.${index}.transition`)}
+                          className="px-2 py-1 border border-gray-300 rounded text-sm"
+                        >
+                          <option value="none">None</option>
+                          <option value="fade">Fade</option>
+                          <option value="slide">Slide</option>
+                          <option value="zoom">Zoom</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => removeContent(index)}
+                          className="text-red-600 hover:text-red-700"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
-            ))}
+            )}
 
             {errors.content && (
               <p className="text-sm text-red-600">{errors.content.message}</p>
@@ -566,6 +744,34 @@ export function ScheduleBuilder({
           </div>
         )}
 
+        {/* Validation Summary */}
+        {!isFormValid && (
+          <div className="mb-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-5 w-5 text-yellow-600 mt-0.5" />
+              <div className="flex-1">
+                <h4 className="text-sm font-medium text-yellow-800 mb-2">
+                  Please complete all required sections:
+                </h4>
+                <ul className="list-disc list-inside space-y-1 text-sm text-yellow-700">
+                  {!tabValidation.basic && (
+                    <li>Basic Info: Name, start date, and end date are required</li>
+                  )}
+                  {!tabValidation.time && (
+                    <li>Time Slots: Add at least one time slot</li>
+                  )}
+                  {!tabValidation.targets && (
+                    <li>Target Devices: Select at least one device or group</li>
+                  )}
+                  {!tabValidation.content && (
+                    <li>Content: Add at least one media item</li>
+                  )}
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex items-center justify-end gap-3 mt-6 pt-6 border-t border-gray-200">
           <button
@@ -577,12 +783,25 @@ export function ScheduleBuilder({
           </button>
           <button
             type="submit"
-            disabled={
-              validateMutation.data?.conflicts?.some((c) => c.severity === 'error')
+            disabled={!isFormValid}
+            title={
+              !isFormValid
+                ? 'Please complete all required sections (Basic Info, Time Slots, Target Devices, Content)'
+                : 'Save schedule'
             }
-            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
-            Save Schedule
+            {isFormValid ? (
+              <>
+                <CheckCircle2 className="h-4 w-4" />
+                Save Schedule
+              </>
+            ) : (
+              <>
+                <AlertCircle className="h-4 w-4" />
+                Complete All Sections
+              </>
+            )}
           </button>
         </div>
       </form>

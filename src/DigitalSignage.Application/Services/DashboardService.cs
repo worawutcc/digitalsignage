@@ -29,24 +29,22 @@ public class DashboardService : IDashboardService
     {
         try
         {
-            // Execute parallel queries for better performance
-            var totalDevicesTask = _context.Set<Domain.Entities.Device>().CountAsync();
-            var onlineDevicesTask = _context.Set<Domain.Entities.Device>()
+            // Execute queries sequentially to avoid DbContext concurrency issues
+            var totalDevices = await _context.Set<Domain.Entities.Device>().CountAsync();
+            var onlineDevices = await _context.Set<Domain.Entities.Device>()
                 .Where(d => (int)d.Status == (int)DeviceStatus.Online)
                 .CountAsync();
-            var totalPlaylistsTask = _context.Set<Domain.Entities.Playlist>().CountAsync();
-            var totalMediaTask = _context.Set<Domain.Entities.Media>().CountAsync();
-            var totalUsersTask = _context.Set<Domain.Entities.User>().CountAsync();
-
-            await Task.WhenAll(totalDevicesTask, onlineDevicesTask, totalPlaylistsTask, totalMediaTask, totalUsersTask);
+            var totalPlaylists = await _context.Set<Domain.Entities.Playlist>().CountAsync();
+            var totalMedia = await _context.Set<Domain.Entities.Media>().CountAsync();
+            var totalUsers = await _context.Set<Domain.Entities.User>().CountAsync();
 
             var stats = new DashboardStatsDto
             {
-                TotalDevices = await totalDevicesTask,
-                OnlineDevices = await onlineDevicesTask,
-                TotalPlaylists = await totalPlaylistsTask,
-                TotalMedia = await totalMediaTask,
-                TotalUsers = await totalUsersTask
+                TotalDevices = totalDevices,
+                OnlineDevices = onlineDevices,
+                TotalPlaylists = totalPlaylists,
+                TotalMedia = totalMedia,
+                TotalUsers = totalUsers
             };
 
             _logger.LogInformation("Dashboard stats retrieved: {TotalDevices} devices, {OnlineDevices} online", 

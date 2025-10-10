@@ -25,7 +25,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import PlaylistService from '@/services/playlistService'
+import PlaylistService from '@/features/playlists/services/playlistService'
 import {
   PlaylistDto,
   PlaylistStatus,
@@ -33,7 +33,7 @@ import {
   formatPlaylistDuration,
   getPlaylistStatusLabel,
   getPlaylistStatusColor
-} from '@/types/playlist'
+} from '@/features/playlists/types'
 
 export default function PlaylistsPage() {
   const router = useRouter()

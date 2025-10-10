@@ -23,87 +23,161 @@ export class PlaylistService {
    * Get assignment summary for a playlist
    */
   static async getAssignmentSummary(id: number): Promise<PlaylistAssignmentSummary> {
-    const response = await apiClient.get<PlaylistAssignmentSummary>(`/api/playlist/${id}/assignment-summary`)
-    return response.data
+    try {
+      const response = await apiClient.get<PlaylistAssignmentSummary>(`/api/playlist/${id}/assignment-summary`)
+      console.log(`📊 Playlist ${id} assignment summary:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ Failed to fetch assignment summary for playlist ${id}:`, error)
+      throw error
+    }
   }
+  
   /**
    * Get all playlists
    */
   static async getAll(): Promise<PlaylistDto[]> {
-    const response = await apiClient.get<PlaylistDto[]>('/api/playlist')
-    return Array.isArray(response.data) ? response.data : []
+    try {
+      const response = await apiClient.get<PlaylistDto[]>('/api/playlist')
+      console.log('🎬 Playlists API response:', response.data)
+      
+      const playlistsArray = Array.isArray(response.data) ? response.data : []
+      return playlistsArray
+    } catch (error) {
+      console.error('❌ Failed to fetch playlists:', error)
+      return []
+    }
   }
 
   /**
    * Get playlists by user ID
    */
   static async getByUserId(userId: number): Promise<PlaylistDto[]> {
-    const response = await apiClient.get<PlaylistDto[]>(`/api/playlist/user/${userId}`)
-    return Array.isArray(response.data) ? response.data : []
+    try {
+      const response = await apiClient.get<PlaylistDto[]>(`/api/playlist/user/${userId}`)
+      console.log(`🎬 User ${userId} playlists:`, response.data)
+      
+      const playlistsArray = Array.isArray(response.data) ? response.data : []
+      return playlistsArray
+    } catch (error) {
+      console.error(`❌ Failed to fetch playlists for user ${userId}:`, error)
+      return []
+    }
   }
 
   /**
    * Get a specific playlist by ID
    */
   static async getById(id: number): Promise<PlaylistDto> {
-    const response = await apiClient.get<PlaylistDto>(`/api/playlist/${id}`)
-    return response.data
+    try {
+      const response = await apiClient.get<PlaylistDto>(`/api/playlist/${id}`)
+      console.log(`🎬 Playlist ${id} detail:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ Failed to fetch playlist ${id}:`, error)
+      throw error
+    }
   }
 
   /**
    * Create a new playlist
    */
   static async create(request: CreatePlaylistRequest, userId?: number): Promise<PlaylistDto> {
-    const params = userId ? { userId } : {}
-    const response = await apiClient.post<PlaylistDto>(
-      '/api/playlist',
-      request,
-      { params }
-    )
-    return response.data
+    try {
+      console.log('🎬 Creating playlist:', request)
+      const params = userId ? { userId } : {}
+      const response = await apiClient.post<PlaylistDto>(
+        '/api/playlist',
+        request,
+        { params }
+      )
+      
+      console.log('✅ Playlist created:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Failed to create playlist:', error)
+      throw error
+    }
   }
 
   /**
    * Update an existing playlist
    */
   static async update(id: number, request: UpdatePlaylistRequest): Promise<PlaylistDto> {
-    const response = await apiClient.put<PlaylistDto>(
-      `/api/playlist/${id}`,
-      request
-    )
-    return response.data
+    try {
+      console.log(`🎬 Updating playlist ${id}:`, request)
+      const response = await apiClient.put<PlaylistDto>(
+        `/api/playlist/${id}`,
+        request
+      )
+      
+      console.log('✅ Playlist updated:', response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ Failed to update playlist ${id}:`, error)
+      throw error
+    }
   }
 
   /**
    * Delete a playlist
    */
   static async delete(id: number): Promise<void> {
-    await apiClient.delete(`/api/playlist/${id}`)
+    try {
+      console.log(`🗑️ Deleting playlist ${id}`)
+      await apiClient.delete(`/api/playlist/${id}`)
+      console.log(`✅ Playlist ${id} deleted`)
+    } catch (error) {
+      console.error(`❌ Failed to delete playlist ${id}:`, error)
+      throw error
+    }
   }
 
   /**
    * Activate a playlist
    */
   static async activate(id: number): Promise<void> {
-    await apiClient.post(`/api/playlist/${id}/activate`)
+    try {
+      console.log(`▶️ Activating playlist ${id}`)
+      await apiClient.post(`/api/playlist/${id}/activate`)
+      console.log(`✅ Playlist ${id} activated`)
+    } catch (error) {
+      console.error(`❌ Failed to activate playlist ${id}:`, error)
+      throw error
+    }
   }
 
   /**
    * Deactivate a playlist
    */
   static async deactivate(id: number): Promise<void> {
-    await apiClient.post(`/api/playlist/${id}/deactivate`)
+    try {
+      console.log(`⏸️ Deactivating playlist ${id}`)
+      await apiClient.post(`/api/playlist/${id}/deactivate`)
+      console.log(`✅ Playlist ${id} deactivated`)
+    } catch (error) {
+      console.error(`❌ Failed to deactivate playlist ${id}:`, error)
+      throw error
+    }
   }
 
   /**
    * Duplicate a playlist
    */
   static async duplicate(id: number, newName?: string): Promise<PlaylistDto> {
-    const response = await apiClient.post<PlaylistDto>(
-      `/api/playlist/${id}/duplicate`,
-      { newName }
-    )
-    return response.data
+    try {
+      console.log(`📋 Duplicating playlist ${id}`)
+      const response = await apiClient.post<PlaylistDto>(
+        `/api/playlist/${id}/duplicate`,
+        { newName }
+      )
+      
+      console.log('✅ Playlist duplicated:', response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ Failed to duplicate playlist ${id}:`, error)
+      throw error
+    }
   }
 
   /**
@@ -177,8 +251,14 @@ export class PlaylistService {
    * Get playlist statistics
    */
   static async getStatistics(): Promise<PlaylistStatistics> {
-    const response = await apiClient.get<PlaylistStatistics>('/api/playlist/statistics')
-    return response.data
+    try {
+      const response = await apiClient.get<PlaylistStatistics>('/api/playlist/statistics')
+      console.log('📊 Playlist statistics:', response.data)
+      return response.data
+    } catch (error) {
+      console.error('❌ Failed to fetch playlist statistics:', error)
+      throw error
+    }
   }
 
   /**

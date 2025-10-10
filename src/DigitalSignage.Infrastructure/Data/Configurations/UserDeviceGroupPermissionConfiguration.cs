@@ -14,73 +14,67 @@ public class UserDeviceGroupPermissionConfiguration : IEntityTypeConfiguration<U
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
+        builder.ToTable("user_device_group_permissions");
+        
         builder.HasKey(x => x.Id);
+        
+        builder.Property(x => x.Id)
+               .HasColumnName("id");
+
+        builder.Property(x => x.UserId)
+               .HasColumnName("user_id")
+               .IsRequired();
+
+        builder.Property(x => x.DeviceGroupId)
+               .HasColumnName("device_group_id")
+               .IsRequired();
 
         // Composite unique constraint for (UserId, DeviceGroupId)
         builder.HasIndex(x => new { x.UserId, x.DeviceGroupId })
                .IsUnique()
-               .HasDatabaseName("UQ_UserDeviceGroupPermissions_UserId_DeviceGroupId");
+               .HasDatabaseName("uq_user_device_group_permissions_user_id_device_group_id");
 
         // Performance indexes
         builder.HasIndex(x => x.UserId)
-               .HasDatabaseName("IX_UserDeviceGroupPermissions_UserId");
+               .HasDatabaseName("ix_user_device_group_permissions_user_id");
 
         builder.HasIndex(x => x.DeviceGroupId)
-               .HasDatabaseName("IX_UserDeviceGroupPermissions_DeviceGroupId");
+               .HasDatabaseName("ix_user_device_group_permissions_device_group_id");
 
         // Property configurations
         builder.Property(x => x.Permission)
+               .HasColumnName("permission")
                .HasConversion<int>()
                .IsRequired()
                .HasComment("UserPermissionLevel enum: 0=NoAccess, 1=ViewOnly, 2=ManageContent, 3=FullControl");
 
         builder.Property(x => x.IsExplicit)
+               .HasColumnName("is_explicit")
                .IsRequired()
                .HasDefaultValue(true)
                .HasComment("True if explicitly assigned, False if inherited from parent group");
-
-        builder.Property(x => x.CreatedAt)
-               .IsRequired()
-               .HasColumnType("timestamp without time zone")
-               .HasDefaultValueSql("NOW()")
-               .HasComment("UTC timestamp when permission was created");
-
-        builder.Property(x => x.UserId)
-               .IsRequired();
-
-        builder.Property(x => x.DeviceGroupId)
-               .IsRequired();
-
-        builder.Property(x => x.CreatedBy)
-               .IsRequired();
 
         // Relationships
         builder.HasOne(x => x.User)
                .WithMany(x => x.DeviceGroupPermissions)
                .HasForeignKey(x => x.UserId)
                .OnDelete(DeleteBehavior.Cascade)
-               .HasConstraintName("FK_UserDeviceGroupPermissions_Users_UserId");
+               .HasConstraintName("fk_user_device_group_permissions_users_user_id");
 
         builder.HasOne(x => x.DeviceGroup)
                .WithMany(x => x.UserPermissions)
                .HasForeignKey(x => x.DeviceGroupId)
                .OnDelete(DeleteBehavior.Cascade)
-               .HasConstraintName("FK_UserDeviceGroupPermissions_DeviceGroups_DeviceGroupId");
+               .HasConstraintName("fk_user_device_group_permissions_device_groups_device_group_id");
 
         builder.HasOne(x => x.CreatedByUser)
                .WithMany()
                .HasForeignKey(x => x.CreatedBy)
                .OnDelete(DeleteBehavior.Restrict)
-               .HasConstraintName("FK_UserDeviceGroupPermissions_Users_CreatedBy");
+               .HasConstraintName("fk_user_device_group_permissions_users_created_by");
 
-        // Table configuration
-        builder.ToTable("UserDeviceGroupPermissions", t =>
-        {
-            t.HasComment("Links users to device groups with specific permission levels, supporting hierarchical inheritance");
-            
-            // Check constraint for valid permission values
-            t.HasCheckConstraint("CK_UserDeviceGroupPermissions_Permission", 
-                "\"Permission\" >= 0 AND \"Permission\" <= 3");
-        });
+        // Check constraint for valid permission values
+        builder.ToTable(t => t.HasCheckConstraint("ck_user_device_group_permissions_permission", 
+            "permission >= 0 AND permission <= 3"));
     }
 }

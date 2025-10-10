@@ -14,66 +14,69 @@ public class PermissionAuditLogConfiguration : IEntityTypeConfiguration<Permissi
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
+        builder.ToTable("permission_audit_logs");
+        
         builder.HasKey(x => x.Id);
+        
+        builder.Property(x => x.Id)
+               .HasColumnName("id");
+
+        builder.Property(x => x.UserId)
+               .HasColumnName("user_id")
+               .IsRequired();
+
+        builder.Property(x => x.DeviceGroupId)
+               .HasColumnName("device_group_id")
+               .IsRequired();
 
         // Audit query indexes
         builder.HasIndex(x => x.UserId)
-               .HasDatabaseName("IX_PermissionAuditLogs_UserId");
+               .HasDatabaseName("ix_permission_audit_logs_user_id");
 
         builder.HasIndex(x => x.DeviceGroupId)
-               .HasDatabaseName("IX_PermissionAuditLogs_DeviceGroupId");
+               .HasDatabaseName("ix_permission_audit_logs_device_group_id");
 
         builder.HasIndex(x => x.CreatedAt)
                .IsDescending()
-               .HasDatabaseName("IX_PermissionAuditLogs_CreatedAt");
+               .HasDatabaseName("ix_permission_audit_logs_created_at");
 
         builder.HasIndex(x => x.CreatedBy)
-               .HasDatabaseName("IX_PermissionAuditLogs_CreatedBy");
+               .HasDatabaseName("ix_permission_audit_logs_created_by");
 
         builder.HasIndex(x => x.Action)
-               .HasDatabaseName("IX_PermissionAuditLogs_Action");
+               .HasDatabaseName("ix_permission_audit_logs_action");
 
         // Composite index for common queries
         builder.HasIndex(x => new { x.UserId, x.CreatedAt })
                .IsDescending(false, true)
-               .HasDatabaseName("IX_PermissionAuditLogs_UserId_CreatedAt");
+               .HasDatabaseName("ix_permission_audit_logs_user_id_created_at");
 
         // Property configurations
         builder.Property(x => x.PreviousPermission)
+               .HasColumnName("previous_permission")
                .HasConversion<int?>()
                .HasComment("Permission level before change (null for new permissions)");
 
         builder.Property(x => x.NewPermission)
+               .HasColumnName("new_permission")
                .HasConversion<int?>()
                .HasComment("Permission level after change (null for deleted permissions)");
 
         builder.Property(x => x.Action)
+               .HasColumnName("action")
                .IsRequired()
                .HasMaxLength(50)
                .HasComment("Action type: GRANTED, MODIFIED, REVOKED");
 
         builder.Property(x => x.Reason)
+               .HasColumnName("reason")
                .HasMaxLength(500)
                .HasComment("Admin-provided reason for the permission change");
 
         builder.Property(x => x.Context)
+               .HasColumnName("context")
                .HasMaxLength(1000)
                .HasComment("Additional context (IP address, user agent, etc.)");
-
-        builder.Property(x => x.CreatedAt)
-               .IsRequired()
-               .HasColumnType("timestamp without time zone")
-               .HasDefaultValueSql("NOW()")
-               .HasComment("UTC timestamp when change occurred");
-
-        builder.Property(x => x.UserId)
-               .IsRequired();
-
-        builder.Property(x => x.DeviceGroupId)
-               .IsRequired();
-
-        builder.Property(x => x.CreatedBy)
-               .IsRequired();
 
         // Immutable entity configuration - prevent updates
         builder.Property(x => x.Id)
@@ -99,29 +102,6 @@ public class PermissionAuditLogConfiguration : IEntityTypeConfiguration<Permissi
                .OnDelete(DeleteBehavior.Restrict)
                .HasConstraintName("FK_PermissionAuditLogs_Users_CreatedBy");
 
-        // Table configuration with constraints
-        builder.ToTable("PermissionAuditLogs", t =>
-        {
-            t.HasComment("Immutable audit trail of all permission changes for compliance and security tracking");
-            
-            // Check constraint to ensure at least one permission value exists
-            t.HasCheckConstraint("CK_PermissionAuditLogs_HasPermissionValue", 
-                "\"PreviousPermission\" IS NOT NULL OR \"NewPermission\" IS NOT NULL");
-            
-            // Check constraint for valid permission values
-            t.HasCheckConstraint("CK_PermissionAuditLogs_ValidPermissionValues", 
-                "(\"PreviousPermission\" IS NULL OR (\"PreviousPermission\" >= 0 AND \"PreviousPermission\" <= 3)) AND " +
-                "(\"NewPermission\" IS NULL OR (\"NewPermission\" >= 0 AND \"NewPermission\" <= 3))");
-            
-            // Check constraint for valid actions
-            t.HasCheckConstraint("CK_PermissionAuditLogs_ValidAction", 
-                "\"Action\" IN ('GRANTED', 'MODIFIED', 'REVOKED')");
-            
-            // Check constraint for action consistency
-            t.HasCheckConstraint("CK_PermissionAuditLogs_ActionConsistency", 
-                "(\"Action\" = 'GRANTED' AND \"PreviousPermission\" IS NULL AND \"NewPermission\" IS NOT NULL) OR " +
-                "(\"Action\" = 'MODIFIED' AND \"PreviousPermission\" IS NOT NULL AND \"NewPermission\" IS NOT NULL) OR " +
-                "(\"Action\" = 'REVOKED' AND \"PreviousPermission\" IS NOT NULL AND \"NewPermission\" IS NULL)");
-        });
+        // Table configuration with constraints - already defined above
     }
 }

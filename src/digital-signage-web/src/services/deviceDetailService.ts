@@ -28,6 +28,20 @@ export const deviceDetailService = {
   },
 
   /**
+   * Create device configuration (uses PUT endpoint)
+   */
+  createConfiguration: async (
+    deviceId: number, 
+    config: DeviceConfigurationUpdate
+  ): Promise<DeviceConfiguration> => {
+    const response = await apiClient.put<DeviceConfiguration>(
+      `/api/devices/${deviceId}/configuration`,
+      config
+    )
+    return response.data
+  },
+
+  /**
    * Update device configuration
    */
   updateConfiguration: async (

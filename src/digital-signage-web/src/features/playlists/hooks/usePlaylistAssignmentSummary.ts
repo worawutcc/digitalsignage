@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
-import { PlaylistService } from '@/services/playlistService';
-import type { PlaylistAssignmentSummary } from '@/types/playlist';
+import { PlaylistService } from '../services/playlistService';
+import type { PlaylistAssignmentSummary } from '../types';
 
 /**
  * Hook for fetching playlist assignment summary

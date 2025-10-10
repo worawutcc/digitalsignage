@@ -5,6 +5,20 @@ import { Wifi, WifiOff, AlertTriangle, Wrench } from 'lucide-react'
 import { DeviceStatusProps, DeviceStatusType, StatusConfig, SizeConfig } from './DeviceStatus.types'
 
 const statusConfig = {
+  Pending: {
+    label: 'Pending',
+    color: 'bg-gray-400',
+    textColor: 'text-gray-600',
+    bgColor: 'bg-gray-50',
+    icon: WifiOff,
+  },
+  Registered: {
+    label: 'Registered',
+    color: 'bg-blue-400',
+    textColor: 'text-blue-600',
+    bgColor: 'bg-blue-50',
+    icon: Wifi,
+  },
   Online: {
     label: 'Online',
     color: 'bg-green-500',
@@ -32,6 +46,13 @@ const statusConfig = {
     textColor: 'text-blue-700',
     bgColor: 'bg-blue-50',
     icon: Wrench,
+  },
+  Inactive: {
+    label: 'Inactive',
+    color: 'bg-gray-500',
+    textColor: 'text-gray-700',
+    bgColor: 'bg-gray-100',
+    icon: WifiOff,
   },
 }
 
@@ -73,8 +94,20 @@ export function DeviceStatus({
   size = 'md',
   className
 }: DeviceStatusProps) {
-  const config = statusConfig[status]
+  const config = statusConfig[status as DeviceStatusType]
   const sizes = sizeConfig[size]
+  
+  // Guard: if config is undefined (unknown status), use fallback UI
+  if (!config) {
+    console.warn(`Unknown device status: ${status}`)
+    return (
+      <div className={cn('inline-flex items-center space-x-2', className)} title="Unknown Status">
+        <div className={cn('rounded-full bg-gray-500', sizes.dot)} />
+        {showText && <span className="text-xs text-gray-600">Unknown</span>}
+      </div>
+    )
+  }
+  
   const Icon = config.icon
 
   if (showText && showIcon) {

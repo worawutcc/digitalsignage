@@ -23,15 +23,15 @@ export interface RecurrenceConfig {
 }
 
 export interface TargetDevice {
-  id?: string
-  groupId?: string
+  deviceId: number  // Device ID from API as number
+  groupId?: number
   name: string
   type: 'specific' | 'group'
 }
 
 export interface ScheduleContent {
-  id: string
-  mediaId: string
+  id: string  // Local form field ID (UUID)
+  mediaId: number  // Media ID from API as number
   mediaName: string
   order: number
   duration: number // seconds

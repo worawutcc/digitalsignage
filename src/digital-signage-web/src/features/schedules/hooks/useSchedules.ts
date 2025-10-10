@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { ScheduleService } from '@/services'
+import { scheduleService } from '../services/scheduleService'
 import type {
   Schedule,
   ScheduleFilters,
@@ -10,51 +10,6 @@ import type {
   CalendarData,
   ScheduleStats,
 } from '../types'
-
-// Simple wrapper to handle methods not available in ScheduleService
-const scheduleServiceWrapper = {
-  async getAll(filters?: ScheduleFilters) {
-    return ScheduleService.getAll()
-  },
-  async getById(id: string) {
-    return ScheduleService.getById(parseInt(id))
-  },
-  async create(schedule: CreateScheduleRequest) {
-    // Transform features CreateScheduleRequest to services format
-    return ScheduleService.create({
-      name: schedule.name,
-      description: schedule.description || '',
-      startDate: schedule.startDate,
-      endDate: schedule.endDate,
-      startTime: '00:00',
-      endTime: '23:59',
-      mediaFileIds: [],
-      deviceIds: []
-    })
-  },
-  async update(id: string, updates: any) {
-    return ScheduleService.update(parseInt(id), updates)
-  },
-  async delete(id: string) {
-    return ScheduleService.delete(parseInt(id))
-  },
-  async bulkDelete(ids: string[]) {
-    return ScheduleService.bulkDelete(ids.map(id => parseInt(id)))
-  },
-  async toggleActive(id: string, isActive: boolean) {
-    return ScheduleService.toggleActive(parseInt(id), isActive)
-  },
-  // Stub methods for features not yet implemented
-  async validate() { return { isValid: true, errors: [] } },
-  async activate(id: string) { return this.toggleActive(id, true) },
-  async deactivate(id: string) { return this.toggleActive(id, false) },
-  async duplicate() { throw new Error('Duplicate not implemented') },
-  async bulkActivate() { throw new Error('Bulk activate not implemented') },
-  async bulkDeactivate() { throw new Error('Bulk deactivate not implemented') },
-  async setDefaultSchedule() { throw new Error('Set default not implemented') },
-  async getScheduleUsers() { return [] },
-  async getSchedulesForSelector() { return [] }
-}
 
 /**
  * Query Keys for Schedule Management
@@ -77,7 +32,7 @@ export const scheduleKeys = {
 export function useSchedules(filters?: ScheduleFilters) {
   return useQuery({
     queryKey: scheduleKeys.list(filters),
-    queryFn: () => ScheduleService.getAll(),
+    queryFn: () => scheduleService.getAll(filters),
     staleTime: 30000, // 30 seconds
     refetchInterval: 30000, // Refresh every 30 seconds for real-time updates
   })
@@ -89,37 +44,52 @@ export function useSchedules(filters?: ScheduleFilters) {
 export function useSchedule(id: string) {
   return useQuery({
     queryKey: scheduleKeys.detail(id),
-    queryFn: () => ScheduleService.getById(parseInt(id)),
+    queryFn: () => scheduleService.getById(id),
     enabled: !!id,
   })
 }
 
 /**
  * Hook: Get calendar data for schedule visualization
+ * NOTE: Backend /calendar endpoint not yet implemented, computing from schedule list
  */
 export function useScheduleCalendar(
   start: string,
   end: string,
   devices?: string[],
-  view: string = 'month'
+  view: 'month' | 'week' | 'day' = 'month'
 ) {
   return useQuery({
     queryKey: scheduleKeys.calendar(start, end, devices, view),
     queryFn: async () => {
-      // Get schedules by date range and transform to calendar format
-      const schedules = await ScheduleService.getByDateRange(start, end)
+      console.log('📅 Computing calendar data from schedules (no /calendar endpoint)')
+      
+      // Get all schedules and filter by date range
+      const schedules = await scheduleService.getAll()
+      
+      // Transform to calendar format
       return {
-        events: schedules.map(schedule => ({
-          id: schedule.id.toString(),
-          title: schedule.name,
-          start: schedule.startDate,
-          end: schedule.endDate,
-          allDay: false,
-          scheduleId: schedule.id.toString(),
-          deviceNames: schedule.devices?.map(d => d.name) || [],
-          status: schedule.isActive ? 'active' : 'inactive'
-        })),
-        conflicts: [] // TODO: Implement conflict detection
+        events: schedules
+          .filter(schedule => {
+            const scheduleStart = new Date(schedule.startDate)
+            const scheduleEnd = new Date(schedule.endDate)
+            const rangeStart = new Date(start)
+            const rangeEnd = new Date(end)
+            
+            // Check if schedule overlaps with date range
+            return scheduleStart <= rangeEnd && scheduleEnd >= rangeStart
+          })
+          .map(schedule => ({
+            id: schedule.id?.toString() || '',
+            title: schedule.name || 'Untitled',
+            start: schedule.startDate,
+            end: schedule.endDate,
+            color: schedule.isActive ? '#3b82f6' : '#6b7280',
+            priority: schedule.priority || 0,
+            devices: [],
+            conflicts: []
+          })),
+        conflicts: []
       }
     },
     staleTime: 30000,
@@ -128,17 +98,39 @@ export function useScheduleCalendar(
 
 /**
  * Hook: Get schedule statistics
+ * NOTE: Backend /stats endpoint not yet implemented, computing from schedule list
  */
 export function useScheduleStats() {
   return useQuery({
     queryKey: scheduleKeys.stats(),
     queryFn: async () => {
-      const schedules = await ScheduleService.getAll()
-      const activeSchedules = schedules.filter(s => s.isActive)
+      console.log('📊 Computing stats from schedules (no /stats endpoint)')
+      
+      const schedules = await scheduleService.getAll()
+      const now = new Date()
+      
+      const active = schedules.filter(s => s.isActive).length
+      const inactive = schedules.filter(s => !s.isActive).length
+      const draft = schedules.filter(s => s.status === 'draft').length
+      
+      // Check for expired schedules
+      const expired = schedules.filter(s => {
+        const endDate = new Date(s.endDate)
+        return endDate < now
+      }).length
+      
       return {
+        totalSchedules: schedules.length,
+        activeSchedules: active,
+        draftSchedules: draft,
+        expiredSchedules: expired,
+        conflictCount: 0, // TODO: Implement conflict detection
+        devicesCovered: 0, // TODO: Count unique devices
+        
+        // Legacy format for compatibility
         total: schedules.length,
-        active: activeSchedules.length,
-        inactive: schedules.length - activeSchedules.length,
+        active,
+        inactive,
         scheduledToday: 0,
         upcomingThisWeek: 0
       }
@@ -153,7 +145,7 @@ export function useScheduleStats() {
 export function useDeviceSchedules(deviceId: string) {
   return useQuery({
     queryKey: scheduleKeys.forDevice(deviceId),
-    queryFn: () => ScheduleService.getByDevice(parseInt(deviceId)),
+    queryFn: () => scheduleService.getForDevice(deviceId),
     enabled: !!deviceId,
   })
 }
@@ -165,10 +157,17 @@ export function useCreateSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (schedule: CreateScheduleRequest) => scheduleServiceWrapper.create(schedule),
-    onSuccess: () => {
+    mutationFn: (schedule: CreateScheduleRequest) => {
+      console.log('🎯 useCreateSchedule mutationFn called with:', schedule)
+      return scheduleService.create(schedule)
+    },
+    onSuccess: (data) => {
+      console.log('✅ Schedule created successfully:', data)
       queryClient.invalidateQueries({ queryKey: scheduleKeys.all })
     },
+    onError: (error) => {
+      console.error('❌ Failed to create schedule in mutation:', error)
+    }
   })
 }
 
@@ -180,7 +179,7 @@ export function useUpdateSchedule() {
 
   return useMutation({
     mutationFn: ({ id, updates }: { id: string; updates: UpdateScheduleRequest }) =>
-      scheduleServiceWrapper.update(id, updates),
+      scheduleService.update(id, updates),
     onSuccess: (data, variables) => {
       // Update the specific schedule in cache
       queryClient.setQueryData(scheduleKeys.detail(variables.id), data)
@@ -198,7 +197,7 @@ export function useDeleteSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => scheduleServiceWrapper.delete(id),
+    mutationFn: (id: string) => scheduleService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
       queryClient.invalidateQueries({ queryKey: scheduleKeys.stats() })
@@ -207,12 +206,12 @@ export function useDeleteSchedule() {
 }
 
 /**
- * Hook: Validate schedule
+ * Hook: Validate schedule for conflicts
  */
 export function useValidateSchedule() {
   return useMutation({
     mutationFn: (validation: ScheduleValidationRequest) =>
-      scheduleServiceWrapper.validate(),
+      scheduleService.validate(validation),
   })
 }
 
@@ -223,7 +222,7 @@ export function useActivateSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => scheduleServiceWrapper.activate(id),
+    mutationFn: (id: string) => scheduleService.activate(id),
     onSuccess: (data, id) => {
       queryClient.setQueryData(scheduleKeys.detail(id), data)
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
@@ -239,7 +238,7 @@ export function useDeactivateSchedule() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => scheduleServiceWrapper.deactivate(id),
+    mutationFn: (id: string) => scheduleService.deactivate(id),
     onSuccess: (data, id) => {
       queryClient.setQueryData(scheduleKeys.detail(id), data)
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
@@ -256,7 +255,7 @@ export function useDuplicateSchedule() {
 
   return useMutation({
     mutationFn: ({ id, newName }: { id: string; newName?: string }) =>
-      scheduleServiceWrapper.duplicate(),
+      scheduleService.duplicate(id, newName),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
       queryClient.invalidateQueries({ queryKey: scheduleKeys.stats() })
@@ -271,7 +270,7 @@ export function useBulkDeleteSchedules() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (scheduleIds: string[]) => scheduleServiceWrapper.bulkDelete(scheduleIds),
+    mutationFn: (scheduleIds: string[]) => scheduleService.bulkDelete(scheduleIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
       queryClient.invalidateQueries({ queryKey: scheduleKeys.stats() })
@@ -286,7 +285,7 @@ export function useBulkActivateSchedules() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (scheduleIds: string[]) => scheduleServiceWrapper.bulkActivate(),
+    mutationFn: (scheduleIds: string[]) => scheduleService.bulkActivate(scheduleIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
       queryClient.invalidateQueries({ queryKey: scheduleKeys.stats() })
@@ -301,7 +300,7 @@ export function useBulkDeactivateSchedules() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (scheduleIds: string[]) => scheduleServiceWrapper.bulkDeactivate(),
+    mutationFn: (scheduleIds: string[]) => scheduleService.bulkDeactivate(scheduleIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: scheduleKeys.lists() })
       queryClient.invalidateQueries({ queryKey: scheduleKeys.stats() })

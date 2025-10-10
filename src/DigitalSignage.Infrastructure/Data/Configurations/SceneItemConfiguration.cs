@@ -11,41 +11,57 @@ public class SceneItemConfiguration : IEntityTypeConfiguration<SceneItem>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
+        builder.ToTable("scene_items");
+        
         builder.HasKey(si => si.Id);
+        
+        builder.Property(si => si.Id)
+               .HasColumnName("id");
 
         builder.Property(si => si.X)
+            .HasColumnName("x")
             .IsRequired();
 
         builder.Property(si => si.Y)
+            .HasColumnName("y")
             .IsRequired();
 
         builder.Property(si => si.Width)
+            .HasColumnName("width")
             .IsRequired();
 
         builder.Property(si => si.Height)
+            .HasColumnName("height")
             .IsRequired();
 
         builder.Property(si => si.ZIndex)
+            .HasColumnName("z_index")
             .HasDefaultValue(0);
 
         builder.Property(si => si.Opacity)
+            .HasColumnName("opacity")
             .HasDefaultValue(1.0f)
             .HasPrecision(3, 2); // 0.00 to 1.00
 
         builder.Property(si => si.Rotation)
+            .HasColumnName("rotation")
             .HasDefaultValue(0.0f)
             .HasPrecision(5, 2); // -360.00 to 360.00
 
         builder.Property(si => si.AnimationIn)
+            .HasColumnName("animation_in")
             .HasMaxLength(50);
 
         builder.Property(si => si.AnimationOut)
+            .HasColumnName("animation_out")
             .HasMaxLength(50);
 
         builder.Property(si => si.AnimationDuration)
+            .HasColumnName("animation_duration")
             .HasDefaultValue(0);
 
         builder.Property(si => si.UseCustomDuration)
+            .HasColumnName("use_custom_duration")
             .HasDefaultValue(false);
 
         // Indexes

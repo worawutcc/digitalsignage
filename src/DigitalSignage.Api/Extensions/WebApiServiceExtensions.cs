@@ -76,7 +76,7 @@ public static class WebApiServiceExtensions
         {
             options.AddDefaultPolicy(policy =>
             {
-                policy.WithOrigins("http://localhost:3001", "https://localhost:3001")
+                policy.WithOrigins("http://localhost:3000", "https://localhost:3000")
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials(); // Required for SignalR
@@ -87,11 +87,20 @@ public static class WebApiServiceExtensions
     }
 
     /// <summary>
-    /// Register MVC controllers
+    /// Register MVC controllers with JSON serialization options
     /// </summary>
     public static IServiceCollection AddMvcServices(this IServiceCollection services)
     {
-        services.AddControllers();
+        services.AddControllers()
+            .AddJsonOptions(options =>
+            {
+                // Serialize enums as strings instead of integers (Best Practice for API)
+                // This makes the API more readable, maintainable, and resilient to enum value changes
+                options.JsonSerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter());
+                
+                // Use camelCase for JSON property names
+                options.JsonSerializerOptions.PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase;
+            });
 
         return services;
     }

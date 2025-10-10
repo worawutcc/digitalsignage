@@ -18,70 +18,86 @@ public class DeviceHardwareProfileConfiguration : IEntityTypeConfiguration<Devic
         builder.HasKey(e => e.Id);
 
         // Table name
-        builder.ToTable("DeviceHardwareProfiles");
+        builder.ToTable("device_hardware_profiles");
 
-        // Properties configuration
+        // Properties configuration with snake_case column names
         builder.Property(e => e.DeviceId)
+            .HasColumnName("device_id")
             .IsRequired();
 
         builder.Property(e => e.DisplayWidth)
+            .HasColumnName("display_width")
             .IsRequired();
 
         builder.Property(e => e.DisplayHeight)
+            .HasColumnName("display_height")
             .IsRequired();
 
         builder.Property(e => e.RefreshRate)
+            .HasColumnName("refresh_rate")
             .IsRequired()
             .HasPrecision(5, 2); // Up to 999.99 Hz
 
         builder.Property(e => e.PhysicalWidth)
+            .HasColumnName("physical_width")
             .IsRequired()
             .HasPrecision(6, 2); // Up to 9999.99 inches
 
         builder.Property(e => e.PhysicalHeight)
+            .HasColumnName("physical_height")
             .IsRequired()
             .HasPrecision(6, 2); // Up to 9999.99 inches
 
         builder.Property(e => e.DensityDpi)
+            .HasColumnName("density_dpi")
             .IsRequired();
 
         builder.Property(e => e.Manufacturer)
+            .HasColumnName("manufacturer")
             .IsRequired()
             .HasMaxLength(100);
 
         builder.Property(e => e.Model)
+            .HasColumnName("model")
             .IsRequired()
             .HasMaxLength(200);
 
         builder.Property(e => e.AndroidVersion)
+            .HasColumnName("android_version")
             .IsRequired()
             .HasMaxLength(50);
 
         builder.Property(e => e.ApiLevel)
+            .HasColumnName("api_level")
             .IsRequired();
 
         builder.Property(e => e.BuildFingerprint)
+            .HasColumnName("build_fingerprint")
             .IsRequired()
             .HasMaxLength(500);
 
         // JSON columns for PostgreSQL
         builder.Property(e => e.SupportedFormats)
+            .HasColumnName("supported_formats")
             .IsRequired()
             .HasColumnType("jsonb")
             .HasDefaultValue("{}");
 
         builder.Property(e => e.CodecCapabilities)
+            .HasColumnName("codec_capabilities")
             .IsRequired()
             .HasColumnType("jsonb")
             .HasDefaultValue("{}");
 
         builder.Property(e => e.AdditionalSpecs)
+            .HasColumnName("additional_specs")
             .IsRequired()
             .HasColumnType("jsonb")
             .HasDefaultValue("{}");
 
         // Timestamp configuration for PostgreSQL
         builder.Property(e => e.DetectedAt)
+            .HasColumnName("detected_at")
             .IsRequired()
             .HasColumnType("timestamp without time zone")
             .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");

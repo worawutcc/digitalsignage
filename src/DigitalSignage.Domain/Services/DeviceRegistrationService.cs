@@ -236,7 +236,7 @@ public class DeviceRegistrationService : IDeviceRegistrationService
         {
             DeviceId = deviceId,
             Action = action,
-            UserId = performedByUserId ?? 1, // Default to admin user
+            UserId = performedByUserId ?? -1, // Default to system user
             Details = $"PIN: {registrationPin}",
             IpAddress = ipAddress ?? "Unknown",
             UserAgent = userAgent,
