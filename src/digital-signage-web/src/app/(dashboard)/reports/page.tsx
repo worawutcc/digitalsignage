@@ -106,7 +106,9 @@ export default function ReportsPage() {
       { templateId },
       {
         onSuccess: (response) => {
-          console.log('Report generated:', response.message)
+          if (response) {
+            console.log('Report generated:', response.message)
+          }
         },
         onError: (error) => {
           console.error('Failed to generate report:', error)
