@@ -90,8 +90,19 @@ class UserService {
    * GET /api/users/profile
    */
   async getProfile(): Promise<User> {
-    const response = await apiClient.get<User>(`${this.basePath}/profile`);
-    return response.data;
+    try {
+      const response = await apiClient.get<User>(`${this.basePath}/profile`);
+      
+      if (!response.data || !response.data.userId) {
+        throw new Error('Invalid user profile response structure');
+      }
+      
+      console.log('[UserService] User profile retrieved successfully:', response.data.email);
+      return response.data;
+    } catch (error) {
+      console.error('[UserService] Failed to get user profile:', error);
+      throw error;
+    }
   }
 
   /**
@@ -99,8 +110,19 @@ class UserService {
    * PUT /api/users/profile
    */
   async updateProfile(data: UpdateUserProfileRequest): Promise<User> {
-    const response = await apiClient.put<User>(`${this.basePath}/profile`, data);
-    return response.data;
+    try {
+      const response = await apiClient.put<User>(`${this.basePath}/profile`, data);
+      
+      if (!response.data || !response.data.userId) {
+        throw new Error('Invalid update profile response structure');
+      }
+      
+      console.log('[UserService] User profile updated successfully:', response.data.email);
+      return response.data;
+    } catch (error) {
+      console.error('[UserService] Failed to update user profile:', error);
+      throw error;
+    }
   }
 
   /**
@@ -108,7 +130,13 @@ class UserService {
    * POST /api/users/change-password
    */
   async changePassword(data: ChangePasswordRequest): Promise<void> {
-    await apiClient.post<void>(`${this.basePath}/change-password`, data);
+    try {
+      await apiClient.post<void>(`${this.basePath}/change-password`, data);
+      console.log('[UserService] Password changed successfully');
+    } catch (error) {
+      console.error('[UserService] Failed to change password:', error);
+      throw error;
+    }
   }
 
   /**
@@ -116,8 +144,16 @@ class UserService {
    * GET /api/users
    */
   async getAllUsers(): Promise<User[]> {
-    const response = await apiClient.get<User[]>(this.basePath);
-    return response.data;
+    try {
+      const response = await apiClient.get<User[]>(this.basePath);
+      
+      const usersArray = Array.isArray(response.data) ? response.data : [];
+      console.log('[UserService] Retrieved all users successfully:', usersArray.length);
+      return usersArray;
+    } catch (error) {
+      console.error('[UserService] Failed to get all users:', error);
+      return [];
+    }
   }
 
   /**
@@ -125,8 +161,19 @@ class UserService {
    * GET /api/users/{id}
    */
   async getUserById(id: number): Promise<User> {
-    const response = await apiClient.get<User>(`${this.basePath}/${id}`);
-    return response.data;
+    try {
+      const response = await apiClient.get<User>(`${this.basePath}/${id}`);
+      
+      if (!response.data || !response.data.userId) {
+        throw new Error('Invalid user response structure');
+      }
+      
+      console.log('[UserService] User retrieved successfully:', response.data.email);
+      return response.data;
+    } catch (error) {
+      console.error('[UserService] Failed to get user by ID:', id, error);
+      throw error;
+    }
   }
 
   /**
@@ -134,8 +181,19 @@ class UserService {
    * PUT /api/users/{id}
    */
   async updateUser(id: number, data: UpdateUserRequest): Promise<User> {
-    const response = await apiClient.put<User>(`${this.basePath}/${id}`, data);
-    return response.data;
+    try {
+      const response = await apiClient.put<User>(`${this.basePath}/${id}`, data);
+      
+      if (!response.data || !response.data.userId) {
+        throw new Error('Invalid update user response structure');
+      }
+      
+      console.log('[UserService] User updated successfully:', response.data.email);
+      return response.data;
+    } catch (error) {
+      console.error('[UserService] Failed to update user:', id, error);
+      throw error;
+    }
   }
 
   /**
@@ -143,7 +201,13 @@ class UserService {
    * DELETE /api/users/{id}
    */
   async deleteUser(id: number): Promise<void> {
-    await apiClient.delete(`${this.basePath}/${id}`);
+    try {
+      await apiClient.delete(`${this.basePath}/${id}`);
+      console.log('[UserService] User deleted successfully:', id);
+    } catch (error) {
+      console.error('[UserService] Failed to delete user:', id, error);
+      throw error;
+    }
   }
 
   /**
@@ -151,7 +215,13 @@ class UserService {
    * POST /api/users/{id}/reset-password
    */
   async resetUserPassword(id: number, data: ResetPasswordRequest): Promise<void> {
-    await apiClient.post<void>(`${this.basePath}/${id}/reset-password`, data);
+    try {
+      await apiClient.post<void>(`${this.basePath}/${id}/reset-password`, data);
+      console.log('[UserService] User password reset successfully:', id);
+    } catch (error) {
+      console.error('[UserService] Failed to reset user password:', id, error);
+      throw error;
+    }
   }
 
   /**
@@ -159,16 +229,30 @@ class UserService {
    * POST /api/users/{id}/lock
    */
   async lockUser(id: number, data: LockUserRequest): Promise<void> {
-    await apiClient.post<void>(`${this.basePath}/${id}/lock`, data);
+    try {
+      await apiClient.post<void>(`${this.basePath}/${id}/lock`, data);
+      console.log('[UserService] User lock status updated:', id, data.isLocked);
+    } catch (error) {
+      console.error('[UserService] Failed to update user lock status:', id, error);
+      throw error;
+    }
   }
 
   /**
    * Get devices associated with a user
    * GET /api/users/{userId}/devices
    */
-  async getUserDevices(userId: string): Promise<DeviceDto[]> {
-    const response = await apiClient.get<DeviceDto[]>(`${this.basePath}/${userId}/devices`);
-    return response.data;
+  async getUserDevices(userId: number): Promise<DeviceDto[]> {
+    try {
+      const response = await apiClient.get<DeviceDto[]>(`${this.basePath}/${userId}/devices`);
+      
+      const devicesArray = Array.isArray(response.data) ? response.data : [];
+      console.log('[UserService] User devices retrieved successfully:', userId, devicesArray.length);
+      return devicesArray;
+    } catch (error) {
+      console.error('[UserService] Failed to get user devices:', userId, error);
+      return [];
+    }
   }
 
   // ================== Helper Methods ==================
