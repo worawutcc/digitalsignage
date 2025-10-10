@@ -11,41 +11,61 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
+        builder.ToTable("services");
+        
         builder.HasKey(s => s.Id);
+        
+        builder.Property(s => s.Id)
+               .HasColumnName("id");
 
         builder.Property(s => s.Name)
-            .IsRequired()
-            .HasMaxLength(100);
+               .HasColumnName("name")
+               .IsRequired()
+               .HasMaxLength(100);
 
         builder.Property(s => s.Version)
-            .IsRequired()
-            .HasMaxLength(20);
+               .HasColumnName("version")
+               .IsRequired()
+               .HasMaxLength(20);
 
         builder.Property(s => s.BaseUrl)
-            .IsRequired()
-            .HasMaxLength(500);
+               .HasColumnName("base_url")
+               .IsRequired()
+               .HasMaxLength(500);
 
         builder.Property(s => s.HealthCheckUrl)
-            .HasMaxLength(500);
+               .HasColumnName("health_check_url")
+               .HasMaxLength(500);
 
-        builder.Property(s => s.Description)
-            .HasMaxLength(1000)
-            .HasDefaultValue(string.Empty);
-
-        builder.Property(s => s.Tags)
-            .HasMaxLength(200);
-
-        builder.Property(s => s.Metadata)
-            .HasMaxLength(2000);
-
-        builder.Property(s => s.Priority)
-            .HasDefaultValue(0);
+        builder.Property(s => s.Type)
+               .HasColumnName("type")
+               .HasConversion<int>()
+               .IsRequired();
+               
+        builder.Property(s => s.Status)
+               .HasColumnName("status")
+               .HasConversion<int>()
+               .IsRequired();
 
         builder.Property(s => s.IsActive)
-            .HasDefaultValue(true);
+               .HasColumnName("is_active")
+               .HasDefaultValue(true);
+
+        builder.Property(s => s.Tags)
+               .HasColumnName("tags")
+               .HasMaxLength(200);
+
+        builder.Property(s => s.Metadata)
+               .HasColumnName("metadata")
+               .HasMaxLength(2000);
+
+        builder.Property(s => s.Priority)
+               .HasColumnName("priority")
+               .HasDefaultValue(0);
 
         builder.Property(s => s.ConsecutiveHealthCheckFailures)
-            .HasDefaultValue(0);
+               .HasColumnName("consecutive_health_check_failures")
+               .HasDefaultValue(0);
 
         // Configure DateTime properties as timestamp without time zone
         builder.Property(s => s.LastHeartbeat)
@@ -57,13 +77,19 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
                .HasColumnType("timestamp without time zone");
 
         // Indexes
-        builder.HasIndex(s => s.Name);
+        builder.HasIndex(s => s.Name)
+               .HasDatabaseName("ix_services_name");
         builder.HasIndex(s => new { s.Name, s.Version })
-            .IsUnique();
-        builder.HasIndex(s => s.Type);
-        builder.HasIndex(s => s.Status);
-        builder.HasIndex(s => s.IsActive);
-        builder.HasIndex(s => s.LastHeartbeat);
+               .IsUnique()
+               .HasDatabaseName("ix_services_name_version");
+        builder.HasIndex(s => s.Type)
+               .HasDatabaseName("ix_services_type");
+        builder.HasIndex(s => s.Status)
+               .HasDatabaseName("ix_services_status");
+        builder.HasIndex(s => s.IsActive)
+               .HasDatabaseName("ix_services_is_active");
+        builder.HasIndex(s => s.LastHeartbeat)
+               .HasDatabaseName("ix_services_last_heartbeat");
 
         // Relationships
         builder.HasMany(s => s.ServiceInstances)

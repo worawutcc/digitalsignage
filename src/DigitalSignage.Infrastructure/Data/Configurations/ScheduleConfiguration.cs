@@ -12,21 +12,34 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
 
+        builder.ToTable("schedules");
+
         // Schedule-specific configuration
         builder.HasKey(e => e.Id);
         
-        // Properties
-        builder.Property(e => e.Name).HasMaxLength(200).IsRequired();
-        builder.Property(e => e.RecurrencePattern).HasMaxLength(1000);
+        builder.Property(e => e.Id)
+               .HasColumnName("id");
+        
+        // Properties with snake_case column names
+        builder.Property(e => e.Name)
+               .HasColumnName("name")
+               .HasMaxLength(200)
+               .IsRequired();
+        
+        builder.Property(e => e.RecurrencePattern)
+               .HasColumnName("recurrence_pattern")
+               .HasMaxLength(1000);
         
         // Configure IsDefault for fallback schedules (Feature 019)
         builder.Property(e => e.IsDefault)
+               .HasColumnName("is_default")
                .IsRequired()
                .HasDefaultValue(false)
                .HasComment("Marks this schedule as a fallback when user has no assigned schedules");
         
         // Configure enum conversion
         builder.Property(e => e.Status)
+               .HasColumnName("status")
                .HasConversion<string>()
                .HasMaxLength(50);
 

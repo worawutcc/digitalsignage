@@ -11,12 +11,27 @@ public class UserDeviceAssociationConfiguration : IEntityTypeConfiguration<UserD
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
+        builder.ToTable("user_device_associations");
+        
         builder.HasKey(x => x.Id);
+        
+        builder.Property(x => x.Id)
+               .HasColumnName("id");
+
+        builder.Property(x => x.UserId)
+               .HasColumnName("user_id")
+               .IsRequired();
+
+        builder.Property(x => x.DeviceId)
+               .HasColumnName("device_id")
+               .IsRequired();
 
         builder.Property(x => x.AssociationType)
+            .HasColumnName("association_type")
             .HasMaxLength(32);
 
         builder.Property(x => x.AssociatedAt)
+            .HasColumnName("associated_at")
             .HasColumnType("timestamp without time zone")
             .IsRequired();
 
@@ -25,6 +40,7 @@ public class UserDeviceAssociationConfiguration : IEntityTypeConfiguration<UserD
         builder.Property(x => x.UpdatedAt).HasColumnType("timestamp without time zone");
 
         builder.Property(x => x.IsActive)
+            .HasColumnName("is_active")
             .IsRequired();
 
         builder.HasOne(x => x.User)
@@ -37,9 +53,14 @@ public class UserDeviceAssociationConfiguration : IEntityTypeConfiguration<UserD
             .HasForeignKey(x => x.DeviceId)
             .OnDelete(DeleteBehavior.Cascade);
 
-        builder.HasIndex(x => new { x.UserId, x.DeviceId }).IsUnique();
-        builder.HasIndex(x => x.UserId);
-        builder.HasIndex(x => x.DeviceId);
-        builder.HasIndex(x => x.AssociationType);
+        builder.HasIndex(x => new { x.UserId, x.DeviceId })
+               .IsUnique()
+               .HasDatabaseName("ix_user_device_associations_user_id_device_id");
+        builder.HasIndex(x => x.UserId)
+               .HasDatabaseName("ix_user_device_associations_user_id");
+        builder.HasIndex(x => x.DeviceId)
+               .HasDatabaseName("ix_user_device_associations_device_id");
+        builder.HasIndex(x => x.AssociationType)
+               .HasDatabaseName("ix_user_device_associations_association_type");
     }
 }

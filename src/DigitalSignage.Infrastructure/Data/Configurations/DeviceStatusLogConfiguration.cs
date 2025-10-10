@@ -11,29 +11,35 @@ public class DeviceStatusLogConfiguration : IEntityTypeConfiguration<DeviceStatu
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
-        builder.ToTable("DeviceStatusLogs");
+        builder.ToTable("device_status_logs");
         
         builder.HasKey(dsl => dsl.Id);
         
         builder.Property(dsl => dsl.Id)
+            .HasColumnName("id")
             .ValueGeneratedOnAdd();
             
         builder.Property(dsl => dsl.DeviceId)
+            .HasColumnName("device_id")
             .IsRequired();
             
         builder.Property(dsl => dsl.Status)
+            .HasColumnName("status")
             .HasConversion<int>()
             .IsRequired();
             
         builder.Property(dsl => dsl.Details)
+            .HasColumnName("details")
             .HasColumnType("text");
             
         builder.Property(dsl => dsl.Timestamp)
+            .HasColumnName("timestamp")
             .IsRequired()
             .HasColumnType("timestamp without time zone")
-            .HasDefaultValueSql("NOW()");
+            .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
             
         builder.Property(dsl => dsl.Source)
+            .HasColumnName("source")
             .HasMaxLength(50)
             .IsRequired();
         
@@ -45,6 +51,6 @@ public class DeviceStatusLogConfiguration : IEntityTypeConfiguration<DeviceStatu
             
         // Indexes
         builder.HasIndex(dsl => new { dsl.DeviceId, dsl.Timestamp })
-            .HasDatabaseName("IX_DeviceStatusLogs_DeviceId_Timestamp");
+            .HasDatabaseName("ix_device_status_logs_device_id_timestamp");
     }
 }

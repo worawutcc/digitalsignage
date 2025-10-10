@@ -12,23 +12,33 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
         
+        builder.ToTable("playlists");
+        
         builder.HasKey(p => p.Id);
+        
+        builder.Property(p => p.Id)
+               .HasColumnName("id");
 
         builder.Property(p => p.Name)
+            .HasColumnName("name")
             .IsRequired()
             .HasMaxLength(200);
 
         builder.Property(p => p.Description)
+            .HasColumnName("description")
             .HasMaxLength(1000);
 
         builder.Property(p => p.Status)
+            .HasColumnName("status")
             .HasConversion<int>()
             .IsRequired();
 
         builder.Property(p => p.Priority)
+            .HasColumnName("priority")
             .HasDefaultValue(0);
 
         builder.Property(p => p.IsLooped)
+            .HasColumnName("is_looped")
             .HasDefaultValue(false);
 
         // Indexes

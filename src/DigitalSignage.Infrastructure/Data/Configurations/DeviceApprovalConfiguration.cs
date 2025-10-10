@@ -11,29 +11,56 @@ public class DeviceApprovalConfiguration : IEntityTypeConfiguration<DeviceApprov
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
 
-        builder.HasKey(e => e.Id);
+        builder.ToTable("device_approvals");
 
-        // Configure properties
+        builder.HasKey(e => e.Id);
+        
+        builder.Property(e => e.Id)
+               .HasColumnName("id");
+
+        // Configure properties with snake_case column names
         builder.Property(e => e.DeviceName)
+               .HasColumnName("device_name")
                .HasMaxLength(100)
                .IsRequired();
 
         builder.Property(e => e.Location)
+               .HasColumnName("location")
                .HasMaxLength(200);
 
         builder.Property(e => e.Tags)
+               .HasColumnName("tags")
                .HasMaxLength(1000);
 
         builder.Property(e => e.Notes)
+               .HasColumnName("notes")
                .HasMaxLength(500);
 
         builder.Property(e => e.DeviceKey)
+               .HasColumnName("device_key")
                .HasMaxLength(255);
 
         // Configure enum conversion
         builder.Property(e => e.Status)
+               .HasColumnName("status")
                .HasConversion<string>()
                .HasMaxLength(50);
+
+        // Configure foreign key properties with snake_case column names
+        builder.Property(e => e.DeviceRegistrationRequestId)
+               .HasColumnName("device_registration_request_id");
+
+        builder.Property(e => e.ApprovedByUserId)
+               .HasColumnName("approved_by_user_id");
+
+        builder.Property(e => e.DeviceGroupId)
+               .HasColumnName("device_group_id");
+
+        builder.Property(e => e.ZoneId)
+               .HasColumnName("zone_id");
+
+        builder.Property(e => e.InitialScheduleId)
+               .HasColumnName("initial_schedule_id");
 
         // Configure relationships
         // DeviceApproval is a one-to-one relationship with DeviceRegistrationRequest

@@ -11,8 +11,28 @@ public class ScheduleMediaConfiguration : IEntityTypeConfiguration<ScheduleMedia
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
 
+        builder.ToTable("schedule_medias");
+
         // ScheduleMedia-specific configuration
         builder.HasKey(e => e.Id);
+        
+        builder.Property(e => e.Id)
+               .HasColumnName("id");
+
+        builder.Property(e => e.ScheduleId)
+               .HasColumnName("schedule_id")
+               .IsRequired();
+
+        builder.Property(e => e.MediaId)
+               .HasColumnName("media_id")
+               .IsRequired();
+
+        builder.Property(e => e.Order)
+               .HasColumnName("order")
+               .IsRequired();
+
+        builder.Property(e => e.DurationSeconds)
+               .HasColumnName("duration_seconds");
 
         // Navigation properties
         builder.HasOne(e => e.Schedule)
@@ -26,6 +46,8 @@ public class ScheduleMediaConfiguration : IEntityTypeConfiguration<ScheduleMedia
                .OnDelete(DeleteBehavior.Cascade);
 
         // Indexes
-        builder.HasIndex(e => new { e.ScheduleId, e.Order }).IsUnique();
+        builder.HasIndex(e => new { e.ScheduleId, e.Order })
+               .IsUnique()
+               .HasDatabaseName("ix_schedule_medias_schedule_id_order");
     }
 }

@@ -12,15 +12,32 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
 
+        builder.ToTable("devices");
+
         // Device-specific configuration
         builder.HasKey(e => e.Id);
         
-        // Properties
-        builder.Property(e => e.Name).HasMaxLength(200).IsRequired();
-        builder.Property(e => e.DeviceKey).HasMaxLength(255).IsRequired();
-        builder.Property(e => e.Location).HasMaxLength(300);
-        builder.Property(e => e.IpAddress).HasMaxLength(45);
-        builder.Property(e => e.Resolution).HasMaxLength(50);
+        builder.Property(e => e.Id)
+               .HasColumnName("id");
+        
+        // Properties with snake_case column names
+        builder.Property(e => e.Name)
+            .HasColumnName("name")
+            .HasMaxLength(200)
+            .IsRequired();
+        builder.Property(e => e.DeviceKey)
+            .HasColumnName("device_key")
+            .HasMaxLength(255)
+            .IsRequired();
+        builder.Property(e => e.Location)
+            .HasColumnName("location")
+            .HasMaxLength(300);
+        builder.Property(e => e.IpAddress)
+            .HasColumnName("ip_address")
+            .HasMaxLength(45);
+        builder.Property(e => e.Resolution)
+            .HasColumnName("resolution")
+            .HasMaxLength(50);
         
         // Configure LastHeartbeat as timestamp without time zone
         builder.Property(e => e.LastHeartbeat)
@@ -34,26 +51,61 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
         
         // Configure enum conversion
         builder.Property(e => e.Status)
+               .HasColumnName("status")
                .HasConversion<string>()
                .HasMaxLength(50);
         
-        // Android TV specific properties
-        builder.Property(e => e.MacAddress).HasMaxLength(17);
-        builder.Property(e => e.AndroidVersion).HasMaxLength(50);
-        builder.Property(e => e.ApiLevel).HasMaxLength(10);
-        builder.Property(e => e.SerialNumber).HasMaxLength(100);
-        builder.Property(e => e.Manufacturer).HasMaxLength(100);
-        builder.Property(e => e.Model).HasMaxLength(100);
-        builder.Property(e => e.DisplayResolution).HasMaxLength(20);
+        builder.Property(e => e.DeviceType)
+               .HasColumnName("device_type")
+               .HasConversion<string>()
+               .HasMaxLength(50);
+        
+        builder.Property(e => e.IsActive)
+               .HasColumnName("is_active")
+               .HasDefaultValue(true);
+        
+        // Android TV specific properties with snake_case column names
+        builder.Property(e => e.MacAddress)
+               .HasColumnName("mac_address")
+               .HasMaxLength(17);
+        builder.Property(e => e.AndroidVersion)
+               .HasColumnName("android_version")
+               .HasMaxLength(50);
+        builder.Property(e => e.ApiLevel)
+               .HasColumnName("api_level");
+        builder.Property(e => e.SerialNumber)
+               .HasColumnName("serial_number")
+               .HasMaxLength(100);
+        builder.Property(e => e.Manufacturer)
+               .HasColumnName("manufacturer")
+               .HasMaxLength(100);
+        builder.Property(e => e.Model)
+               .HasColumnName("model")
+               .HasMaxLength(100);
+        builder.Property(e => e.DisplayResolution)
+               .HasColumnName("display_resolution")
+               .HasMaxLength(20);
         
         // Configure DeactivatedAt as timestamp without time zone
         builder.Property(e => e.DeactivatedAt)
                .HasColumnName("deactivated_at")
                .HasColumnType("timestamp without time zone");
         
+        // Foreign key properties with proper column names
+        builder.Property(e => e.ManagedByUserId)
+               .HasColumnName("managed_by_user_id");
+        builder.Property(e => e.DeviceGroupId)
+               .HasColumnName("device_group_id");
+        builder.Property(e => e.AssignedUserId)
+               .HasColumnName("assigned_user_id");
+        builder.Property(e => e.DeactivatedBy)
+               .HasColumnName("deactivated_by");
+        
         // Indexes
-        builder.HasIndex(e => e.DeviceKey).IsUnique();
-        builder.HasIndex(e => e.MacAddress).IsUnique();
+        builder.HasIndex(e => e.DeviceKey).IsUnique()
+               .HasDatabaseName("IX_Devices_DeviceKey");
+        builder.HasIndex(e => e.MacAddress).IsUnique()
+               .HasDatabaseName("IX_Devices_MacAddress");
         
         // Index for user assignment queries (Feature 019)
         builder.HasIndex(e => e.AssignedUserId)

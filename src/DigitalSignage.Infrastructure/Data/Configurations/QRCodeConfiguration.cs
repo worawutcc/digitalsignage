@@ -8,7 +8,7 @@ public class QRCodeConfiguration : IEntityTypeConfiguration<QRCode>
 {
     public void Configure(EntityTypeBuilder<QRCode> builder)
     {
-        builder.ToTable("QRCodes");
+        builder.ToTable("qr_codes");
 
         builder.HasKey(e => e.Id);
 
@@ -16,48 +16,61 @@ public class QRCodeConfiguration : IEntityTypeConfiguration<QRCode>
             .ValueGeneratedOnAdd();
 
         builder.Property(e => e.Name)
+            .HasColumnName("name")
             .IsRequired()
             .HasMaxLength(200);
 
         builder.Property(e => e.Type)
+            .HasColumnName("type")
             .IsRequired()
             .HasMaxLength(50);
 
         builder.Property(e => e.Content)
+            .HasColumnName("content")
             .IsRequired();
 
         builder.Property(e => e.Description)
+            .HasColumnName("description")
             .HasMaxLength(1000);
 
         builder.Property(e => e.Scans)
+            .HasColumnName("scans")
             .HasDefaultValue(0);
 
         builder.Property(e => e.LastScanned)
+            .HasColumnName("last_scanned")
             .HasColumnType("timestamp without time zone");
 
         builder.Property(e => e.CreatedAt)
+            .HasColumnName("created_at")
             .IsRequired()
             .HasColumnType("timestamp without time zone")
             .HasDefaultValueSql("NOW() AT TIME ZONE 'UTC'");
 
         builder.Property(e => e.UpdatedAt)
+            .HasColumnName("updated_at")
             .HasColumnType("timestamp without time zone");
 
         builder.Property(e => e.Status)
+            .HasColumnName("status")
             .IsRequired()
             .HasMaxLength(20)
             .HasDefaultValue("active");
 
         builder.Property(e => e.ExpiryDate)
+            .HasColumnName("expiry_date")
             .HasColumnType("timestamp without time zone");
 
         builder.Property(e => e.DeviceId)
+            .HasColumnName("device_id")
             .HasMaxLength(100);
 
         builder.Property(e => e.DeviceName)
+            .HasColumnName("device_name")
             .HasMaxLength(200);
 
         builder.Property(e => e.ImagePath)
+            .HasColumnName("image_path")
             .HasMaxLength(500);
 
         // Indexes
