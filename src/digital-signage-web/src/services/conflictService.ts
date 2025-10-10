@@ -54,54 +54,98 @@ export class ConflictService {
    * Get all schedule conflicts with filtering
    */
   async getConflicts(request?: ConflictDetectionRequest): Promise<ConflictDetectionResponse> {
-    const params = new URLSearchParams();
-    
-    if (request?.scheduleIds?.length) {
-      request.scheduleIds.forEach(id => params.append('scheduleIds', id));
-    }
-    
-    if (request?.userIds?.length) {
-      request.userIds.forEach(id => params.append('userIds', id));
-    }
-    
-    if (request?.timeRange?.start) {
-      params.append('startTime', request.timeRange.start);
-    }
-    
-    if (request?.timeRange?.end) {
-      params.append('endTime', request.timeRange.end);
-    }
-    
-    if (request?.conflictTypes?.length) {
-      request.conflictTypes.forEach(type => params.append('types', type));
-    }
-    
-    if (request?.includeResolved !== undefined) {
-      params.append('includeResolved', request.includeResolved.toString());
-    }
-    
-    if (request?.severity?.length) {
-      request.severity.forEach(s => params.append('severity', s));
-    }
+    try {
+      const params = new URLSearchParams();
+      
+      if (request?.scheduleIds?.length) {
+        request.scheduleIds.forEach(id => params.append('scheduleIds', id));
+      }
+      
+      if (request?.userIds?.length) {
+        request.userIds.forEach(id => params.append('userIds', id));
+      }
+      
+      if (request?.timeRange?.start) {
+        params.append('startTime', request.timeRange.start);
+      }
+      
+      if (request?.timeRange?.end) {
+        params.append('endTime', request.timeRange.end);
+      }
+      
+      if (request?.conflictTypes?.length) {
+        request.conflictTypes.forEach(type => params.append('types', type));
+      }
+      
+      if (request?.includeResolved !== undefined) {
+        params.append('includeResolved', request.includeResolved.toString());
+      }
+      
+      if (request?.severity?.length) {
+        request.severity.forEach(s => params.append('severity', s));
+      }
 
-    const response = await apiClient.get<{
-      success: boolean;
-      data: ConflictDetectionResponse;
-    }>(`${this.basePath}?${params.toString()}`);
-    
-    return response.data.data;
+      const response = await apiClient.get<{
+        success: boolean;
+        data: ConflictDetectionResponse;
+      }>(`${this.basePath}?${params.toString()}`);
+      
+      if (!response.data?.data) {
+        console.error('[ConflictService] Invalid response structure for getConflicts');
+        return { 
+          conflicts: [], 
+          totalConflicts: 0, 
+          conflictsByType: {} as Record<ConflictType, number>,
+          conflictsBySeverity: {} as Record<ConflictSeverity, number>,
+          analysisMetadata: {
+            analysisDuration: 0,
+            schedulesAnalyzed: 0,
+            usersAnalyzed: 0,
+            lastAnalysisAt: new Date().toISOString()
+          }
+        };
+      }
+
+      console.log('[ConflictService] Conflicts retrieved:', response.data.data.totalConflicts || 0);
+      return response.data.data;
+    } catch (error) {
+      console.error('[ConflictService] Failed to get conflicts:', error);
+      return { 
+        conflicts: [], 
+        totalConflicts: 0, 
+        conflictsByType: {} as Record<ConflictType, number>,
+        conflictsBySeverity: {} as Record<ConflictSeverity, number>,
+        analysisMetadata: {
+          analysisDuration: 0,
+          schedulesAnalyzed: 0,
+          usersAnalyzed: 0,
+          lastAnalysisAt: new Date().toISOString()
+        }
+      };
+    }
   }
 
   /**
    * Get specific conflict by ID
    */
-  async getConflictById(conflictId: string): Promise<ScheduleConflict> {
-    const response = await apiClient.get<{
-      success: boolean;
-      data: ScheduleConflict;
-    }>(`${this.basePath}/${conflictId}`);
-    
-    return response.data.data;
+  async getConflictById(conflictId: string): Promise<ScheduleConflict | null> {
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: ScheduleConflict;
+      }>(`${this.basePath}/${conflictId}`);
+      
+      if (!response.data?.data) {
+        console.error('[ConflictService] Invalid response structure for getConflictById');
+        return null;
+      }
+
+      console.log('[ConflictService] Conflict retrieved:', conflictId);
+      return response.data.data;
+    } catch (error) {
+      console.error('[ConflictService] Failed to get conflict by ID:', error);
+      return null;
+    }
   }
 
   /**
@@ -204,13 +248,24 @@ export class ConflictService {
       parameters?: Record<string, any>;
       notes?: string;
     }
-  ): Promise<ConflictResolution> {
-    const response = await apiClient.post<{
-      success: boolean;
-      data: ConflictResolution;
-    }>(`${this.basePath}/${conflictId}/resolve`, resolution);
-    
-    return response.data.data;
+  ): Promise<ConflictResolution | null> {
+    try {
+      const response = await apiClient.post<{
+        success: boolean;
+        data: ConflictResolution;
+      }>(`${this.basePath}/${conflictId}/resolve`, resolution);
+      
+      if (!response.data?.data) {
+        console.error('[ConflictService] Invalid response structure for resolveConflict');
+        return null;
+      }
+
+      console.log('[ConflictService] Conflict resolved:', conflictId, 'with strategy:', resolution.strategy);
+      return response.data.data;
+    } catch (error) {
+      console.error('[ConflictService] Failed to resolve conflict:', error);
+      return null;
+    }
   }
 
   /**
@@ -229,24 +284,35 @@ export class ConflictService {
     recommendedStrategy?: ResolutionStrategy;
     warningsBeforeResolution: string[];
   }> {
-    const response = await apiClient.get<{
-      success: boolean;
-      data: {
-        suggestions: Array<{
-          strategy: ResolutionStrategy;
-          type: ResolutionType;
-          description: string;
-          impact: string;
-          automated: boolean;
-          parameters?: Record<string, any>;
-          estimatedTime?: number;
-        }>;
-        recommendedStrategy?: ResolutionStrategy;
-        warningsBeforeResolution: string[];
-      };
-    }>(`${this.basePath}/${conflictId}/suggestions`);
-    
-    return response.data.data;
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: {
+          suggestions: Array<{
+            strategy: ResolutionStrategy;
+            type: ResolutionType;
+            description: string;
+            impact: string;
+            automated: boolean;
+            parameters?: Record<string, any>;
+            estimatedTime?: number;
+          }>;
+          recommendedStrategy?: ResolutionStrategy;
+          warningsBeforeResolution: string[];
+        };
+      }>(`${this.basePath}/${conflictId}/suggestions`);
+      
+      if (!response.data?.data) {
+        console.error('[ConflictService] Invalid response structure for getResolutionSuggestions');
+        return { suggestions: [], warningsBeforeResolution: [] };
+      }
+
+      console.log('[ConflictService] Resolution suggestions retrieved:', response.data.data.suggestions?.length || 0);
+      return response.data.data;
+    } catch (error) {
+      console.error('[ConflictService] Failed to get resolution suggestions:', error);
+      return { suggestions: [], warningsBeforeResolution: [] };
+    }
   }
 
   /**
@@ -635,19 +701,26 @@ export class ConflictService {
     previousState?: any;
     newState?: any;
   }>> {
-    const response = await apiClient.get<{
-      success: boolean;
-      data: Array<{
-        action: string;
-        performedBy: string;
-        performedAt: string;
-        details: Record<string, any>;
-        previousState?: any;
-        newState?: any;
-      }>;
-    }>(`${this.basePath}/${conflictId}/history`);
-    
-    return response.data.data;
+    try {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: Array<{
+          action: string;
+          performedBy: string;
+          performedAt: string;
+          details: Record<string, any>;
+          previousState?: any;
+          newState?: any;
+        }>;
+      }>(`${this.basePath}/${conflictId}/history`);
+      
+      const historyArray = Array.isArray(response.data?.data) ? response.data.data : [];
+      console.log('[ConflictService] Conflict history retrieved:', historyArray.length, 'entries');
+      return historyArray;
+    } catch (error) {
+      console.error('[ConflictService] Failed to get conflict history:', error);
+      return [];
+    }
   }
 }
 
