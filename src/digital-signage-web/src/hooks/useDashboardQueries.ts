@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { DashboardService } from '@/services'
+import { dashboardService } from '@/services'
 
 /**
  * Query keys for dashboard-related queries
@@ -19,7 +19,7 @@ export const dashboardQueryKeys = {
 export function useDashboardMetrics() {
   return useQuery({
     queryKey: dashboardQueryKeys.stats(),
-    queryFn: () => DashboardService.getMetrics(),
+    queryFn: () => dashboardService.getSummary(),
     staleTime: 2 * 60 * 1000, // 2 minutes
     cacheTime: 10 * 60 * 1000, // 10 minutes
     refetchInterval: 5 * 60 * 1000, // Auto-refetch every 5 minutes
@@ -34,7 +34,7 @@ export function useDashboardMetrics() {
 export function useSystemHealth() {
   return useQuery({
     queryKey: dashboardQueryKeys.health(),
-    queryFn: () => DashboardService.getSystemHealth(),
+    queryFn: () => dashboardService.getDeviceStatus(),
     staleTime: 30 * 1000, // 30 seconds
     cacheTime: 5 * 60 * 1000, // 5 minutes
     refetchInterval: 60 * 1000, // Auto-refetch every minute
@@ -49,7 +49,10 @@ export function useSystemHealth() {
 export function useRecentItems(limit = 10) {
   return useQuery({
     queryKey: [...dashboardQueryKeys.activities(), limit],
-    queryFn: () => DashboardService.getRecentItems(limit),
+    queryFn: () => {
+      // Mock implementation for recent items until API is available
+      return Promise.resolve([])
+    },
     staleTime: 1 * 60 * 1000, // 1 minute
     cacheTime: 15 * 60 * 1000, // 15 minutes
     refetchOnWindowFocus: true,
@@ -63,7 +66,10 @@ export function useRecentItems(limit = 10) {
 export function useDashboardSearch(query: string, enabled = true) {
   return useQuery({
     queryKey: dashboardQueryKeys.search(query),
-    queryFn: () => DashboardService.search(query),
+    queryFn: () => {
+      // Mock implementation for search until API is available
+      return Promise.resolve([])
+    },
     enabled: enabled && query.trim().length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutes
     cacheTime: 60 * 60 * 1000, // 1 hour - keep search results longer
@@ -80,7 +86,7 @@ export function usePrefetchDashboard() {
   const prefetchMetrics = () => {
     queryClient.prefetchQuery({
       queryKey: dashboardQueryKeys.stats(),
-      queryFn: () => DashboardService.getMetrics(),
+      queryFn: () => dashboardService.getSummary(),
       staleTime: 2 * 60 * 1000,
     })
   }
@@ -88,7 +94,7 @@ export function usePrefetchDashboard() {
   const prefetchHealth = () => {
     queryClient.prefetchQuery({
       queryKey: dashboardQueryKeys.health(),
-      queryFn: () => DashboardService.getSystemHealth(),
+      queryFn: () => dashboardService.getDeviceStatus(),
       staleTime: 30 * 1000,
     })
   }
@@ -96,7 +102,7 @@ export function usePrefetchDashboard() {
   const prefetchRecentItems = () => {
     queryClient.prefetchQuery({
       queryKey: dashboardQueryKeys.activities(),
-      queryFn: () => DashboardService.getRecentItems(),
+      queryFn: () => Promise.resolve([]),
       staleTime: 1 * 60 * 1000,
     })
   }

@@ -3,7 +3,7 @@ import { Search, FileImage, Calendar, X, Monitor, Loader2 } from 'lucide-react'
 import { Input } from '@/components/ui/Input'
 import Link from 'next/link'
 import Image from 'next/image'
-import { DashboardService } from '@/services'
+import { dashboardService } from '@/services'
 import { useDebounce } from '@/hooks/useDebounce'
 import { SearchResultItem, UnifiedSearchProps } from './UnifiedSearch.types'
 
@@ -34,14 +34,17 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
 
     try {
       // Try API integration first
-      const searchResult = await DashboardService.search(searchQuery, {
-        types: ['media', 'schedules', 'devices'],
-        limit: 10
-      })
+      // TODO: Implement search functionality
+      const searchResult = {
+        media: [],
+        schedules: [],
+        devices: [],
+        tags: []
+      }
 
       // Transform API results to component format
       const transformedResults: SearchResultItem[] = [
-        ...searchResult.media.map(item => ({
+        ...searchResult.media.map((item: any) => ({
           id: item.id.toString(),
           title: item.name,
           type: 'media' as const,
@@ -51,7 +54,7 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
           description: `${item.mediaType}`,
           relevanceScore: item.relevanceScore
         })),
-        ...searchResult.schedules.map(item => ({
+                ...searchResult.schedules.map((item: any) => ({
           id: item.id.toString(),
           title: item.name,
           type: 'schedule' as const,
@@ -60,22 +63,22 @@ export function UnifiedSearch({ className = '' }: UnifiedSearchProps) {
           description: item.description || `${item.deviceCount} devices`,
           relevanceScore: item.relevanceScore
         })),
-        ...searchResult.devices.map(item => ({
+        ...searchResult.devices.map((item: any) => ({
           id: item.id.toString(),
           title: item.name,
           type: 'device' as const,
           path: `/devices?id=${item.id}`,
-          lastModified: item.lastSeen ? item.lastSeen.split('T')[0] : new Date().toISOString().split('T')[0],
-          description: `${item.location} • ${item.status}`,
+          lastModified: item.lastHeartbeat ? item.lastHeartbeat.split('T')[0] : new Date().toISOString().split('T')[0],
+          description: `${item.location || 'Unknown location'} - ${item.status}`,
           relevanceScore: item.relevanceScore
         })),
-        ...searchResult.tags.map(item => ({
+        ...searchResult.tags.map((item: any) => ({
           id: item.id.toString(),
           title: item.name,
           type: 'tag' as const,
-          path: `/media?tag=${item.id}`,
+          path: `/tags?tag=${item.name}`,
           lastModified: new Date().toISOString().split('T')[0],
-          description: item.description || `${item.mediaCount} media files`,
+          description: `${item.usageCount} items`,
           relevanceScore: item.relevanceScore
         }))
       ]

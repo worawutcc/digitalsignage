@@ -3,7 +3,7 @@ export { MediaService } from './mediaService'
 export { ScheduleService } from './scheduleService'
 export { TagService } from './tagService'
 export { DeviceService } from './deviceService'
-export { DashboardService } from './dashboardService'
+export { dashboardService } from './dashboardService'
 export { UserService } from './userService'
 
 // New enhanced services
@@ -49,10 +49,9 @@ export type {
 } from './deviceService'
 
 export type {
-  DashboardMetrics,
-  QuickAction,
-  RecentItem,
-  SearchResult,
+  DashboardSummary,
+  DeviceStatusItem,
+  DeviceStatusGrid,
 } from './dashboardService'
 
 // Export new API service types

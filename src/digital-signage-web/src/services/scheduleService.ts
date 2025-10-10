@@ -188,7 +188,7 @@ export class ScheduleService {
    */
   static async getAll(): Promise<Schedule[]> {
     const response = await apiClient.get('/api/admin/schedules')
-    return response.data
+    return Array.isArray(response.data) ? response.data : []
   }
 
   /**

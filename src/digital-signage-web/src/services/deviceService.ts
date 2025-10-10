@@ -82,7 +82,7 @@ export class DeviceService {
    */
   static async getAll(): Promise<Device[]> {
     const response = await apiClient.get('/api/devices')
-    return response.data
+    return Array.isArray(response.data) ? response.data : []
   }
 
   /**
@@ -130,7 +130,7 @@ export class DeviceService {
    */
   static async search(params: DeviceSearchParams): Promise<Device[]> {
     const response = await apiClient.get('/api/devices/search', { params })
-    return response.data
+    return Array.isArray(response.data) ? response.data : []
   }
 
   /**

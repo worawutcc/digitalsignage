@@ -2,97 +2,34 @@
 
 import { useState } from 'react'
 import { 
+  QrCode, 
   Plus, 
-  QrCode,
-  Download,
-  Search,
-  Filter,
-  Eye,
-  Edit,
+  Search, 
+  Filter, 
+  Eye, 
+  Download, 
+  Copy, 
+  Edit, 
   Trash2,
-  Copy,
-  Smartphone,
   Link,
-  Calendar,
+  Smartphone,
   Users,
+  ExternalLink,
   BarChart3,
   RefreshCw,
-  Share2,
-  ExternalLink
+  Loader2
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-
-interface QRCode {
-  id: string
-  name: string
-  type: 'url' | 'wifi' | 'text' | 'email' | 'phone' | 'sms'
-  content: string
-  description: string
-  scans: number
-  lastScanned: string
-  createdDate: string
-  status: 'active' | 'inactive' | 'expired'
-  expiryDate?: string
-  deviceId?: string
-  deviceName?: string
-}
-
-const mockQRCodes: QRCode[] = [
-  {
-    id: '1',
-    name: 'Lobby WiFi Access',
-    type: 'wifi',
-    content: 'WIFI:T:WPA;S:CompanyGuest;P:guest123;H:false;;',
-    description: 'Guest WiFi credentials for lobby visitors',
-    scans: 1234,
-    lastScanned: '2 hours ago',
-    createdDate: '2024-12-15',
-    status: 'active',
-    deviceId: 'device-1',
-    deviceName: 'Lobby Display 1'
-  },
-  {
-    id: '2',
-    name: 'Product Demo Video',
-    type: 'url',
-    content: 'https://company.com/products/demo',
-    description: 'Link to product demonstration video',
-    scans: 856,
-    lastScanned: '15 minutes ago',
-    createdDate: '2024-12-10',
-    status: 'active',
-    deviceId: 'device-2',
-    deviceName: 'Conference Room A'
-  },
-  {
-    id: '3',
-    name: 'Customer Support',
-    type: 'phone',
-    content: 'tel:+1234567890',
-    description: 'Direct line to customer support',
-    scans: 423,
-    lastScanned: '1 day ago',
-    createdDate: '2024-12-01',
-    status: 'active',
-    deviceId: 'device-3',
-    deviceName: 'Reception Display'
-  },
-  {
-    id: '4',
-    name: 'Event Registration',
-    type: 'url',
-    content: 'https://company.com/events/register',
-    description: 'Registration form for upcoming event',
-    scans: 234,
-    lastScanned: '3 days ago',
-    createdDate: '2024-11-25',
-    status: 'expired',
-    expiryDate: '2024-12-31',
-    deviceId: 'device-4',
-    deviceName: 'Cafeteria Screen'
-  }
-]
+import { 
+  useQRCodes, 
+  useQRCodeStats, 
+  useCreateQRCode, 
+  useUpdateQRCode, 
+  useDeleteQRCode, 
+  useDownloadQRCode 
+} from '@/hooks/useQRCodes'
+import { type QRCode, type CreateQRCodeRequest } from '@/services/qrCodeService'
 
 const getTypeIcon = (type: string) => {
   switch (type) {
@@ -122,18 +59,114 @@ const getStatusColor = (status: string) => {
   }
 }
 
+const formatDate = (dateString: string) => {
+  try {
+    return new Date(dateString).toLocaleDateString()
+  } catch {
+    return 'N/A'
+  }
+}
+
+const formatRelativeTime = (dateString: string) => {
+  try {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 60) {
+      return `${diffInMinutes} minutes ago`
+    } else if (diffInMinutes < 1440) {
+      const hours = Math.floor(diffInMinutes / 60)
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`
+    } else {
+      const days = Math.floor(diffInMinutes / 1440)
+      return `${days} day${days > 1 ? 's' : ''} ago`
+    }
+  } catch {
+    return 'N/A'
+  }
+}
+
 export default function QRCodesPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [selectedType, setSelectedType] = useState<string>('url')
+  const [formData, setFormData] = useState<Partial<CreateQRCodeRequest>>({
+    name: '',
+    type: 'url',
+    content: '',
+    description: '',
+  })
 
-  const filteredQRCodes = mockQRCodes.filter(qr =>
+  // React Query hooks
+  const { data: qrCodes = [], isLoading, error } = useQRCodes()
+  const { data: stats } = useQRCodeStats()
+  const createQRCodeMutation = useCreateQRCode()
+  const deleteQRCodeMutation = useDeleteQRCode()
+  const downloadQRCodeMutation = useDownloadQRCode()
+
+  // Filter QR codes based on search term
+  const filteredQRCodes = qrCodes.filter(qr =>
     qr.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    qr.description.toLowerCase().includes(searchTerm.toLowerCase())
+    qr.description?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  const totalScans = mockQRCodes.reduce((acc, qr) => acc + qr.scans, 0)
-  const activeQRCodes = mockQRCodes.filter(qr => qr.status === 'active').length
+  const handleCreateQRCode = async () => {
+    if (!formData.name || !formData.content) return
+
+    try {
+      await createQRCodeMutation.mutateAsync(formData as CreateQRCodeRequest)
+      setShowCreateModal(false)
+      setFormData({
+        name: '',
+        type: 'url',
+        content: '',
+        description: '',
+      })
+    } catch (error) {
+      console.error('Failed to create QR code:', error)
+    }
+  }
+
+  const handleDeleteQRCode = async (id: string, name: string) => {
+    if (confirm(`Are you sure you want to delete "${name}"?`)) {
+      try {
+        await deleteQRCodeMutation.mutateAsync(id)
+      } catch (error) {
+        console.error('Failed to delete QR code:', error)
+      }
+    }
+  }
+
+  const handleDownloadQRCode = async (id: string, name: string) => {
+    try {
+      await downloadQRCodeMutation.mutateAsync({ id, name })
+    } catch (error) {
+      console.error('Failed to download QR code:', error)
+    }
+  }
+
+  const handleCopyContent = async (content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      // Could add a toast notification here
+    } catch (error) {
+      console.error('Failed to copy content:', error)
+    }
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <h3 className="text-red-800 font-medium">Error loading QR codes</h3>
+          <p className="text-red-600 text-sm mt-1">
+            {error instanceof Error ? error.message : 'An unexpected error occurred'}
+          </p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -170,7 +203,7 @@ export default function QRCodesPage() {
                   Total QR Codes
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {mockQRCodes.length}
+                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.totalQRCodes || qrCodes.length}
                 </p>
               </div>
             </div>
@@ -184,7 +217,7 @@ export default function QRCodesPage() {
                   Total Scans
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {totalScans.toLocaleString()}
+                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : (stats?.totalScans || 0).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -198,7 +231,7 @@ export default function QRCodesPage() {
                   Active QR Codes
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {activeQRCodes}
+                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : stats?.activeQRCodes || qrCodes.filter(qr => qr.status === 'active').length}
                 </p>
               </div>
             </div>
@@ -212,7 +245,7 @@ export default function QRCodesPage() {
                   Avg Scans/Code
                 </p>
                 <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                  {Math.round(totalScans / mockQRCodes.length)}
+                  {isLoading ? <Loader2 className="h-6 w-6 animate-spin" /> : Math.round((stats?.totalScans || 0) / Math.max(stats?.totalQRCodes || 1, 1))}
                 </p>
               </div>
             </div>
@@ -240,101 +273,150 @@ export default function QRCodesPage() {
 
         {/* QR Codes Table */}
         <div className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left p-4">QR Code</th>
-                  <th className="text-left p-4">Type</th>
-                  <th className="text-left p-4">Device</th>
-                  <th className="text-left p-4">Scans</th>
-                  <th className="text-left p-4">Last Scanned</th>
-                  <th className="text-left p-4">Status</th>
-                  <th className="text-left p-4">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredQRCodes.map((qrCode) => (
-                  <tr key={qrCode.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
-                    <td className="p-4">
-                      <div className="flex items-center">
-                        <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mr-3">
-                          <QrCode className="h-5 w-5 text-gray-600" />
+          {isLoading ? (
+            <div className="p-8 text-center">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+              <p className="text-gray-600 dark:text-gray-400">Loading QR codes...</p>
+            </div>
+          ) : filteredQRCodes.length === 0 ? (
+            <div className="p-8 text-center">
+              <QrCode className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                {searchTerm ? 'No QR codes found' : 'No QR codes yet'}
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                {searchTerm 
+                  ? 'Try adjusting your search terms.' 
+                  : 'Create your first QR code to get started.'
+                }
+              </p>
+              {!searchTerm && (
+                <Button onClick={() => setShowCreateModal(true)}>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create QR Code
+                </Button>
+              )}
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left p-4">QR Code</th>
+                    <th className="text-left p-4">Type</th>
+                    <th className="text-left p-4">Device</th>
+                    <th className="text-left p-4">Scans</th>
+                    <th className="text-left p-4">Last Scanned</th>
+                    <th className="text-left p-4">Status</th>
+                    <th className="text-left p-4">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredQRCodes.map((qrCode) => (
+                    <tr key={qrCode.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="p-4">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mr-3">
+                            <QrCode className="h-5 w-5 text-gray-600" />
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900 dark:text-white">
+                              {qrCode.name}
+                            </div>
+                            <div className="text-sm text-gray-500 truncate max-w-xs">
+                              {qrCode.description || 'No description'}
+                            </div>
+                          </div>
                         </div>
-                        <div>
+                      </td>
+                      <td className="p-4">
+                        <div className="flex items-center">
+                          {getTypeIcon(qrCode.type)}
+                          <span className="ml-2 text-sm capitalize">
+                            {qrCode.type}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="p-4">
+                        <div className="text-sm">
                           <div className="font-medium text-gray-900 dark:text-white">
-                            {qrCode.name}
+                            {qrCode.deviceName || 'Unassigned'}
                           </div>
-                          <div className="text-sm text-gray-500 truncate max-w-xs">
-                            {qrCode.description}
-                          </div>
+                          {qrCode.deviceId && (
+                            <div className="text-gray-500 text-xs">
+                              ID: {qrCode.deviceId}
+                            </div>
+                          )}
                         </div>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="flex items-center">
-                        {getTypeIcon(qrCode.type)}
-                        <span className="ml-2 text-sm capitalize">
-                          {qrCode.type}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="text-sm">
+                      </td>
+                      <td className="p-4">
                         <div className="font-medium text-gray-900 dark:text-white">
-                          {qrCode.deviceName || 'Unassigned'}
+                          {(qrCode.scans || 0).toLocaleString()}
                         </div>
-                        {qrCode.deviceId && (
-                          <div className="text-gray-500 text-xs">
-                            ID: {qrCode.deviceId}
+                      </td>
+                      <td className="p-4">
+                        <span className="text-sm text-gray-500">
+                          {qrCode.lastScanned ? formatRelativeTime(qrCode.lastScanned) : 'Never'}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(qrCode.status)}`}>
+                          {qrCode.status}
+                        </span>
+                        {qrCode.expiryDate && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Expires: {formatDate(qrCode.expiryDate)}
                           </div>
                         )}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <div className="font-medium text-gray-900 dark:text-white">
-                        {qrCode.scans.toLocaleString()}
-                      </div>
-                    </td>
-                    <td className="p-4">
-                      <span className="text-sm text-gray-500">
-                        {qrCode.lastScanned}
-                      </span>
-                    </td>
-                    <td className="p-4">
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(qrCode.status)}`}>
-                        {qrCode.status}
-                      </span>
-                      {qrCode.expiryDate && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Expires: {qrCode.expiryDate}
+                      </td>
+                      <td className="p-4">
+                        <div className="flex gap-1">
+                          <Button variant="ghost" size="sm" title="View QR Code">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            title="Download"
+                            onClick={() => handleDownloadQRCode(qrCode.id, qrCode.name)}
+                            disabled={downloadQRCodeMutation.isPending}
+                          >
+                            {downloadQRCodeMutation.isPending ? 
+                              <Loader2 className="h-4 w-4 animate-spin" /> : 
+                              <Download className="h-4 w-4" />
+                            }
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            title="Copy Content"
+                            onClick={() => handleCopyContent(qrCode.content)}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" title="Edit">
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="sm" 
+                            title="Delete"
+                            onClick={() => handleDeleteQRCode(qrCode.id, qrCode.name)}
+                            disabled={deleteQRCodeMutation.isPending}
+                          >
+                            {deleteQRCodeMutation.isPending ? 
+                              <Loader2 className="h-4 w-4 animate-spin" /> : 
+                              <Trash2 className="h-4 w-4" />
+                            }
+                          </Button>
                         </div>
-                      )}
-                    </td>
-                    <td className="p-4">
-                      <div className="flex gap-1">
-                        <Button variant="ghost" size="sm" title="View QR Code">
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" title="Download">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" title="Copy Link">
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" title="Edit">
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="sm" title="Delete">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
 
         {/* Create QR Code Modal */}
@@ -358,9 +440,13 @@ export default function QRCodesPage() {
                 <div className="space-y-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      QR Code Name
+                      QR Code Name *
                     </label>
-                    <Input placeholder="Enter QR code name" />
+                    <Input 
+                      placeholder="Enter QR code name"
+                      value={formData.name || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    />
                   </div>
 
                   <div>
@@ -371,6 +457,8 @@ export default function QRCodesPage() {
                       className="w-full p-3 border border-gray-300 rounded-lg resize-none"
                       rows={2}
                       placeholder="Describe this QR code..."
+                      value={formData.description || ''}
+                      onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                     />
                   </div>
 
@@ -379,8 +467,8 @@ export default function QRCodesPage() {
                       QR Code Type
                     </label>
                     <select 
-                      value={selectedType}
-                      onChange={(e) => setSelectedType(e.target.value)}
+                      value={formData.type || 'url'}
+                      onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value }))}
                       className="w-full p-3 border border-gray-300 rounded-lg"
                     >
                       <option value="url">Website URL</option>
@@ -394,45 +482,41 @@ export default function QRCodesPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                      Content
+                      Content *
                     </label>
-                    {selectedType === 'url' && (
-                      <Input placeholder="https://example.com" />
+                    {formData.type === 'url' && (
+                      <Input 
+                        placeholder="https://example.com"
+                        value={formData.content || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                      />
                     )}
-                    {selectedType === 'wifi' && (
-                      <div className="space-y-2">
-                        <Input placeholder="Network Name (SSID)" />
-                        <Input placeholder="Password" type="password" />
-                        <select className="w-full p-3 border border-gray-300 rounded-lg">
-                          <option value="WPA">WPA/WPA2</option>
-                          <option value="WEP">WEP</option>
-                          <option value="nopass">No Password</option>
-                        </select>
-                      </div>
-                    )}
-                    {selectedType === 'text' && (
+                    {formData.type === 'text' && (
                       <textarea 
                         className="w-full p-3 border border-gray-300 rounded-lg resize-none"
                         rows={3}
                         placeholder="Enter your text content..."
+                        value={formData.content || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
                       />
                     )}
-                    {selectedType === 'email' && (
-                      <Input placeholder="email@example.com" type="email" />
+                    {formData.type === 'email' && (
+                      <Input 
+                        placeholder="email@example.com" 
+                        type="email"
+                        value={formData.content || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                      />
                     )}
-                    {selectedType === 'phone' && (
-                      <Input placeholder="+1 (555) 123-4567" type="tel" />
+                    {formData.type === 'phone' && (
+                      <Input 
+                        placeholder="+1 (555) 123-4567" 
+                        type="tel"
+                        value={formData.content || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, content: e.target.value }))}
+                      />
                     )}
-                    {selectedType === 'sms' && (
-                      <div className="space-y-2">
-                        <Input placeholder="Phone Number" type="tel" />
-                        <textarea 
-                          className="w-full p-3 border border-gray-300 rounded-lg resize-none"
-                          rows={2}
-                          placeholder="SMS message..."
-                        />
-                      </div>
-                    )}
+                    {/* Additional type-specific inputs can be added here */}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -440,12 +524,13 @@ export default function QRCodesPage() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Assign to Device
                       </label>
-                      <select className="w-full p-3 border border-gray-300 rounded-lg">
+                      <select 
+                        className="w-full p-3 border border-gray-300 rounded-lg"
+                        value={formData.deviceId || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, deviceId: e.target.value }))}
+                      >
                         <option value="">Select Device</option>
-                        <option value="device-1">Lobby Display 1</option>
-                        <option value="device-2">Conference Room A</option>
-                        <option value="device-3">Reception Display</option>
-                        <option value="device-4">Cafeteria Screen</option>
+                        {/* Device options would be populated from useDevices hook */}
                       </select>
                     </div>
                     
@@ -453,7 +538,11 @@ export default function QRCodesPage() {
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                         Expiry Date (Optional)
                       </label>
-                      <Input type="date" />
+                      <Input 
+                        type="date"
+                        value={formData.expiryDate || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, expiryDate: e.target.value }))}
+                      />
                     </div>
                   </div>
                 </div>
@@ -462,11 +551,22 @@ export default function QRCodesPage() {
                   <Button 
                     variant="outline"
                     onClick={() => setShowCreateModal(false)}
+                    disabled={createQRCodeMutation.isPending}
                   >
                     Cancel
                   </Button>
-                  <Button>
-                    Create QR Code
+                  <Button 
+                    onClick={handleCreateQRCode}
+                    disabled={createQRCodeMutation.isPending || !formData.name || !formData.content}
+                  >
+                    {createQRCodeMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      'Create QR Code'
+                    )}
                   </Button>
                 </div>
               </div>
