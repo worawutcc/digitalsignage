@@ -47,46 +47,81 @@ export const settingsService = {
    * Get all system settings
    */
   getSettings: async (): Promise<SystemSetting[]> => {
-    const response = await apiClient.get<SystemSetting[]>('/api/settings')
-    // Add Array.isArray() guard for safety
-    return Array.isArray(response.data) ? response.data : []
+    try {
+      const response = await apiClient.get<SystemSetting[]>('/api/settings')
+      
+      const settingsArray = Array.isArray(response.data) ? response.data : []
+      console.log('[SettingsService] System settings retrieved:', settingsArray.length)
+      return settingsArray
+    } catch (error) {
+      console.error('[SettingsService] Failed to get system settings:', error)
+      return [] // Safe fallback
+    }
   },
 
   /**
    * Get settings by category
    */
   getSettingsByCategory: async (category: string): Promise<SystemSetting[]> => {
-    const response = await apiClient.get<SystemSetting[]>(`/api/settings/${category}`)
-    // Add Array.isArray() guard for safety
-    return Array.isArray(response.data) ? response.data : []
+    try {
+      const response = await apiClient.get<SystemSetting[]>(`/api/settings/${category}`)
+      
+      const settingsArray = Array.isArray(response.data) ? response.data : []
+      console.log('[SettingsService] Settings by category retrieved:', category, settingsArray.length)
+      return settingsArray
+    } catch (error) {
+      console.error('[SettingsService] Failed to get settings by category:', category, error)
+      return [] // Safe fallback
+    }
   },
 
   /**
    * Update multiple system settings
    */
   updateSettings: async (request: UpdateSettingsRequest): Promise<SystemSetting[]> => {
-    const response = await apiClient.put<SystemSetting[]>('/api/settings', request)
-    // Add Array.isArray() guard for safety
-    return Array.isArray(response.data) ? response.data : []
+    try {
+      const response = await apiClient.put<SystemSetting[]>('/api/settings', request)
+      
+      const settingsArray = Array.isArray(response.data) ? response.data : []
+      console.log('[SettingsService] Settings updated successfully:', settingsArray.length)
+      return settingsArray
+    } catch (error) {
+      console.error('[SettingsService] Failed to update settings:', error)
+      return [] // Safe fallback
+    }
   },
 
-    /**
+  /**
    * Reset settings to default values
    */
   resetToDefaults: async (category?: string): Promise<SystemSetting[]> => {
-    const response = await apiClient.post<SystemSetting[]>('/settings/reset', {
-      category
-    })
-    return Array.isArray(response.data) ? response.data : []
+    try {
+      const response = await apiClient.post<SystemSetting[]>('/settings/reset', {
+        category
+      })
+      
+      const settingsArray = Array.isArray(response.data) ? response.data : []
+      console.log('[SettingsService] Settings reset to defaults:', category || 'all', settingsArray.length)
+      return settingsArray
+    } catch (error) {
+      console.error('[SettingsService] Failed to reset settings to defaults:', category, error)
+      return [] // Safe fallback
+    }
   },
 
   /**
    * Get available setting categories
    */
   getCategories: async (): Promise<string[]> => {
-    // Extract categories from all settings
-    const settings = await settingsService.getSettings()
-    const categories = [...new Set(settings.map(s => s.category))].sort()
-    return categories
+    try {
+      // Extract categories from all settings
+      const settings = await settingsService.getSettings()
+      const categories = [...new Set(settings.map(s => s.category))].sort()
+      console.log('[SettingsService] Setting categories retrieved:', categories.length)
+      return categories
+    } catch (error) {
+      console.error('[SettingsService] Failed to get setting categories:', error)
+      return [] // Safe fallback
+    }
   }
 }

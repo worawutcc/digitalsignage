@@ -1,3 +1,4 @@
+// TODO: Fix duplicate interface definitions - temporarily disabled type checking
 // @ts-nocheck
 /**
  * User API service for user management operations

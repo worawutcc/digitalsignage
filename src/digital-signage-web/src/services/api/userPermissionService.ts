@@ -64,13 +64,21 @@ class UserPermissionService {
   async getAccessibleDeviceGroups(
     minimumLevel: UserPermissionLevel = UserPermissionLevel.ViewOnly
   ): Promise<DeviceGroupAccessDto[]> {
-    const response = await apiClient.get<DeviceGroupAccessDto[]>(
-      `${this.basePath}/accessible-groups`,
-      {
-        params: { minimumLevel }
-      }
-    );
-    return response.data;
+    try {
+      const response = await apiClient.get<DeviceGroupAccessDto[]>(
+        `${this.basePath}/accessible-groups`,
+        {
+          params: { minimumLevel }
+        }
+      );
+      
+      const groupsArray = Array.isArray(response.data) ? response.data : [];
+      console.log('[UserPermissionService] Accessible device groups retrieved:', groupsArray.length, 'minimumLevel:', minimumLevel);
+      return groupsArray;
+    } catch (error) {
+      console.error('[UserPermissionService] Failed to get accessible device groups:', error);
+      return [];
+    }
   }
 
   /**
@@ -78,8 +86,16 @@ class UserPermissionService {
    * GET /api/user/permissions/my-permissions
    */
   async getMyPermissions(): Promise<UserPermissionDto[]> {
-    const response = await apiClient.get<UserPermissionDto[]>(`${this.basePath}/my-permissions`);
-    return response.data;
+    try {
+      const response = await apiClient.get<UserPermissionDto[]>(`${this.basePath}/my-permissions`);
+      
+      const permissionsArray = Array.isArray(response.data) ? response.data : [];
+      console.log('[UserPermissionService] User permissions retrieved:', permissionsArray.length);
+      return permissionsArray;
+    } catch (error) {
+      console.error('[UserPermissionService] Failed to get user permissions:', error);
+      return [];
+    }
   }
 
   /**
@@ -87,10 +103,21 @@ class UserPermissionService {
    * GET /api/user/permissions/device-group/{deviceGroupId}
    */
   async getMyPermissionForDeviceGroup(deviceGroupId: number): Promise<UserPermissionDto> {
-    const response = await apiClient.get<UserPermissionDto>(
-      `${this.basePath}/device-group/${deviceGroupId}`
-    );
-    return response.data;
+    try {
+      const response = await apiClient.get<UserPermissionDto>(
+        `${this.basePath}/device-group/${deviceGroupId}`
+      );
+      
+      if (!response.data || !response.data.userId) {
+        throw new Error('Invalid permission response structure');
+      }
+      
+      console.log('[UserPermissionService] Permission for device group retrieved:', deviceGroupId, response.data.permissionLevel);
+      return response.data;
+    } catch (error) {
+      console.error('[UserPermissionService] Failed to get permission for device group:', deviceGroupId, error);
+      throw error;
+    }
   }
 
   /**
@@ -101,13 +128,25 @@ class UserPermissionService {
     deviceGroupId: number,
     requiredLevel: UserPermissionLevel = UserPermissionLevel.ViewOnly
   ): Promise<boolean> {
-    const response = await apiClient.get<{ canAccess: boolean }>(
-      `${this.basePath}/can-access-group/${deviceGroupId}`,
-      {
-        params: { requiredLevel }
+    try {
+      const response = await apiClient.get<{ canAccess: boolean }>(
+        `${this.basePath}/can-access-group/${deviceGroupId}`,
+        {
+          params: { requiredLevel }
+        }
+      );
+      
+      if (!response.data || typeof response.data.canAccess !== 'boolean') {
+        console.warn('[UserPermissionService] Invalid access check response, denying access');
+        return false;
       }
-    );
-    return response.data.canAccess;
+      
+      console.log('[UserPermissionService] Access check for device group:', deviceGroupId, 'requiredLevel:', requiredLevel, 'canAccess:', response.data.canAccess);
+      return response.data.canAccess;
+    } catch (error) {
+      console.error('[UserPermissionService] Failed to check device group access (denying access):', deviceGroupId, error);
+      return false; // Deny access by default on error (security fail-safe)
+    }
   }
 
   /**

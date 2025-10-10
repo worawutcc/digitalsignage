@@ -129,8 +129,19 @@ class AuthService {
    * POST /api/auth/register
    */
   async register(data: RegisterRequest): Promise<RegisterResponse> {
-    const response = await apiClient.post<RegisterResponse>(`${this.basePath}/register`, data);
-    return response.data;
+    try {
+      const response = await apiClient.post<RegisterResponse>(`${this.basePath}/register`, data);
+      
+      if (!response.data) {
+        throw new Error('Invalid response structure from register endpoint');
+      }
+      
+      console.log('[AuthService] User registered successfully:', response.data.email);
+      return response.data;
+    } catch (error) {
+      console.error('[AuthService] Registration failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -138,8 +149,19 @@ class AuthService {
    * POST /api/auth/login
    */
   async login(data: LoginRequest): Promise<LoginResponse> {
-    const response = await apiClient.post<LoginResponse>(`${this.basePath}/login`, data);
-    return response.data;
+    try {
+      const response = await apiClient.post<LoginResponse>(`${this.basePath}/login`, data);
+      
+      if (!response.data || !response.data.user || !response.data.accessToken) {
+        throw new Error('Invalid login response structure');
+      }
+      
+      console.log('[AuthService] User logged in successfully:', response.data.user.email);
+      return response.data;
+    } catch (error) {
+      console.error('[AuthService] Login failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -147,8 +169,19 @@ class AuthService {
    * POST /api/auth/device-login
    */
   async deviceLogin(data: DeviceLoginRequest): Promise<DeviceLoginResponse> {
-    const response = await apiClient.post<DeviceLoginResponse>(`${this.basePath}/device-login`, data);
-    return response.data;
+    try {
+      const response = await apiClient.post<DeviceLoginResponse>(`${this.basePath}/device-login`, data);
+      
+      if (!response.data || !response.data.device || !response.data.accessToken) {
+        throw new Error('Invalid device login response structure');
+      }
+      
+      console.log('[AuthService] Device logged in successfully:', response.data.device.name);
+      return response.data;
+    } catch (error) {
+      console.error('[AuthService] Device login failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -156,8 +189,19 @@ class AuthService {
    * POST /api/auth/refresh
    */
   async refreshToken(data: RefreshTokenRequest): Promise<RefreshTokenResponse> {
-    const response = await apiClient.post<RefreshTokenResponse>(`${this.basePath}/refresh`, data);
-    return response.data;
+    try {
+      const response = await apiClient.post<RefreshTokenResponse>(`${this.basePath}/refresh`, data);
+      
+      if (!response.data || !response.data.accessToken) {
+        throw new Error('Invalid refresh token response structure');
+      }
+      
+      console.log('[AuthService] Token refreshed successfully');
+      return response.data;
+    } catch (error) {
+      console.error('[AuthService] Token refresh failed:', error);
+      throw error;
+    }
   }
 
   /**
@@ -165,7 +209,13 @@ class AuthService {
    * POST /api/auth/logout
    */
   async logout(data: LogoutRequest): Promise<void> {
-    await apiClient.post<void>(`${this.basePath}/logout`, data);
+    try {
+      await apiClient.post<void>(`${this.basePath}/logout`, data);
+      console.log('[AuthService] User logged out successfully');
+    } catch (error) {
+      console.error('[AuthService] Logout failed:', error);
+      throw error;
+    }
   }
 
   // ================== Helper Methods ==================
