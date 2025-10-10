@@ -261,7 +261,7 @@ export default function SchedulesPage() {
                             {schedule.name}
                           </div>
                           <div className="text-xs text-gray-500 mt-1">
-                            {schedule.targetDevices.length} device(s) • Priority{' '}
+                            {schedule.targetDevices?.length || 0} device(s) • Priority{' '}
                             {schedule.priority}
                           </div>
                         </div>
@@ -367,7 +367,7 @@ export default function SchedulesPage() {
                           {schedule.priority}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {schedule.targetDevices.length}
+                          {schedule.targetDevices?.length || 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
@@ -447,7 +447,7 @@ export default function SchedulesPage() {
                           <div className="flex items-center space-x-4 mt-2 text-xs text-blue-600 dark:text-blue-400">
                             <span>Priority: {selectedScheduleForAssignment.priority}</span>
                             <span>Status: {selectedScheduleForAssignment.status}</span>
-                            <span>Devices: {selectedScheduleForAssignment.targetDevices.length}</span>
+                            <span>Devices: {selectedScheduleForAssignment.targetDevices?.length || 0}</span>
                           </div>
                         </div>
                       </div>
