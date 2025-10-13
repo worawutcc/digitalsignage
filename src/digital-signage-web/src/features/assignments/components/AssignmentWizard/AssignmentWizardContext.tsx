@@ -216,6 +216,8 @@ export function AssignmentWizardProvider({
         targetId: firstTargetId,
         startDate: data.scheduling.startDate,
         endDate: data.scheduling.endDate || null,
+        startTime: data.scheduling.startTime || null,
+        endTime: data.scheduling.endTime || null,
         priority: data.scheduling.priority || 5, // Default to priority 5 if not set
         isEmergencyBroadcast: data.scheduling.isEmergencyBroadcast || false,
         recurrencePattern: data.scheduling.recurrencePattern || null,

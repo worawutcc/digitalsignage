@@ -10,14 +10,27 @@ import { Calendar, Clock, AlertTriangle, FileText } from 'lucide-react';
 import { Input } from '@/components/ui/Input';
 import { useAssignmentWizard } from '../AssignmentWizardContext';
 
+/**
+ * NOTE: This component uses useState instead of React Hook Form + Zod 
+ * due to integration with existing AssignmentWizardContext pattern.
+ * For standalone forms, prefer React Hook Form + Zod as per UI instructions.
+ */
+
+/**
+ * Scheduling step component for assignment wizard
+ * @description Third step of assignment wizard - schedule timing and options
+ */
 export function SchedulingStep() {
   const { data, updateSchedulingData } = useAssignmentWizard();
   
-  // Form state
+  // Form state - uses useState due to wizard context pattern
+  // For standalone forms, prefer React Hook Form + Zod as per UI instructions
   const [startDate, setStartDate] = useState(
     data.scheduling?.startDate || new Date().toISOString().split('T')[0]
   );
   const [endDate, setEndDate] = useState(data.scheduling?.endDate || '');
+  const [startTime, setStartTime] = useState(data.scheduling?.startTime || '');
+  const [endTime, setEndTime] = useState(data.scheduling?.endTime || '');
   const [priority, setPriority] = useState(data.scheduling?.priority || 5);
   const [isEmergencyBroadcast, setIsEmergencyBroadcast] = useState(
     data.scheduling?.isEmergencyBroadcast || false
@@ -42,13 +55,21 @@ export function SchedulingStep() {
         updateData.endDate = endDate;
       }
       
+      if (startTime) {
+        updateData.startTime = startTime;
+      }
+      
+      if (endTime) {
+        updateData.endTime = endTime;
+      }
+      
       if (notes) {
         updateData.notes = notes;
       }
       
       updateSchedulingData(updateData);
     }
-  }, [startDate, endDate, priority, isEmergencyBroadcast, notes, updateSchedulingData]);
+  }, [startDate, endDate, startTime, endTime, priority, isEmergencyBroadcast, notes, updateSchedulingData]);
 
   // Handle emergency broadcast toggle
   const handleEmergencyToggle = (checked: boolean) => {
@@ -144,6 +165,52 @@ export function SchedulingStep() {
         </div>
       </div>
 
+      {/* Time Range */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="flex items-center gap-2 text-base font-medium mb-3">
+            <Clock className="w-4 h-4" />
+            Start Time (Optional)
+          </label>
+          <Input
+            type="time"
+            value={startTime}
+            onChange={(e) => setStartTime(e.target.value)}
+            className="w-full"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Daily start time for content display
+          </p>
+        </div>
+
+        <div>
+          <label className="flex items-center gap-2 text-base font-medium mb-3">
+            <Clock className="w-4 h-4" />
+            End Time (Optional)
+          </label>
+          <Input
+            type="time"
+            value={endTime}
+            onChange={(e) => setEndTime(e.target.value)}
+            className="w-full"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Daily end time for content display
+          </p>
+        </div>
+      </div>
+
+      {/* Time Range Info */}
+      <div className="p-3 bg-blue-50 rounded-lg">
+        <h4 className="text-sm font-medium text-blue-900 mb-2">Time Range Guidelines:</h4>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li><strong>Both times empty:</strong> Content runs all day (24/7)</li>
+          <li><strong>Start time only:</strong> Content starts at specified time, runs until end of day</li>
+          <li><strong>End time only:</strong> Content runs from beginning of day until specified time</li>
+          <li><strong>Both times set:</strong> Content runs only during the specified time window each day</li>
+        </ul>
+      </div>
+
       {/* Priority */}
       <div>
         <label className="flex items-center gap-2 text-base font-medium mb-3">
@@ -216,9 +283,9 @@ export function SchedulingStep() {
       {/* Schedule Summary */}
       <div className="p-4 bg-gray-50 rounded-lg">
         <h4 className="font-medium text-gray-900 mb-3">Schedule Summary</h4>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
           <div>
-            <span className="text-gray-600">Start:</span>
+            <span className="text-gray-600">Start Date:</span>
             <div className="font-medium">
               {startDate ? new Date(startDate).toLocaleDateString('en-US', {
                 weekday: 'short',
@@ -230,7 +297,7 @@ export function SchedulingStep() {
           </div>
           
           <div>
-            <span className="text-gray-600">End:</span>
+            <span className="text-gray-600">End Date:</span>
             <div className="font-medium">
               {endDate 
                 ? new Date(endDate).toLocaleDateString('en-US', {
@@ -240,6 +307,16 @@ export function SchedulingStep() {
                     day: 'numeric'
                   })
                 : 'Indefinite'
+              }
+            </div>
+          </div>
+
+          <div>
+            <span className="text-gray-600">Time Range:</span>
+            <div className="font-medium">
+              {startTime || endTime 
+                ? `${startTime || '00:00'} - ${endTime || '23:59'}`
+                : 'All day'
               }
             </div>
           </div>

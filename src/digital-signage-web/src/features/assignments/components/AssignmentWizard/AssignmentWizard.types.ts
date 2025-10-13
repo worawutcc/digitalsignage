@@ -40,11 +40,19 @@ export interface TargetSelectionData {
 }
 
 /**
- * Scheduling step data
+ * Scheduling step data for assignment wizard
+ * @interface SchedulingData
  */
 export interface SchedulingData {
+  /** Assignment start date in YYYY-MM-DD format */
   startDate: string;
+  /** Optional assignment end date in YYYY-MM-DD format */
   endDate?: string;
+  /** Optional daily start time in HH:mm format */
+  startTime?: string;
+  /** Optional daily end time in HH:mm format */
+  endTime?: string;
+  /** Assignment priority level (1-10, where 1 = highest priority) */
   priority: number;
   isEmergencyBroadcast: boolean;
   recurrencePattern?: string; // JSON string for recurrence pattern
@@ -133,6 +141,8 @@ export const targetSelectionSchema = z.object({
 export const schedulingSchema = z.object({
   startDate: z.string().min(1, 'Start date is required'),
   endDate: z.string().optional(),
+  startTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional(),
+  endTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format (HH:MM)').optional(),
   priority: z.number().min(1).max(10),
   isEmergencyBroadcast: z.boolean(),
   recurrencePattern: z.string().optional(), // JSON string for recurrence pattern
@@ -147,6 +157,24 @@ export const schedulingSchema = z.object({
   {
     message: 'End date must be after start date',
     path: ['endDate'],
+  }
+).refine(
+  (data) => {
+    if (data.startTime && data.endTime) {
+      const startParts = data.startTime.split(':').map(Number);
+      const endParts = data.endTime.split(':').map(Number);
+      
+      if (startParts.length === 2 && endParts.length === 2) {
+        const startMinutes = startParts[0]! * 60 + startParts[1]!;
+        const endMinutes = endParts[0]! * 60 + endParts[1]!;
+        return startMinutes < endMinutes;
+      }
+    }
+    return true;
+  },
+  {
+    message: 'End time must be after start time',
+    path: ['endTime'],
   }
 );
 
