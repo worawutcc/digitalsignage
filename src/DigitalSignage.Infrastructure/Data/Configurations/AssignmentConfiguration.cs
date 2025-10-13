@@ -117,6 +117,11 @@ public class AssignmentConfiguration : IEntityTypeConfiguration<Assignment>
         // because TargetId can reference either Device.Id or DeviceGroup.Id based on TargetType
         builder.Ignore(a => a.Device);
         builder.Ignore(a => a.DeviceGroup);
+        
+        // Content relationship configuration
+        // Note: Schedule navigation property is loaded manually in repository
+        // because ContentId can reference Schedule.Id when AssignmentType = Schedule
+        builder.Ignore(a => a.Schedule);
 
         builder.HasMany(a => a.AssignmentHistories)
             .WithOne(ah => ah.Assignment)
