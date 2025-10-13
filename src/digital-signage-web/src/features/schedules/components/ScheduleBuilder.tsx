@@ -19,6 +19,8 @@ import { useMediaScheduleIntegration } from '@/hooks/useMediaScheduleIntegration
 import { useDevices } from '@/features/devices/hooks/useDevices'
 import { useMedia } from '@/hooks/useMedia'
 import { Button } from '@/components/ui/Button'
+import { useFormErrorHandling } from '@/hooks/useErrorHandling'
+import { GlobalFormErrors } from '@/components/errors/FormError'
 
 // Validation schema
 const scheduleSchema = z.object({
@@ -102,6 +104,15 @@ export function ScheduleBuilder({
   const [deviceSearch, setDeviceSearch] = useState('')
   const [mediaSearch, setMediaSearch] = useState('')
   const validateMutation = useValidateSchedule()
+  
+  // Error handling
+  const { 
+    errors: allFormErrors, 
+    globalError, 
+    clearAllErrors, 
+    handleValidationErrors,
+    setGlobalFormError 
+  } = useFormErrorHandling<ScheduleFormData>()
   
   // Fetch devices and media
   const devicesResult = useDevices()
@@ -236,36 +247,43 @@ export function ScheduleBuilder({
   //   validateMutation,
   // ])
 
-  const onSubmit = (data: ScheduleFormData) => {
-    console.log('💾 Form submitted with data:', data)
+  const onSubmit = async (data: ScheduleFormData) => {
+    // Clear previous errors
+    clearAllErrors()
     
-    // 🔍 DEBUG: Analyze form data before submission
-    console.log('🔍 Form Data Analysis:')
-    console.log('  - Name:', data.name)
-    console.log('  - Date Range:', data.startDate, 'to', data.endDate)
-    console.log('  - Time Slots Count:', data.timeSlots?.length || 0)
-    console.log('  - Target Devices Count:', data.targetDevices?.length || 0)
-    console.log('  - Content Items Count:', data.content?.length || 0)
-    
-    // ⚠️ FORM VALIDATION: Check for obvious issues
-    if (!data.timeSlots || data.timeSlots.length === 0) {
-      console.error('❌ FORM ERROR: No time slots configured!')
-      alert('Please add at least one time slot before submitting.')
-      return
+    try {
+      console.log('💾 Form submitted with data:', data)
+      
+      // ⚠️ FORM VALIDATION: Check for obvious issues
+      if (!data.timeSlots || data.timeSlots.length === 0) {
+        setGlobalFormError('Please add at least one time slot before submitting.')
+        return
+      }
+      
+      if (!data.targetDevices || data.targetDevices.length === 0) {
+        setGlobalFormError('Please select at least one target device before submitting.')
+        return
+      }
+      
+      if (!data.content || data.content.length === 0) {
+        console.warn('⚠️ No content selected - schedule will be empty')
+      }
+      
+      console.log('✅ Form validation passed, proceeding with submission...')
+      await onSave(data as CreateScheduleRequest)
+      clearAllErrors()
+    } catch (error: any) {
+      console.error('❌ Failed to save schedule:', error)
+      
+      // Handle validation errors from API
+      if (error?.status === 400 && error?.errors) {
+        handleValidationErrors(error)
+      } else {
+        // Handle general errors
+        const errorMessage = error?.message || error?.detail || 'Failed to save schedule. Please try again.'
+        setGlobalFormError(errorMessage)
+      }
     }
-    
-    if (!data.targetDevices || data.targetDevices.length === 0) {
-      console.error('❌ FORM ERROR: No target devices selected!')
-      alert('Please select at least one target device before submitting.')
-      return
-    }
-    
-    if (!data.content || data.content.length === 0) {
-      console.warn('⚠️ FORM WARNING: No content selected - schedule will be empty')
-    }
-    
-    console.log('✅ Form validation passed, proceeding with submission...')
-    onSave(data as CreateScheduleRequest)
   }
 
   return (
@@ -307,6 +325,16 @@ export function ScheduleBuilder({
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="p-6">
+        {/* Global Form Errors */}
+        {(globalError || allFormErrors.length > 0) && (
+          <div className="mb-6">
+            <GlobalFormErrors
+              errors={allFormErrors}
+              onDismiss={clearAllErrors}
+            />
+          </div>
+        )}
+
         {/* Basic Info Tab */}
         {activeTab === 'basic' && (
           <div className="space-y-4">
