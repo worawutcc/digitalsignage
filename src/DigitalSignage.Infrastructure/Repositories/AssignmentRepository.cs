@@ -497,7 +497,17 @@ public class AssignmentRepository : IAssignmentRepository
             assignment.Schedule = await _context.Schedules
                 .FirstOrDefaultAsync(s => s.Id == assignment.ContentId);
         }
-        // TODO: Add other content types (Playlist, Media) when needed
+        else if (assignment.AssignmentType == AssignmentType.Playlist)
+        {
+            assignment.Playlist = await _context.Playlists
+                .FirstOrDefaultAsync(p => p.Id == assignment.ContentId);
+        }
+        else if (assignment.AssignmentType == AssignmentType.Media)
+        {
+            assignment.Media = await _context.Medias
+                .FirstOrDefaultAsync(m => m.Id == assignment.ContentId);
+        }
+        // Note: Emergency type doesn't need content loading as it uses direct content
     }
 
     /// <summary>
@@ -540,6 +550,28 @@ public class AssignmentRepository : IAssignmentRepository
             ? await _context.Schedules.Where(s => scheduleContentIds.Contains(s.Id)).ToListAsync()
             : new List<Schedule>();
 
+        // Load all playlists at once
+        var playlistContentIds = assignmentList
+            .Where(a => a.AssignmentType == AssignmentType.Playlist)
+            .Select(a => a.ContentId)
+            .Distinct()
+            .ToList();
+
+        var playlists = playlistContentIds.Any()
+            ? await _context.Playlists.Where(p => playlistContentIds.Contains(p.Id)).ToListAsync()
+            : new List<Playlist>();
+
+        // Load all medias at once
+        var mediaContentIds = assignmentList
+            .Where(a => a.AssignmentType == AssignmentType.Media)
+            .Select(a => a.ContentId)
+            .Distinct()
+            .ToList();
+
+        var medias = mediaContentIds.Any()
+            ? await _context.Medias.Where(m => mediaContentIds.Contains(m.Id)).ToListAsync()
+            : new List<Media>();
+
         // Assign navigation properties
         foreach (var assignment in assignmentList)
         {
@@ -558,7 +590,15 @@ public class AssignmentRepository : IAssignmentRepository
             {
                 assignment.Schedule = schedules.FirstOrDefault(s => s.Id == assignment.ContentId);
             }
-            // TODO: Add other content types (Playlist, Media) when needed
+            else if (assignment.AssignmentType == AssignmentType.Playlist)
+            {
+                assignment.Playlist = playlists.FirstOrDefault(p => p.Id == assignment.ContentId);
+            }
+            else if (assignment.AssignmentType == AssignmentType.Media)
+            {
+                assignment.Media = medias.FirstOrDefault(m => m.Id == assignment.ContentId);
+            }
+            // Note: Emergency type doesn't need content loading as it uses direct content
         }
     }
 }

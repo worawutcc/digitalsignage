@@ -16,6 +16,8 @@ public class AssignmentProfile : Profile
         CreateMap<Assignment, AssignmentDto>()
             .ForMember(dest => dest.ContentName, opt => opt.Ignore()) // Set by service
             .ForMember(dest => dest.TargetName, opt => opt.Ignore())  // Set by service
+            .ForMember(dest => dest.StartDate, opt => opt.MapFrom(src => GetEffectiveStartDate(src)))
+            .ForMember(dest => dest.EndDate, opt => opt.MapFrom(src => GetEffectiveEndDate(src)))
             .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => GetEffectiveStartTime(src)))
             .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => GetEffectiveEndTime(src)))
             .ForMember(dest => dest.CreatedByUserName, opt => opt.MapFrom(src => 
@@ -36,6 +38,8 @@ public class AssignmentProfile : Profile
             .ForMember(dest => dest.Device, opt => opt.Ignore())
             .ForMember(dest => dest.DeviceGroup, opt => opt.Ignore())
             .ForMember(dest => dest.Schedule, opt => opt.Ignore())
+            .ForMember(dest => dest.Playlist, opt => opt.Ignore())
+            .ForMember(dest => dest.Media, opt => opt.Ignore())
             .ForMember(dest => dest.AssignmentHistories, opt => opt.Ignore());
 
         // UpdateAssignmentRequest -> Assignment
@@ -51,6 +55,8 @@ public class AssignmentProfile : Profile
             .ForMember(dest => dest.Device, opt => opt.Ignore())
             .ForMember(dest => dest.DeviceGroup, opt => opt.Ignore())
             .ForMember(dest => dest.Schedule, opt => opt.Ignore())
+            .ForMember(dest => dest.Playlist, opt => opt.Ignore())
+            .ForMember(dest => dest.Media, opt => opt.Ignore())
             .ForMember(dest => dest.AssignmentHistories, opt => opt.Ignore());
 
         // AssignmentHistory -> AssignmentHistoryDto
@@ -59,6 +65,36 @@ public class AssignmentProfile : Profile
                 src.User != null ? src.User.Username : string.Empty));
     }
     
+    /// <summary>
+    /// Get effective start date for assignment - from Schedule if AssignmentType = Schedule, otherwise from Assignment itself
+    /// </summary>
+    private static DateTime GetEffectiveStartDate(Assignment assignment)
+    {
+        // If AssignmentType is Schedule and Schedule is loaded, use Schedule's StartDate
+        if (assignment.AssignmentType == AssignmentType.Schedule && assignment.Schedule != null)
+        {
+            return assignment.Schedule.StartDate;
+        }
+        
+        // Otherwise use Assignment's own StartDate
+        return assignment.StartDate;
+    }
+    
+    /// <summary>
+    /// Get effective end date for assignment - from Schedule if AssignmentType = Schedule, otherwise from Assignment itself
+    /// </summary>
+    private static DateTime? GetEffectiveEndDate(Assignment assignment)
+    {
+        // If AssignmentType is Schedule and Schedule is loaded, use Schedule's EndDate
+        if (assignment.AssignmentType == AssignmentType.Schedule && assignment.Schedule != null)
+        {
+            return assignment.Schedule.EndDate;
+        }
+        
+        // Otherwise use Assignment's own EndDate
+        return assignment.EndDate;
+    }
+
     /// <summary>
     /// Get effective start time for assignment - from Schedule if AssignmentType = Schedule, otherwise from Assignment itself
     /// </summary>

@@ -107,7 +107,8 @@ public class Assignment : BaseEntity
     
     // Content navigation properties (based on AssignmentType)
     public Schedule? Schedule { get; set; }
-    // TODO: Add Playlist? and Media? when needed
+    public Playlist? Playlist { get; set; }
+    public Media? Media { get; set; }
     
     public ICollection<AssignmentHistory> AssignmentHistories { get; set; } = new List<AssignmentHistory>();
 
