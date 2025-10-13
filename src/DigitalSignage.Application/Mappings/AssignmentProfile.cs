@@ -15,6 +15,8 @@ public class AssignmentProfile : Profile
         CreateMap<Assignment, AssignmentDto>()
             .ForMember(dest => dest.ContentName, opt => opt.Ignore()) // Set by service
             .ForMember(dest => dest.TargetName, opt => opt.Ignore())  // Set by service
+            .ForMember(dest => dest.StartTime, opt => opt.MapFrom(src => src.StartTime))
+            .ForMember(dest => dest.EndTime, opt => opt.MapFrom(src => src.EndTime))
             .ForMember(dest => dest.CreatedByUserName, opt => opt.MapFrom(src => 
                 src.CreatedByUser != null ? src.CreatedByUser.Username : string.Empty))
             .ForMember(dest => dest.LastModifiedByUserName, opt => opt.MapFrom(src => 

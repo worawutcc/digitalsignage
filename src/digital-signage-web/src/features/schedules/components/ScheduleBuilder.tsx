@@ -238,6 +238,33 @@ export function ScheduleBuilder({
 
   const onSubmit = (data: ScheduleFormData) => {
     console.log('💾 Form submitted with data:', data)
+    
+    // 🔍 DEBUG: Analyze form data before submission
+    console.log('🔍 Form Data Analysis:')
+    console.log('  - Name:', data.name)
+    console.log('  - Date Range:', data.startDate, 'to', data.endDate)
+    console.log('  - Time Slots Count:', data.timeSlots?.length || 0)
+    console.log('  - Target Devices Count:', data.targetDevices?.length || 0)
+    console.log('  - Content Items Count:', data.content?.length || 0)
+    
+    // ⚠️ FORM VALIDATION: Check for obvious issues
+    if (!data.timeSlots || data.timeSlots.length === 0) {
+      console.error('❌ FORM ERROR: No time slots configured!')
+      alert('Please add at least one time slot before submitting.')
+      return
+    }
+    
+    if (!data.targetDevices || data.targetDevices.length === 0) {
+      console.error('❌ FORM ERROR: No target devices selected!')
+      alert('Please select at least one target device before submitting.')
+      return
+    }
+    
+    if (!data.content || data.content.length === 0) {
+      console.warn('⚠️ FORM WARNING: No content selected - schedule will be empty')
+    }
+    
+    console.log('✅ Form validation passed, proceeding with submission...')
     onSave(data as CreateScheduleRequest)
   }
 

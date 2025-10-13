@@ -269,7 +269,7 @@ export class AssignmentApiClient {
    * Get assignments by type
    */
   async getAssignmentsByType(
-    assignmentType: AssignmentType,
+    assignmentType: string, // Use string instead of enum
     params?: Omit<GetAssignmentsRequest, 'assignmentType'>
   ): Promise<AssignmentListResponse> {
     return this.getAssignments({ ...params, assignmentType });
@@ -279,7 +279,7 @@ export class AssignmentApiClient {
    * Get assignments by status
    */
   async getAssignmentsByStatus(
-    status: AssignmentStatus,
+    status: string, // Use string instead of enum
     params?: Omit<GetAssignmentsRequest, 'status'>
   ): Promise<AssignmentListResponse> {
     return this.getAssignments({ ...params, status });

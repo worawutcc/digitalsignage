@@ -92,4 +92,10 @@ public interface IDeviceService
     /// <param name="deviceId">Device ID to reconsider</param>
     /// <returns>Response with success status</returns>
     Task<ReconsiderDeviceResponseDto> ReconsiderDeviceAsync(int deviceId);
+
+    /// <summary>
+    /// Get device statistics for dashboard
+    /// </summary>
+    /// <returns>Device statistics including total, online, offline counts and average uptime</returns>
+    Task<DeviceStatsDto> GetDeviceStatsAsync();
 }

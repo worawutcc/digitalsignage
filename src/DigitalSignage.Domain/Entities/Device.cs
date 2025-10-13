@@ -55,6 +55,11 @@ public class Device : BaseEntity
     /// </summary>
     public ICollection<ScheduleDevice> ScheduleDevices { get; set; } = new List<ScheduleDevice>();
     
+    /// <summary>
+    /// Playlists assigned to this device (one-to-many relationship)
+    /// </summary>
+    public ICollection<PlaylistAssignment> PlaylistAssignments { get; set; } = new List<PlaylistAssignment>();
+    
     public ICollection<UserDeviceAssociation> UserAssociations { get; set; } = new List<UserDeviceAssociation>();
     public ICollection<Assignment> Assignments { get; set; } = new List<Assignment>();
     

@@ -95,7 +95,7 @@ public class PlaylistAssignmentConfiguration : IEntityTypeConfiguration<Playlist
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(pa => pa.Device)
-            .WithMany()
+            .WithMany(d => d.PlaylistAssignments)
             .HasForeignKey(pa => pa.DeviceId)
             .OnDelete(DeleteBehavior.Cascade);
 

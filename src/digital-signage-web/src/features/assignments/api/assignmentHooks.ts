@@ -182,7 +182,7 @@ export function useActiveAssignments(
 ) {
   return useQuery(
     assignmentKeys.active(),
-    () => assignmentApi.getAssignmentsByStatus(AssignmentStatus.Active),
+    () => assignmentApi.getAssignmentsByStatus('Active'),
     {
       staleTime: 20000, // 20 seconds (more frequent updates)
       refetchInterval: 30000, // Auto-refresh every 30 seconds
@@ -305,7 +305,7 @@ export function useUpdateAssignment(
         if (previousAssignment) {
           queryClient.setQueryData<Assignment>(
             assignmentKeys.detail(id),
-            { ...previousAssignment, ...request }
+            { ...previousAssignment, ...request } as Assignment
           );
         }
 

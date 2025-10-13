@@ -113,7 +113,16 @@ export const contentSelectionSchema = z.object({
   contentId: z.number().positive('Please select content'),
   contentName: z.string().optional(),
   contentType: z.enum(['schedule', 'playlist', 'media']).optional(),
-});
+}).refine(
+  (data) => {
+    // Must have both assignmentType (including 0) and a valid contentId
+    return data.assignmentType !== undefined && data.contentId > 0;
+  },
+  {
+    message: 'Please select both assignment type and specific content',
+    path: ['contentId']
+  }
+);
 
 export const targetSelectionSchema = z.object({
   targetType: z.nativeEnum(AssignmentTargetType),

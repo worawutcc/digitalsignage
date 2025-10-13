@@ -78,10 +78,10 @@ export enum AssignmentAction {
  */
 export interface Assignment {
   id: number;
-  assignmentType: AssignmentType;
+  assignmentType: string; // API sends string enum (e.g., "Schedule", "Playlist")
   contentId: number;
   contentName: string;
-  targetType: AssignmentTargetType;
+  targetType: string; // API sends string enum (e.g., "Device", "DeviceGroup")
   targetId: number;
   targetName: string;
   priority: number; // 1-10
@@ -92,7 +92,7 @@ export interface Assignment {
   isRecurring: boolean;
   recurrencePattern: string | null; // JSON string or pattern
   daysOfWeek: string | null; // Comma-separated: "Mon,Wed,Fri"
-  status: AssignmentStatus;
+  status: string; // API sends string enum (e.g., "Draft", "Active")
   isEmergencyBroadcast: boolean;
   emergencyExpiresAt: string | null; // ISO date string
   notes: string | null;
@@ -186,7 +186,7 @@ export const isEmergencyBroadcast = (
  * Type guard to check if assignment is active
  */
 export const isActiveAssignment = (assignment: Assignment): boolean => {
-  return assignment.status === AssignmentStatus.Active;
+  return assignment.status === 'Active';
 };
 
 /**
@@ -229,9 +229,9 @@ export type AssignmentFormData = Omit<
  * Assignment filter criteria
  */
 export interface AssignmentFilter {
-  assignmentType?: AssignmentType;
-  targetType?: AssignmentTargetType;
-  status?: AssignmentStatus;
+  assignmentType?: string; // API uses string enums
+  targetType?: string; // API uses string enums  
+  status?: string; // API uses string enums
   isEmergencyBroadcast?: boolean;
   startDate?: string;
   endDate?: string;

@@ -83,9 +83,9 @@ export interface UpdateAssignmentPriorityRequest {
  * Request to get assignment list with filters
  */
 export interface GetAssignmentsRequest {
-  status?: AssignmentStatus;
-  assignmentType?: AssignmentType;
-  targetType?: AssignmentTargetType;
+  status?: string; // API uses string enums
+  assignmentType?: string; // API uses string enums
+  targetType?: string; // API uses string enums
   targetId?: number;
   createdByUserId?: number;
   dateFrom?: string;

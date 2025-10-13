@@ -20,9 +20,9 @@ import {
 
 export interface AssignmentStatusProps {
   /**
-   * Assignment status
+   * Assignment status (string from API)
    */
-  status: AssignmentStatusEnum;
+  status: string;
   
   /**
    * Badge size variant
@@ -59,10 +59,17 @@ export interface AssignmentStatusProps {
 }
 
 /**
- * Status configuration mapping
+ * Status configuration mapping (using string keys from API)
  */
-const STATUS_CONFIG = {
-  [AssignmentStatusEnum.Draft]: {
+const STATUS_CONFIG: Record<string, {
+  label: string;
+  icon: React.ComponentType<any>;
+  className: string;
+  darkClassName: string;
+  dotClassName: string;
+  animated: boolean;
+}> = {
+  'Draft': {
     label: 'Draft',
     icon: Clock,
     className: 'bg-gray-100 text-gray-700 border-gray-300',
@@ -70,7 +77,7 @@ const STATUS_CONFIG = {
     dotClassName: 'bg-gray-500',
     animated: false,
   },
-  [AssignmentStatusEnum.Scheduled]: {
+  'Scheduled': {
     label: 'Scheduled',
     icon: Clock,
     className: 'bg-blue-100 text-blue-700 border-blue-300',
@@ -78,7 +85,7 @@ const STATUS_CONFIG = {
     dotClassName: 'bg-blue-500',
     animated: false,
   },
-  [AssignmentStatusEnum.Active]: {
+  'Active': {
     label: 'Active',
     icon: Play,
     className: 'bg-green-100 text-green-700 border-green-300',
@@ -86,7 +93,7 @@ const STATUS_CONFIG = {
     dotClassName: 'bg-green-500',
     animated: true,
   },
-  [AssignmentStatusEnum.Expired]: {
+  'Expired': {
     label: 'Expired',
     icon: XCircle,
     className: 'bg-red-100 text-red-700 border-red-300',
@@ -94,7 +101,7 @@ const STATUS_CONFIG = {
     dotClassName: 'bg-red-500',
     animated: false,
   },
-  [AssignmentStatusEnum.Paused]: {
+  'Paused': {
     label: 'Paused',
     icon: Pause,
     className: 'bg-yellow-100 text-yellow-700 border-yellow-300',
@@ -102,7 +109,7 @@ const STATUS_CONFIG = {
     dotClassName: 'bg-yellow-500',
     animated: false,
   },
-  [AssignmentStatusEnum.Cancelled]: {
+  'Cancelled': {
     label: 'Cancelled',
     icon: Ban,
     className: 'bg-gray-100 text-gray-700 border-gray-300',
@@ -110,7 +117,7 @@ const STATUS_CONFIG = {
     dotClassName: 'bg-gray-500',
     animated: false,
   },
-} as const;
+};
 
 /**
  * Size configuration
@@ -166,12 +173,11 @@ export function AssignmentStatus({
   className,
   'data-testid': testId,
 }: AssignmentStatusProps) {
-  const config = STATUS_CONFIG[status];
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG['Draft']!; // Fallback to Draft
   const sizeConfig = SIZE_CONFIG[size];
   
-  if (!config) {
-    console.warn(`Unknown assignment status: ${status}`);
-    return null;
+  if (!STATUS_CONFIG[status]) {
+    console.warn(`Unknown assignment status: ${status}, falling back to Draft`);
   }
 
   const Icon = config.icon;
@@ -250,10 +256,8 @@ export function AssignmentStatusDot({
   className,
   'data-testid': testId,
 }: Omit<AssignmentStatusProps, 'showIcon' | 'label'>) {
-  const config = STATUS_CONFIG[status];
+  const config = STATUS_CONFIG[status] || STATUS_CONFIG['Draft']!;
   const sizeConfig = SIZE_CONFIG[size];
-  
-  if (!config) return null;
   
   const shouldAnimate = animated && config.animated;
 

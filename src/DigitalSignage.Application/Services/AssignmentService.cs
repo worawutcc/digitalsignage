@@ -1,5 +1,6 @@
 using AutoMapper;
 using Microsoft.Extensions.Logging;
+using Microsoft.EntityFrameworkCore;
 using System.Text.Json;
 using DigitalSignage.Application.DTOs;
 using DigitalSignage.Application.DTOs.Assignment;
@@ -21,6 +22,9 @@ public class AssignmentService : IAssignmentService
     private readonly IDeviceRepository _deviceRepository;
     private readonly IDeviceGroupRepository _deviceGroupRepository;
     private readonly IUserRepository _userRepository;
+    private readonly IScheduleRepository _scheduleRepository;
+    private readonly IMediaRepository _mediaRepository;
+    private readonly DbContext _context;
     private readonly IMapper _mapper;
     private readonly ILogger<AssignmentService> _logger;
 
@@ -29,6 +33,9 @@ public class AssignmentService : IAssignmentService
         IDeviceRepository deviceRepository,
         IDeviceGroupRepository deviceGroupRepository,
         IUserRepository userRepository,
+        IScheduleRepository scheduleRepository,
+        IMediaRepository mediaRepository,
+        DbContext context,
         IMapper mapper,
         ILogger<AssignmentService> logger)
     {
@@ -36,6 +43,9 @@ public class AssignmentService : IAssignmentService
         _deviceRepository = deviceRepository;
         _deviceGroupRepository = deviceGroupRepository;
         _userRepository = userRepository;
+        _scheduleRepository = scheduleRepository;
+        _mediaRepository = mediaRepository;
+        _context = context;
         _mapper = mapper;
         _logger = logger;
     }
@@ -64,7 +74,7 @@ public class AssignmentService : IAssignmentService
             ContentId = request.ContentId,
             TargetType = request.TargetType,
             TargetId = request.TargetId,
-            Priority = request.IsEmergencyBroadcast ? 1 : request.Priority,
+            Priority = request.IsEmergencyBroadcast ? 1 : (request.Priority > 0 ? request.Priority : 5), // Default priority to 5 if 0
             StartDate = DateTime.SpecifyKind(request.StartDate, DateTimeKind.Unspecified),
             EndDate = request.EndDate.HasValue ? DateTime.SpecifyKind(request.EndDate.Value, DateTimeKind.Unspecified) : null,
             StartTime = request.StartTime,
@@ -191,6 +201,9 @@ public class AssignmentService : IAssignmentService
         var assignmentDtos = _mapper.Map<IEnumerable<AssignmentDto>>(assignments);
         var assignmentList = assignmentDtos.ToList();
 
+        // Populate ContentName and TargetName for each assignment
+        await PopulateDisplayNamesAsync(assignmentList);
+
         return new PagedResult<AssignmentDto>
         {
             Items = assignmentList,
@@ -198,6 +211,87 @@ public class AssignmentService : IAssignmentService
             PageNumber = page,
             PageSize = pageSize
         };
+    }
+
+    /// <summary>
+    /// Populate ContentName and TargetName for assignment DTOs
+    /// </summary>
+    private async Task PopulateDisplayNamesAsync(IList<AssignmentDto> assignments)
+    {
+        foreach (var assignment in assignments)
+        {
+            // Populate ContentName based on AssignmentType and ContentId
+            assignment.ContentName = await GetContentNameAsync(assignment.AssignmentType, assignment.ContentId);
+            
+            // Populate TargetName based on TargetType and TargetId
+            assignment.TargetName = await GetTargetNameAsync(assignment.TargetType, assignment.TargetId);
+        }
+    }
+
+    /// <summary>
+    /// Get content name by type and ID
+    /// </summary>
+    private async Task<string> GetContentNameAsync(AssignmentType assignmentType, int contentId)
+    {
+        try
+        {
+            switch (assignmentType)
+            {
+                case AssignmentType.Schedule:
+                    var schedule = await _scheduleRepository.GetByIdAsync(contentId);
+                    return schedule?.Name ?? $"Schedule {contentId}";
+                    
+                case AssignmentType.Playlist:
+                    var playlist = await _context.Set<Playlist>()
+                        .FirstOrDefaultAsync(p => p.Id == contentId);
+                    return playlist?.Name ?? $"Playlist {contentId}";
+                    
+                case AssignmentType.Media:
+                    var media = await _mediaRepository.GetByIdAsync(contentId);
+                    return media?.Name ?? $"Media {contentId}";
+                    
+                case AssignmentType.Emergency:
+                    // For emergency assignments, try to get the actual content name first
+                    var emergencyMedia = await _mediaRepository.GetByIdAsync(contentId);
+                    return emergencyMedia?.Name ?? $"Emergency Broadcast {contentId}";
+                    
+                default:
+                    return $"Content {contentId}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get content name for {AssignmentType} {ContentId}", assignmentType, contentId);
+            return $"{assignmentType} {contentId}";
+        }
+    }
+
+    /// <summary>
+    /// Get target name by type and ID
+    /// </summary>
+    private async Task<string> GetTargetNameAsync(AssignmentTargetType targetType, int targetId)
+    {
+        try
+        {
+            switch (targetType)
+            {
+                case AssignmentTargetType.Device:
+                    var device = await _deviceRepository.GetByIdAsync(targetId);
+                    return device?.Name ?? $"Device {targetId}";
+                    
+                case AssignmentTargetType.DeviceGroup:
+                    var deviceGroup = await _deviceGroupRepository.GetByIdAsync(targetId);
+                    return deviceGroup?.Name ?? $"Device Group {targetId}";
+                    
+                default:
+                    return $"Target {targetId}";
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to get target name for {TargetType} {TargetId}", targetType, targetId);
+            return $"Target {targetId}";
+        }
     }
 
     public async Task DeleteAssignmentAsync(int assignmentId, int deletedByUserId)

@@ -61,6 +61,20 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
                .HasColumnType("timestamp without time zone")
                .IsRequired();
 
+        // Configure TimeSpan properties with snake_case column names
+        builder.Property(e => e.StartTime)
+               .HasColumnName("start_time")
+               .IsRequired();
+
+        builder.Property(e => e.EndTime)
+               .HasColumnName("end_time")
+               .IsRequired();
+
+        builder.Property(e => e.IsRecurring)
+               .HasColumnName("is_recurring")
+               .IsRequired()
+               .HasDefaultValue(false);
+
         // Configure index for IsDefault (Feature 019)
         builder.HasIndex(e => e.IsDefault)
                .HasDatabaseName("IX_Schedules_IsDefault");

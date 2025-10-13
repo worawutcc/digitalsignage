@@ -139,5 +139,11 @@ public class DeviceConfiguration : IEntityTypeConfiguration<Device>
                .WithOne(sd => sd.Device)
                .HasForeignKey(sd => sd.DeviceId)
                .OnDelete(DeleteBehavior.Cascade);
+
+        // One-to-many with playlist assignments
+        builder.HasMany(e => e.PlaylistAssignments)
+               .WithOne(pa => pa.Device)
+               .HasForeignKey(pa => pa.DeviceId)
+               .OnDelete(DeleteBehavior.Cascade);
     }
 }
