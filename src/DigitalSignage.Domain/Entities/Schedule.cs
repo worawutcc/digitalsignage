@@ -18,12 +18,18 @@ public class Schedule : BaseEntity
     /// Indicates if this is a default fallback schedule (Feature 019)
     /// </summary>
     public bool IsDefault { get; set; } = false;
-
-    // Foreign keys
-    public int DeviceId { get; set; }
+    
+    /// <summary>
+    /// Priority for conflict resolution (1-10, higher = more priority)
+    /// </summary>
+    public int Priority { get; set; } = 5;
 
     // Navigation properties
-    public Device Device { get; set; } = null!;
+    /// <summary>
+    /// Many-to-many: Devices assigned to this schedule
+    /// </summary>
+    public ICollection<ScheduleDevice> ScheduleDevices { get; set; } = new List<ScheduleDevice>();
+    
     public ICollection<ScheduleMedia> ScheduleMedias { get; set; } = new List<ScheduleMedia>();
     
     /// <summary>

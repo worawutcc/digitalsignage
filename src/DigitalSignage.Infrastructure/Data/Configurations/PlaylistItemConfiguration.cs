@@ -44,6 +44,15 @@ public class PlaylistItemConfiguration : IEntityTypeConfiguration<PlaylistItem>
             .HasColumnName("is_conditional")
             .HasDefaultValue(false);
 
+        // Foreign Keys
+        builder.Property(pi => pi.PlaylistId)
+            .HasColumnName("playlist_id")
+            .IsRequired();
+
+        builder.Property(pi => pi.MediaId)
+            .HasColumnName("media_id")
+            .IsRequired();
+
         // Indexes
         builder.HasIndex(pi => new { pi.PlaylistId, pi.OrderIndex })
             .IsUnique();

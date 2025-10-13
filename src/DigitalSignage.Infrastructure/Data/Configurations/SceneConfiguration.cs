@@ -53,6 +53,13 @@ public class SceneConfiguration : IEntityTypeConfiguration<Scene>
             .HasColumnName("template_name")
             .HasMaxLength(100);
 
+        // Foreign Keys
+        builder.Property(s => s.CreatedByUserId)
+            .HasColumnName("created_by_user_id");
+
+        builder.Property(s => s.BackgroundImageId)
+            .HasColumnName("background_image_id");
+
         // Indexes
         builder.HasIndex(s => s.Name);
         builder.HasIndex(s => s.LayoutType);

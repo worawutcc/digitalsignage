@@ -254,7 +254,7 @@ export const selectAssignmentStatistics = createSelector(
   (assignments) => {
     const stats = {
       total: assignments.length,
-      byStatus: {} as Record<AssignmentStatus, number>,
+      byStatus: {} as Record<string, number>,
       emergencyCount: 0,
       activeHighPriority: 0,
     };

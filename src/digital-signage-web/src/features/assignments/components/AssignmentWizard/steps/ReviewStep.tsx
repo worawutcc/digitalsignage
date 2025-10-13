@@ -14,6 +14,13 @@ import { WizardStep } from '../AssignmentWizard.types';
 
 export function ReviewStep() {
   const { data, goToStep, isSubmitting } = useAssignmentWizard();
+  
+  // Debug: Log current wizard data
+  console.log('🔍 ReviewStep - Current wizard data:', {
+    content: data.content,
+    target: data.target,
+    scheduling: data.scheduling
+  });
 
   const getAssignmentTypeLabel = (type: AssignmentType) => {
     switch (type) {

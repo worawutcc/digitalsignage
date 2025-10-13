@@ -87,6 +87,25 @@ export class ScheduleService {
       const firstTimeSlot = schedule.timeSlots?.[0]
       const firstDevice = schedule.targetDevices?.[0]
       
+      // 🔍 DEBUG: Log extraction details
+      console.log('🔍 Data extraction details:')
+      console.log('  - timeSlots:', schedule.timeSlots)
+      console.log('  - firstTimeSlot:', firstTimeSlot)
+      console.log('  - targetDevices:', schedule.targetDevices)
+      console.log('  - firstDevice:', firstDevice)
+      console.log('  - content:', schedule.content)
+      
+      // ⚠️ VALIDATION: Check for critical missing data
+      if (!firstDevice?.deviceId) {
+        console.error('❌ CRITICAL: No device selected! deviceId will be 0')
+        throw new Error('Please select a target device before creating the schedule')
+      }
+      
+      if (!firstTimeSlot?.startTime || !firstTimeSlot?.endTime) {
+        console.error('❌ CRITICAL: Missing time slot data!')
+        throw new Error('Please configure time slots before creating the schedule')
+      }
+      
       const backendPayload = {
         name: schedule.name,
         description: schedule.description,
@@ -109,6 +128,14 @@ export class ScheduleService {
       }
       
       console.log('📦 Transformed payload for API:', backendPayload)
+      
+      // 🔍 PAYLOAD VALIDATION: Check final payload before sending
+      if (backendPayload.deviceId === 0) {
+        console.error('❌ PAYLOAD ERROR: deviceId is 0, API will likely reject this')
+      }
+      if (!backendPayload.mediaIds || backendPayload.mediaIds.length === 0) {
+        console.warn('⚠️ WARNING: No media selected, schedule will be empty')
+      }
       
       const response = await apiClient.post<Schedule>(
         '/api/admin/schedules',

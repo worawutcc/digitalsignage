@@ -174,11 +174,29 @@ export function ScheduleBuilder({
 
   // Tab validation status
   const tabValidation = useMemo(() => {
+    // Basic validation
+    const basicValid = !!(formData.name && formData.startDate && formData.endDate)
+    
+    // Time slots validation - check all required fields
+    const timeValid = formData.timeSlots?.length > 0 && 
+      formData.timeSlots.every(slot => 
+        slot.startTime && 
+        slot.endTime && 
+        slot.daysOfWeek && 
+        slot.daysOfWeek.length > 0
+      )
+    
+    // Targets validation
+    const targetsValid = formData.targetDevices?.length > 0
+    
+    // Content validation
+    const contentValid = formData.content?.length > 0
+    
     return {
-      basic: !!(formData.name && formData.startDate && formData.endDate),
-      time: formData.timeSlots?.length > 0,
-      targets: formData.targetDevices?.length > 0,
-      content: formData.content?.length > 0,
+      basic: basicValid,
+      time: timeValid,
+      targets: targetsValid,
+      content: contentValid,
     }
   }, [formData.name, formData.startDate, formData.endDate, formData.timeSlots, formData.targetDevices, formData.content])
 
@@ -220,6 +238,33 @@ export function ScheduleBuilder({
 
   const onSubmit = (data: ScheduleFormData) => {
     console.log('💾 Form submitted with data:', data)
+    
+    // 🔍 DEBUG: Analyze form data before submission
+    console.log('🔍 Form Data Analysis:')
+    console.log('  - Name:', data.name)
+    console.log('  - Date Range:', data.startDate, 'to', data.endDate)
+    console.log('  - Time Slots Count:', data.timeSlots?.length || 0)
+    console.log('  - Target Devices Count:', data.targetDevices?.length || 0)
+    console.log('  - Content Items Count:', data.content?.length || 0)
+    
+    // ⚠️ FORM VALIDATION: Check for obvious issues
+    if (!data.timeSlots || data.timeSlots.length === 0) {
+      console.error('❌ FORM ERROR: No time slots configured!')
+      alert('Please add at least one time slot before submitting.')
+      return
+    }
+    
+    if (!data.targetDevices || data.targetDevices.length === 0) {
+      console.error('❌ FORM ERROR: No target devices selected!')
+      alert('Please select at least one target device before submitting.')
+      return
+    }
+    
+    if (!data.content || data.content.length === 0) {
+      console.warn('⚠️ FORM WARNING: No content selected - schedule will be empty')
+    }
+    
+    console.log('✅ Form validation passed, proceeding with submission...')
     onSave(data as CreateScheduleRequest)
   }
 
@@ -272,7 +317,7 @@ export function ScheduleBuilder({
               <input
                 type="text"
                 {...register('name')}
-                className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 placeholder="Enter schedule name"
               />
               {errors.name && (
@@ -287,7 +332,7 @@ export function ScheduleBuilder({
               <textarea
                 {...register('description')}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 placeholder="Enter schedule description"
               />
             </div>
@@ -302,7 +347,7 @@ export function ScheduleBuilder({
                   {...register('priority', { valueAsNumber: true })}
                   min={1}
                   max={10}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 />
                 {errors.priority && (
                   <p className="mt-1 text-sm text-red-600">{errors.priority.message}</p>
@@ -316,7 +361,7 @@ export function ScheduleBuilder({
                 <input
                   type="date"
                   {...register('startDate')}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 />
                 {errors.startDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.startDate.message}</p>
@@ -330,7 +375,7 @@ export function ScheduleBuilder({
                 <input
                   type="date"
                   {...register('endDate')}
-                  className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 placeholder-gray-500 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                 />
                 {errors.endDate && (
                   <p className="mt-1 text-sm text-red-600">{errors.endDate.message}</p>
@@ -344,7 +389,7 @@ export function ScheduleBuilder({
               </label>
               <select
                 {...register('recurrence.type')}
-                className="w-full px-3 py-2 border border-gray-400 rounded-md bg-white dark:bg-gray-900 text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
               >
                 <option value="never">No Recurrence</option>
                 <option value="daily">Daily</option>
@@ -404,7 +449,7 @@ export function ScheduleBuilder({
                     <input
                       type="time"
                       {...register(`timeSlots.${index}.startTime`)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                     />
                   </div>
                   <div>
@@ -414,7 +459,7 @@ export function ScheduleBuilder({
                     <input
                       type="time"
                       {...register(`timeSlots.${index}.endTime`)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md bg-white text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                     />
                   </div>
                 </div>
@@ -699,13 +744,13 @@ export function ScheduleBuilder({
                           type="number"
                           {...register(`content.${index}.duration`, { valueAsNumber: true })}
                           min={1}
-                          className="w-20 px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="w-20 px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                           placeholder="15"
                         />
                         <span className="text-xs text-gray-600">sec</span>
                         <select
                           {...register(`content.${index}.transition`)}
-                          className="px-2 py-1 border border-gray-300 rounded text-sm"
+                          className="px-2 py-1 border border-gray-300 rounded bg-white text-gray-900 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-600"
                         >
                           <option value="none">None</option>
                           <option value="fade">Fade</option>

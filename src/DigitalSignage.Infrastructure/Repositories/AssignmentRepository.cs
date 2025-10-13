@@ -479,6 +479,7 @@ public class AssignmentRepository : IAssignmentRepository
     /// </summary>
     private async Task LoadPolymorphicNavigationProperties(Assignment assignment)
     {
+        // Load target (Device or DeviceGroup)
         if (assignment.TargetType == AssignmentTargetType.Device)
         {
             assignment.Device = await _context.Devices
@@ -489,6 +490,14 @@ public class AssignmentRepository : IAssignmentRepository
             assignment.DeviceGroup = await _context.DeviceGroups
                 .FirstOrDefaultAsync(dg => dg.Id == assignment.TargetId);
         }
+        
+        // Load content based on AssignmentType
+        if (assignment.AssignmentType == AssignmentType.Schedule)
+        {
+            assignment.Schedule = await _context.Schedules
+                .FirstOrDefaultAsync(s => s.Id == assignment.ContentId);
+        }
+        // TODO: Add other content types (Playlist, Media) when needed
     }
 
     /// <summary>
@@ -520,9 +529,21 @@ public class AssignmentRepository : IAssignmentRepository
             ? await _context.DeviceGroups.Where(dg => deviceGroupTargetIds.Contains(dg.Id)).ToListAsync()
             : new List<DeviceGroup>();
 
+        // Load all schedules at once
+        var scheduleContentIds = assignmentList
+            .Where(a => a.AssignmentType == AssignmentType.Schedule)
+            .Select(a => a.ContentId)
+            .Distinct()
+            .ToList();
+
+        var schedules = scheduleContentIds.Any()
+            ? await _context.Schedules.Where(s => scheduleContentIds.Contains(s.Id)).ToListAsync()
+            : new List<Schedule>();
+
         // Assign navigation properties
         foreach (var assignment in assignmentList)
         {
+            // Assign target properties
             if (assignment.TargetType == AssignmentTargetType.Device)
             {
                 assignment.Device = devices.FirstOrDefault(d => d.Id == assignment.TargetId);
@@ -531,6 +552,13 @@ public class AssignmentRepository : IAssignmentRepository
             {
                 assignment.DeviceGroup = deviceGroups.FirstOrDefault(dg => dg.Id == assignment.TargetId);
             }
+            
+            // Assign content properties
+            if (assignment.AssignmentType == AssignmentType.Schedule)
+            {
+                assignment.Schedule = schedules.FirstOrDefault(s => s.Id == assignment.ContentId);
+            }
+            // TODO: Add other content types (Playlist, Media) when needed
         }
     }
 }

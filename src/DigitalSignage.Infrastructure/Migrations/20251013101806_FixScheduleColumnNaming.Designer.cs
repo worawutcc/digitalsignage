@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace DigitalSignage.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20251010045806_FinalSnakeCasePostgreSQLSchema")]
-    partial class FinalSnakeCasePostgreSQLSchema
+    [Migration("20251013101806_FixScheduleColumnNaming")]
+    partial class FixScheduleColumnNaming
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -2004,7 +2004,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("current_position_seconds");
 
                     b.Property<int>("DeviceId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("device_id");
 
                     b.Property<string>("ErrorMessage")
                         .HasMaxLength(500)
@@ -2036,7 +2037,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("last_sync_at");
 
                     b.Property<int>("PlaylistId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("playlist_id");
 
                     b.Property<int>("Status")
                         .ValueGeneratedOnAdd()
@@ -2112,7 +2114,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("created_by");
 
                     b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("created_by_user_id");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -2217,7 +2220,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("end_date");
 
                     b.Property<TimeOnly?>("EndTime")
-                        .HasColumnType("time without time zone");
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("end_time");
 
                     b.Property<bool>("IsActive")
                         .ValueGeneratedOnAdd()
@@ -2251,7 +2255,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("start_date");
 
                     b.Property<TimeOnly?>("StartTime")
-                        .HasColumnType("time without time zone");
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("start_time");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -2338,14 +2343,16 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("is_conditional");
 
                     b.Property<int>("MediaId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("media_id");
 
                     b.Property<int>("OrderIndex")
                         .HasColumnType("integer")
                         .HasColumnName("order_index");
 
                     b.Property<int>("PlaylistId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("playlist_id");
 
                     b.Property<TimeOnly?>("StartTime")
                         .HasColumnType("time without time zone");
@@ -2495,7 +2502,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
@@ -2512,27 +2520,38 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("created_by");
 
                     b.Property<string>("CreatedByIp")
-                        .HasColumnType("text");
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("created_by_ip");
 
                     b.Property<int?>("DeviceId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("device_id");
 
                     b.Property<DateTime>("ExpiresAt")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("expires_at");
 
                     b.Property<bool>("IsRevoked")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_revoked");
 
                     b.Property<string>("ReplacedByToken")
-                        .HasColumnType("text");
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("replaced_by_token");
 
                     b.Property<DateTime?>("RevokedAt")
-                        .HasColumnType("timestamp without time zone");
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("revoked_at");
 
                     b.Property<string>("TokenValue")
                         .IsRequired()
                         .HasMaxLength(255)
-                        .HasColumnType("character varying(255)");
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("token_value");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -2547,7 +2566,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("updated_by");
 
                     b.Property<int>("UserId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("user_id");
 
                     b.HasKey("Id");
 
@@ -2556,15 +2576,23 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.HasIndex("DeviceId");
 
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("IX_RefreshTokens_ExpiresAt");
+
+                    b.HasIndex("IsRevoked")
+                        .HasDatabaseName("IX_RefreshTokens_IsRevoked");
+
                     b.HasIndex("TokenValue")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasDatabaseName("IX_RefreshTokens_TokenValue");
 
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_RefreshToken_UpdatedAt");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_RefreshTokens_UserId");
 
-                    b.ToTable("RefreshTokens");
+                    b.ToTable("refresh_tokens", (string)null);
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.RegistrationAuditLog", b =>
@@ -2774,7 +2802,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("background_color");
 
                     b.Property<int?>("BackgroundImageId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("background_image_id");
 
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
@@ -2789,7 +2818,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("created_by");
 
                     b.Property<int?>("CreatedByUserId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("created_by_user_id");
 
                     b.Property<string>("Description")
                         .IsRequired()
@@ -2903,14 +2933,16 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("created_by");
 
                     b.Property<int>("DurationSeconds")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_seconds");
 
                     b.Property<int>("Height")
                         .HasColumnType("integer")
                         .HasColumnName("height");
 
                     b.Property<int>("MediaId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("media_id");
 
                     b.Property<float>("Opacity")
                         .ValueGeneratedOnAdd()
@@ -2927,7 +2959,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("rotation");
 
                     b.Property<int>("SceneId")
-                        .HasColumnType("integer");
+                        .HasColumnType("integer")
+                        .HasColumnName("scene_id");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -3001,15 +3034,13 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDefaultValue(-1)
                         .HasColumnName("created_by");
 
-                    b.Property<int>("DeviceId")
-                        .HasColumnType("integer");
-
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("timestamp without time zone")
                         .HasColumnName("end_date");
 
                     b.Property<TimeSpan>("EndTime")
-                        .HasColumnType("interval");
+                        .HasColumnType("interval")
+                        .HasColumnName("end_time");
 
                     b.Property<bool>("IsDefault")
                         .ValueGeneratedOnAdd()
@@ -3019,13 +3050,23 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasComment("Marks this schedule as a fallback when user has no assigned schedules");
 
                     b.Property<bool>("IsRecurring")
-                        .HasColumnType("boolean");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_recurring");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(5)
+                        .HasColumnName("priority")
+                        .HasComment("Priority level 1-10 for schedule conflict resolution, higher = more important");
 
                     b.Property<string>("RecurrencePattern")
                         .HasMaxLength(1000)
@@ -3037,7 +3078,8 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasColumnName("start_date");
 
                     b.Property<TimeSpan>("StartTime")
-                        .HasColumnType("interval");
+                        .HasColumnType("interval")
+                        .HasColumnName("start_time");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -3062,15 +3104,97 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("IX_Schedule_CreatedAt");
 
-                    b.HasIndex("DeviceId");
-
                     b.HasIndex("IsDefault")
                         .HasDatabaseName("IX_Schedules_IsDefault");
+
+                    b.HasIndex("Priority")
+                        .HasDatabaseName("IX_Schedules_Priority");
 
                     b.HasIndex("UpdatedAt")
                         .HasDatabaseName("IX_Schedule_UpdatedAt");
 
                     b.ToTable("schedules", (string)null);
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.ScheduleDevice", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("DeviceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_id");
+
+                    b.Property<int?>("DevicePriority")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_priority");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("ScheduleId")
+                        .HasColumnType("integer")
+                        .HasColumnName("schedule_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_ScheduleDevice_CreatedAt");
+
+                    b.HasIndex("DeviceId")
+                        .HasDatabaseName("ix_schedule_devices_device_id");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_schedule_devices_is_active");
+
+                    b.HasIndex("ScheduleId")
+                        .HasDatabaseName("ix_schedule_devices_schedule_id");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_ScheduleDevice_UpdatedAt");
+
+                    b.HasIndex("DeviceId", "IsActive")
+                        .HasDatabaseName("ix_schedule_devices_device_active");
+
+                    b.HasIndex("ScheduleId", "DeviceId")
+                        .IsUnique()
+                        .HasDatabaseName("uq_schedule_devices_schedule_id_device_id");
+
+                    b.HasIndex("ScheduleId", "IsActive")
+                        .HasDatabaseName("ix_schedule_devices_schedule_active");
+
+                    b.ToTable("schedule_devices", (string)null);
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.ScheduleMedia", b =>
@@ -4155,7 +4279,7 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade);
 
                     b.HasOne("DigitalSignage.Domain.Entities.Device", "Device")
-                        .WithMany()
+                        .WithMany("PlaylistAssignments")
                         .HasForeignKey("DeviceId")
                         .OnDelete(DeleteBehavior.Cascade);
 
@@ -4284,15 +4408,23 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Navigation("Scene");
                 });
 
-            modelBuilder.Entity("DigitalSignage.Domain.Entities.Schedule", b =>
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.ScheduleDevice", b =>
                 {
                     b.HasOne("DigitalSignage.Domain.Entities.Device", "Device")
-                        .WithMany("Schedules")
+                        .WithMany("ScheduleDevices")
                         .HasForeignKey("DeviceId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("DigitalSignage.Domain.Entities.Schedule", "Schedule")
+                        .WithMany("ScheduleDevices")
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
                     b.Navigation("Device");
+
+                    b.Navigation("Schedule");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.ScheduleMedia", b =>
@@ -4425,9 +4557,11 @@ namespace DigitalSignage.Infrastructure.Migrations
 
                     b.Navigation("HardwareProfile");
 
+                    b.Navigation("PlaylistAssignments");
+
                     b.Navigation("RegistrationRecords");
 
-                    b.Navigation("Schedules");
+                    b.Navigation("ScheduleDevices");
 
                     b.Navigation("StatusLogs");
 
@@ -4479,6 +4613,8 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Schedule", b =>
                 {
+                    b.Navigation("ScheduleDevices");
+
                     b.Navigation("ScheduleMedias");
 
                     b.Navigation("UserSchedules");

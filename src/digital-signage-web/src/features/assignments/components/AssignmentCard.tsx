@@ -8,6 +8,7 @@
 import React, { useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Assignment, AssignmentType, AssignmentStatus as AssignmentStatusEnum, AssignmentTargetType } from '../types/assignment.types';
+import { getAssignmentTypeText } from '../utils/assignmentHelpers';
 import { AssignmentStatus } from './AssignmentStatus';
 import { AssignmentPriority } from './AssignmentPriority';
 import { Checkbox } from '@/components/ui/Checkbox';
@@ -18,6 +19,7 @@ import {
   Trash2,
   Eye,
   Calendar,
+  Clock,
   Monitor,
   Users,
   PlaySquare,
@@ -119,26 +121,28 @@ function formatRelativeTime(dateString: string): string {
 /**
  * Get content type icon
  */
-function getContentTypeIcon(type: AssignmentType) {
+function getContentTypeIcon(type: string) {
   switch (type) {
-    case AssignmentType.Schedule:
+    case 'Schedule':
       return Calendar;
-    case AssignmentType.Playlist:
+    case 'Playlist':
       return PlaySquare;
-    case AssignmentType.Media:
+    case 'Media':
       return Image;
-    case AssignmentType.Emergency:
+    case 'Emergency':
       return Radio;
     default:
       return PlaySquare;
   }
 }
 
+
+
 /**
  * Get target type display
  */
 function getTargetTypeDisplay(assignment: Assignment) {
-  const isGroup = assignment.targetType === AssignmentTargetType.DeviceGroup;
+  const isGroup = assignment.targetType === 'DeviceGroup';
   const Icon = isGroup ? Users : Monitor;
   const label = isGroup ? 'Group' : 'Device';
   
@@ -305,10 +309,10 @@ export function AssignmentCard({
           <div className="flex items-start justify-between gap-2 mb-2">
             <div className="flex-1 min-w-0">
               <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100 truncate">
-                {assignment.contentName}
+                {assignment.contentName || `Content ID: ${assignment.contentId}`}
               </h3>
               <p className="text-sm text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                {AssignmentType[assignment.assignmentType]}
+                {assignment.assignmentType}
                 {isEmergency && ' 🚨'}
               </p>
             </div>
@@ -316,7 +320,7 @@ export function AssignmentCard({
             {!isGridView && (
               <AssignmentStatus
                 status={assignment.status}
-                animated={assignment.status === AssignmentStatusEnum.Active}
+                animated={assignment.status === 'Active'}
                 size="sm"
               />
             )}
@@ -326,7 +330,7 @@ export function AssignmentCard({
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 mb-3">
             <TargetIcon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
             <span className="truncate">
-              {targetLabel}: {assignment.targetName}
+              {targetLabel}: {assignment.targetName || `ID: ${assignment.targetId}`}
             </span>
           </div>
 
@@ -346,7 +350,7 @@ export function AssignmentCard({
             {isGridView && (
               <AssignmentStatus
                 status={assignment.status}
-                animated={assignment.status === AssignmentStatusEnum.Active}
+                animated={assignment.status === 'Active'}
                 size="sm"
               />
             )}
@@ -358,6 +362,19 @@ export function AssignmentCard({
                 {formatDateRange(assignment.startDate, assignment.endDate)}
               </span>
             </div>
+
+            {/* Time Range */}
+            {(assignment.startTime || assignment.endTime) && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                <Clock className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                <span className="truncate">
+                  {assignment.startTime && assignment.endTime 
+                    ? `${assignment.startTime} - ${assignment.endTime}`
+                    : assignment.startTime || assignment.endTime
+                  }
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>

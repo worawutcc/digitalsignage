@@ -176,8 +176,8 @@ export function AssignmentPriority({
   // Local state for slider preview
   const [localPriority, setLocalPriority] = useState(initialPriority);
   
-  // Ensure priority is in valid range
-  const priority = Math.min(10, Math.max(1, localPriority));
+  // Ensure priority is in valid range, default to 5 if invalid
+  const priority = Math.min(10, Math.max(1, localPriority || 5));
   const level = getPriorityLevel(priority);
   const config = PRIORITY_LEVELS[level];
   const sizeConfig = SIZE_CONFIG[size];

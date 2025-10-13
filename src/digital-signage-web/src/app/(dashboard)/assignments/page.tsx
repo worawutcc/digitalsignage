@@ -361,7 +361,7 @@ export default function AssignmentsPage() {
                   const value = e.target.value;
                   const newFilters = { ...filters };
                   if (value) {
-                    newFilters.status = value as unknown as AssignmentStatus;
+                    newFilters.status = value;
                   } else {
                     delete newFilters.status;
                   }
@@ -369,12 +369,12 @@ export default function AssignmentsPage() {
                 }}
               >
                 <option value="">All statuses</option>
-                <option value={AssignmentStatus.Draft}>Draft</option>
-                <option value={AssignmentStatus.Scheduled}>Scheduled</option>
-                <option value={AssignmentStatus.Active}>Active</option>
-                <option value={AssignmentStatus.Paused}>Paused</option>
-                <option value={AssignmentStatus.Expired}>Expired</option>
-                <option value={AssignmentStatus.Cancelled}>Cancelled</option>
+                <option value="Draft">Draft</option>
+                <option value="Scheduled">Scheduled</option>
+                <option value="Active">Active</option>
+                <option value="Paused">Paused</option>
+                <option value="Expired">Expired</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
 
@@ -388,7 +388,7 @@ export default function AssignmentsPage() {
                   const value = e.target.value;
                   const newFilters = { ...filters };
                   if (value) {
-                    newFilters.targetType = value as unknown as AssignmentTargetType;
+                    newFilters.targetType = value;
                   } else {
                     delete newFilters.targetType;
                   }
@@ -396,8 +396,8 @@ export default function AssignmentsPage() {
                 }}
               >
                 <option value="">All types</option>
-                <option value={AssignmentTargetType.Device}>Device</option>
-                <option value={AssignmentTargetType.DeviceGroup}>Device Group</option>
+                <option value="Device">Device</option>
+                <option value="DeviceGroup">Device Group</option>
               </select>
             </div>
 
@@ -570,6 +570,7 @@ export default function AssignmentsPage() {
               assignment={assignment}
               selected={selectedIds.includes(assignment.id)}
               onSelect={() => handleSelectAssignment(assignment.id)}
+              onViewDetails={() => handleAssignmentClick(assignment.id)}
               onClick={() => handleAssignmentClick(assignment.id)}
             />
           ))}

@@ -108,24 +108,68 @@ export function AssignmentWizardProvider({
       try {
         switch (step) {
           case WizardStep.ContentSelection:
-            if (!data.content) return false;
-            contentSelectionSchema.parse(data.content);
-            return true;
+            console.log('🔍 Validating ContentSelection:', data.content);
+            if (!data.content) {
+              console.log('❌ ContentSelection validation failed: no content data');
+              return false;
+            }
+            
+            try {
+              contentSelectionSchema.parse(data.content);
+              console.log('✅ ContentSelection validation passed');
+              return true;
+            } catch (validationError) {
+              console.log('❌ ContentSelection validation failed:', validationError);
+              return false;
+            }
+            
           case WizardStep.TargetSelection:
-            if (!data.target) return false;
-            targetSelectionSchema.parse(data.target);
-            return true;
+            console.log('🔍 Validating TargetSelection:', data.target);
+            if (!data.target) {
+              console.log('❌ TargetSelection validation failed: no target data');
+              return false;
+            }
+            
+            try {
+              targetSelectionSchema.parse(data.target);
+              console.log('✅ TargetSelection validation passed');
+              return true;
+            } catch (validationError) {
+              console.log('❌ TargetSelection validation failed:', validationError);
+              return false;
+            }
+            
           case WizardStep.Scheduling:
-            if (!data.scheduling) return false;
-            schedulingSchema.parse(data.scheduling);
-            return true;
+            console.log('🔍 Validating Scheduling:', data.scheduling);
+            if (!data.scheduling) {
+              console.log('❌ Scheduling validation failed: no scheduling data');
+              return false;
+            }
+            
+            try {
+              schedulingSchema.parse(data.scheduling);
+              console.log('✅ Scheduling validation passed');
+              return true;
+            } catch (validationError) {
+              console.log('❌ Scheduling validation failed:', validationError);
+              return false;
+            }
+            
           case WizardStep.Review:
-            return (
-              isStepValid(WizardStep.ContentSelection) &&
-              isStepValid(WizardStep.TargetSelection) &&
-              isStepValid(WizardStep.Scheduling)
-            );
+            const contentValid = isStepValid(WizardStep.ContentSelection);
+            const targetValid = isStepValid(WizardStep.TargetSelection);
+            const schedulingValid = isStepValid(WizardStep.Scheduling);
+            
+            console.log('🔍 Validating Review step:', {
+              contentValid,
+              targetValid,
+              schedulingValid
+            });
+            
+            return contentValid && targetValid && schedulingValid;
+            
           default:
+            console.log('❌ Unknown step validation:', step);
             return false;
         }
       } catch {
@@ -172,7 +216,7 @@ export function AssignmentWizardProvider({
         targetId: firstTargetId,
         startDate: data.scheduling.startDate,
         endDate: data.scheduling.endDate || null,
-        priority: data.scheduling.priority,
+        priority: data.scheduling.priority || 5, // Default to priority 5 if not set
         isEmergencyBroadcast: data.scheduling.isEmergencyBroadcast || false,
         recurrencePattern: data.scheduling.recurrencePattern || null,
         notes: data.scheduling.notes || null,

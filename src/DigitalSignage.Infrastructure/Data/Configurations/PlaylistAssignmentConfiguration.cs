@@ -61,6 +61,15 @@ public class PlaylistAssignmentConfiguration : IEntityTypeConfiguration<Playlist
                .HasColumnName("end_date")
                .HasColumnType("timestamp without time zone");
 
+        // Configure TimeOnly properties as time without time zone
+        builder.Property(pa => pa.StartTime)
+               .HasColumnName("start_time")
+               .HasColumnType("time without time zone");
+
+        builder.Property(pa => pa.EndTime)
+               .HasColumnName("end_time")
+               .HasColumnType("time without time zone");
+
         // Indexes
         builder.HasIndex(pa => new { pa.PlaylistId, pa.DeviceId })
                .HasDatabaseName("ix_playlist_assignments_playlist_id_device_id");
@@ -86,7 +95,7 @@ public class PlaylistAssignmentConfiguration : IEntityTypeConfiguration<Playlist
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasOne(pa => pa.Device)
-            .WithMany()
+            .WithMany(d => d.PlaylistAssignments)
             .HasForeignKey(pa => pa.DeviceId)
             .OnDelete(DeleteBehavior.Cascade);
 

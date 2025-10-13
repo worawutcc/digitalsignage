@@ -249,6 +249,34 @@ public class DevicesController : ControllerBase
     }
 
     /// <summary>
+    /// Get device statistics for dashboard
+    /// </summary>
+    /// <returns>Device statistics including counts and uptime</returns>
+    [HttpGet("stats")]
+    [ProducesResponseType(typeof(DeviceStatsDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceStatsDto>> GetDeviceStats()
+    {
+        try
+        {
+            _logger.LogInformation("Retrieving device statistics");
+            var stats = await _deviceService.GetDeviceStatsAsync();
+            return Ok(stats);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving device statistics");
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while retrieving device statistics",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
     /// Get current user ID from JWT token
     /// </summary>
     /// <returns>User ID</returns>

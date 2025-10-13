@@ -104,6 +104,11 @@ public class Assignment : BaseEntity
     public User? LastModifiedByUser { get; set; }
     public Device? Device { get; set; }
     public DeviceGroup? DeviceGroup { get; set; }
+    
+    // Content navigation properties (based on AssignmentType)
+    public Schedule? Schedule { get; set; }
+    // TODO: Add Playlist? and Media? when needed
+    
     public ICollection<AssignmentHistory> AssignmentHistories { get; set; } = new List<AssignmentHistory>();
 
     /// <summary>

@@ -34,5 +34,51 @@ export interface DisplayDevice {
   resolution?: string;
 }
 
+// Assignment Types
+export interface AssignmentDto {
+  id: number;
+  assignmentType: string;
+  targetType: string;
+  targetId: number;
+  targetName?: string;
+  contentId: number;
+  contentName?: string;
+  status: string;
+  priority: number;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isRecurring: boolean;
+  recurrencePattern?: string;
+  daysOfWeek?: string;
+  isEmergencyBroadcast: boolean;
+  emergencyExpiresAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+  createdByUserId: number;
+  createdByUserName?: string;
+  lastModifiedByUserName?: string;
+}
+
+export interface CreateAssignmentRequest {
+  assignmentType: string;
+  targetType: string;
+  targetId: number;
+  contentId: number;
+  priority?: number;
+  startDate?: string;
+  endDate?: string;
+  startTime?: string;
+  endTime?: string;
+  isRecurring?: boolean;
+  recurrencePattern?: string;
+  daysOfWeek?: string;
+  isEmergencyBroadcast?: boolean;
+  emergencyExpiresAt?: string;
+  notes?: string;
+}
+
 // Enhanced UI Types
 export * from './enhanced-ui'

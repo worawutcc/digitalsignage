@@ -157,11 +157,16 @@ public class ScheduleController : ControllerBase
 
         try
         {
-            _logger.LogInformation("Creating schedule {ScheduleName}", request.Name);
+            _logger.LogInformation("Creating schedule {ScheduleName} with request: {@Request}", request.Name, request);
+
+            // 🔍 DEBUG: Log detailed request analysis
+            _logger.LogInformation("Request Analysis: DeviceId={DeviceId}, MediaIds={MediaIds}, StartTime={StartTime}, EndTime={EndTime}", 
+                request.DeviceId, string.Join(",", request.MediaIds), request.StartTime, request.EndTime);
 
             // Parse time strings to TimeSpan
             if (!TimeSpan.TryParse(request.StartTime, out var startTime))
             {
+                _logger.LogWarning("Invalid start time format: {StartTime}", request.StartTime);
                 return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
                 {
                     ["StartTime"] = new[] { "Invalid start time format" }
@@ -170,6 +175,7 @@ public class ScheduleController : ControllerBase
 
             if (!TimeSpan.TryParse(request.EndTime, out var endTime))
             {
+                _logger.LogWarning("Invalid end time format: {EndTime}", request.EndTime);
                 return BadRequest(new ValidationProblemDetails(new Dictionary<string, string[]>
                 {
                     ["EndTime"] = new[] { "Invalid end time format" }

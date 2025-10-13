@@ -442,7 +442,7 @@ public class MediaService : IMediaService
                 Status = ScheduleStatus.Active,
                 IsRecurring = false,
                 IsDefault = false,
-                DeviceId = 0, // Temporary, will be updated when assigned to device groups
+                // Note: DeviceId removed - use ScheduleDevice junction table for device assignments
                 CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
                 UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
             };

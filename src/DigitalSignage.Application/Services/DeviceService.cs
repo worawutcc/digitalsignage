@@ -932,4 +932,39 @@ public class DeviceService : IDeviceService
         }
         return null;
     }
+
+    /// <summary>
+    /// Get device statistics for dashboard
+    /// </summary>
+    public async Task<DeviceStatsDto> GetDeviceStatsAsync()
+    {
+        try
+        {
+            var devices = await _context.Set<Device>().ToListAsync();
+            
+            var totalDevices = devices.Count;
+            var onlineDevices = devices.Count(d => d.Status == DeviceStatus.Online);
+            var offlineDevices = devices.Count(d => d.Status == DeviceStatus.Offline);
+            var maintenanceDevices = devices.Count(d => d.Status == DeviceStatus.Maintenance);
+            var errorDevices = devices.Count(d => d.Status == DeviceStatus.Error);
+            
+            // Calculate average uptime - for now, just use online percentage
+            var averageUptime = totalDevices > 0 ? (double)onlineDevices / totalDevices * 100 : 0;
+            
+            return new DeviceStatsDto
+            {
+                TotalDevices = totalDevices,
+                OnlineDevices = onlineDevices,
+                OfflineDevices = offlineDevices,
+                MaintenanceDevices = maintenanceDevices,
+                ErrorDevices = errorDevices,
+                AverageUptime = Math.Round(averageUptime, 2)
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving device statistics");
+            throw;
+        }
+    }
 }
