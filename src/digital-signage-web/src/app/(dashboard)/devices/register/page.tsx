@@ -15,6 +15,8 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { useFormErrorHandling } from '@/hooks/useErrorHandling'
+import { GlobalFormErrors, FormFieldWrapper } from '@/components/errors/FormError'
 // Card components defined locally
 
 /**
@@ -104,6 +106,15 @@ export default function DeviceRegistrationPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [submitSuccess, setSubmitSuccess] = useState(false)
 
+  // Error handling
+  const { 
+    errors: allFormErrors, 
+    globalError, 
+    clearAllErrors, 
+    handleValidationErrors,
+    setGlobalFormError 
+  } = useFormErrorHandling<DeviceRegistrationFormData>()
+
   // React Hook Form with Zod validation
   const {
     register,
@@ -134,6 +145,8 @@ export default function DeviceRegistrationPage() {
    * Handle form submission
    */
   const onSubmit = async (data: DeviceRegistrationFormData) => {
+    // Clear previous errors
+    clearAllErrors()
     setIsSubmitting(true)
     setSubmitError(null)
 
@@ -146,14 +159,25 @@ export default function DeviceRegistrationPage() {
       
       // Mock successful registration
       setSubmitSuccess(true)
+      clearAllErrors()
       
       // Reset form after success
       setTimeout(() => {
         router.push('/devices')
       }, 2000)
 
-    } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Failed to register device')
+    } catch (error: any) {
+      console.error('❌ Failed to register device:', error)
+      
+      // Handle validation errors from API
+      if (error?.status === 400 && error?.errors) {
+        handleValidationErrors(error)
+      } else {
+        // Handle general errors
+        const errorMessage = error?.message || error?.detail || 'Failed to register device. Please try again.'
+        setGlobalFormError(errorMessage)
+        setSubmitError(errorMessage)
+      }
     } finally {
       setIsSubmitting(false)
     }
@@ -226,6 +250,14 @@ export default function DeviceRegistrationPage() {
 
         {/* Registration Form */}
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Global Form Errors */}
+          {(globalError || allFormErrors.length > 0) && (
+            <GlobalFormErrors
+              errors={allFormErrors}
+              onDismiss={clearAllErrors}
+            />
+          )}
+
           {/* Basic Information */}
           <Card>
             <CardHeader>

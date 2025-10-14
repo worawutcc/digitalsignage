@@ -3,6 +3,7 @@ import type { RootState } from '@/store'
 import { store } from '@/store'
 import { authActions } from '@/store/slices/authSlice'
 import { TOKEN_STORAGE_KEY } from '@/lib/auth'
+import { setupApiErrorHandler } from './errors/apiErrorHandler'
 
 /**
  * Custom API error class with enhanced error information
@@ -76,6 +77,9 @@ const apiClient: AxiosInstance = axios.create({
   },
 })
 
+// Setup error handling interceptors
+setupApiErrorHandler(apiClient, store.dispatch)
+
 /**
  * Request interceptor for authentication and request logging
  */
@@ -119,7 +123,7 @@ apiClient.interceptors.request.use(
 )
 
 /**
- * Response interceptor for error handling and token refresh
+ * Response interceptor for authentication and enhanced error handling
  */
 apiClient.interceptors.response.use(
   (response) => {
@@ -132,7 +136,7 @@ apiClient.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as AxiosRequestConfig & { _retry?: boolean }
 
-    // Handle 401 Unauthorized - attempt token refresh
+    // Handle 401 Unauthorized - attempt token refresh (keep existing auth logic)
     if (error.response?.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true
 
@@ -175,42 +179,8 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // Handle different error types
-    let apiError: ApiError
-
-    if (error.response) {
-      // Server responded with error status
-      const { status, data } = error.response
-      apiError = new ApiError(
-        status,
-        data,
-        (data && typeof data === 'object' && 'message' in data ? data.message : error.message) as string,
-        (data && typeof data === 'object' && 'code' in data ? data.code : undefined) as string
-      )
-
-      // Log error details in development
-      if (process.env.NODE_ENV === 'development') {
-        console.error(`❌ API Error: ${status} ${error.config?.url}`, data)
-      }
-    } else if (error.request) {
-      // Network error
-      apiError = new ApiError(
-        0,
-        null,
-        'Network error - please check your connection',
-        'NETWORK_ERROR'
-      )
-    } else {
-      // Request setup error
-      apiError = new ApiError(
-        0,
-        null,
-        error.message,
-        'REQUEST_ERROR'
-      )
-    }
-
-    return Promise.reject(apiError)
+    // Let the setupApiErrorHandler handle the error reporting and retry logic
+    return Promise.reject(error)
   }
 )
 

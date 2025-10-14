@@ -9,16 +9,32 @@ import { apiClient } from '@/lib/api'
 
 /**
  * Schedule DTO from backend
+ * Extended with actual API response properties
  */
 export interface Schedule {
   id: number
   name: string
+  description?: string
   startDate: string
   endDate: string
+  startTime?: string
+  endTime?: string
   priority: number
   isActive: boolean
+  status?: 'active' | 'inactive' | 'draft'
   createdAt: string
   updatedAt: string
+  
+  // Optional extended properties for UI
+  targetDevices?: Array<{
+    id: number
+    name: string
+    status: 'online' | 'offline'
+  }>
+  contentSource?: string
+  playlistId?: number
+  mediaId?: number
+  recurrencePattern?: 'daily' | 'weekly' | 'monthly' | 'custom'
 }
 
 /**

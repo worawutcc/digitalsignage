@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic'
 import { useState } from 'react'
 import { Plus, Calendar, List, Filter, Users, Settings, UserCheck, Copy, ChevronLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ScheduleCalendar } from '@/features/schedules/components/ScheduleCalendar'
 import { ScheduleBuilder } from '@/features/schedules/components/ScheduleBuilder'
 import { ConflictDetection } from '@/features/schedules/components/ConflictDetection'
@@ -31,6 +32,7 @@ import type { BulkOperation, BulkOperationResult, OptimisticUpdate, PerformanceM
  * Main page for managing schedules with calendar view, schedule builder, and conflict detection
  */
 export default function SchedulesPage() {
+  const router = useRouter()
   const [view, setView] = useState<'calendar' | 'list' | 'users'>('calendar')
   const [calendarView, setCalendarView] = useState<'month' | 'week' | 'day'>('month')
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -70,16 +72,19 @@ export default function SchedulesPage() {
 
   const handleCreateSchedule = async (schedule: CreateScheduleRequest) => {
     try {
+      console.log('🎯 handleCreateSchedule called with:', schedule)
+      console.log('🔄 Calling createMutation.mutateAsync...')
       await createMutation.mutateAsync(schedule)
+      console.log('✅ Schedule created successfully!')
       setShowCreateModal(false)
     } catch (error) {
-      console.error('Failed to create schedule:', error)
+      console.error('❌ Failed to create schedule:', error)
     }
   }
 
   const handleEventClick = (event: CalendarEvent) => {
-    setSelectedScheduleId(event.id)
-    // Could open a detail modal or navigate to edit page
+    // Navigate to schedule details page
+    router.push(`/schedules/${event.id}`)
   }
 
   const handleDeleteSchedule = async (id: string) => {
@@ -252,17 +257,48 @@ export default function SchedulesPage() {
                   {schedules.slice(0, 5).map((schedule) => (
                     <div
                       key={schedule.id}
-                      className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer"
-                      onClick={() => setSelectedScheduleId(schedule.id)}
+                      className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 group"
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <div className="font-medium text-gray-900">
                             {schedule.name}
                           </div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {schedule.targetDevices?.length || 0} device(s) • Priority{' '}
-                            {schedule.priority}
+                          <div className="text-xs text-gray-500 mt-1 flex items-center gap-2">
+                            <span>{schedule.deviceCount || 0} device(s)</span>
+                            <span>•</span>
+                            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
+                              (schedule.priority || 5) >= 8 ? 'bg-red-100 text-red-800' :
+                              (schedule.priority || 5) >= 5 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {schedule.priority || 5}
+                            </span>
+                            <span>Priority</span>
+                            {schedule.source && (
+                              <>
+                                <span>•</span>
+                                <ContentSourceBadge contentSource={schedule.source} />
+                              </>
+                            )}
+                          </div>
+                          {/* Quick Actions - Show on Hover */}
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity mt-2 flex space-x-2">
+                            <Link
+                              href={`/schedules/${schedule.id}`}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              View Details
+                            </Link>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setSelectedScheduleId(schedule.id)
+                              }}
+                              className="text-xs text-blue-600 hover:text-blue-800"
+                            >
+                              Edit
+                            </button>
                           </div>
                         </div>
                         <span
@@ -361,13 +397,28 @@ export default function SchedulesPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <ContentSourceBadge contentSource="Default" />
+                          <ContentSourceBadge contentSource={
+                            schedule.source || 
+                            // Temporary logic to determine source based on other properties
+                            (schedule.name?.includes('Import') ? 'Import' :
+                             schedule.name?.includes('Template') ? 'Template' :
+                             schedule.name?.includes('API') ? 'API' :
+                             'Default')
+                          } />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {schedule.priority}
+                          <div className="flex items-center">
+                            <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                              (schedule.priority || 5) >= 8 ? 'bg-red-100 text-red-800' :
+                              (schedule.priority || 5) >= 5 ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-green-100 text-green-800'
+                            }`}>
+                              {schedule.priority || 5}
+                            </span>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {schedule.targetDevices?.length || 0}
+                          {schedule.deviceCount || 0}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <button
@@ -393,18 +444,26 @@ export default function SchedulesPage() {
                           />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => setSelectedScheduleId(schedule.id)}
-                            className="text-blue-600 hover:text-blue-900 mr-4"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteSchedule(schedule.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Delete
-                          </button>
+                          <div className="flex items-center space-x-2">
+                            <Link
+                              href={`/schedules/${schedule.id}`}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              View
+                            </Link>
+                            <button
+                              onClick={() => setSelectedScheduleId(schedule.id)}
+                              className="text-blue-600 hover:text-blue-900"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              onClick={() => handleDeleteSchedule(schedule.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Delete
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -447,7 +506,7 @@ export default function SchedulesPage() {
                           <div className="flex items-center space-x-4 mt-2 text-xs text-blue-600 dark:text-blue-400">
                             <span>Priority: {selectedScheduleForAssignment.priority}</span>
                             <span>Status: {selectedScheduleForAssignment.status}</span>
-                            <span>Devices: {selectedScheduleForAssignment.targetDevices?.length || 0}</span>
+                            <span>Devices: {selectedScheduleForAssignment.deviceCount || 0}</span>
                           </div>
                         </div>
                       </div>

@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, JetBrains_Mono } from "next/font/google";
 import { Providers } from '@/app/providers'
-import { Toaster } from 'react-hot-toast'
+import { ErrorBoundary } from '@/components/errors/ErrorBoundary'
+import { ToastContainer } from '@/components/errors/ToastContainer'
 import "./globals.css";
 
 // Force dynamic rendering for all pages to avoid prerendering issues
@@ -75,52 +76,27 @@ export const viewport: Viewport = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="en" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${jetbrainsMono.variable} font-sans antialiased bg-gray-50 min-h-screen`}
         suppressHydrationWarning
       >
-        <Providers>
-          <div id="root">
-            {children}
-          </div>
-          {/* Portal root for modals and overlays */}
-          <div id="modal-root" />
-          <div id="tooltip-root" />
-          <div id="notification-root" />
-          {/* Toast Notifications */}
-          <Toaster
-            position="top-right"
-            reverseOrder={false}
-            gutter={8}
-            toastOptions={{
-              duration: 4000,
-              style: {
-                background: '#363636',
-                color: '#fff',
-                borderRadius: '8px',
-              },
-              success: {
-                duration: 3000,
-                iconTheme: {
-                  primary: '#10b981',
-                  secondary: '#fff',
-                },
-              },
-              error: {
-                duration: 5000,
-                iconTheme: {
-                  primary: '#ef4444',
-                  secondary: '#fff',
-                },
-              },
-            }}
-          />
-        </Providers>
+        <ErrorBoundary level="page">
+          <Providers>
+            <div id="root">
+              {children}
+            </div>
+            {/* Portal root for modals and overlays */}
+            <div id="modal-root" />
+            <div id="tooltip-root" />
+            <div id="notification-root" />
+            <div id="toast-portal" />
+          </Providers>
+        </ErrorBoundary>
       </body>
     </html>
   );

@@ -77,11 +77,12 @@ export function useSchedules() {
  * 
  * @see ScheduleService.getById for API implementation
  */
-export function useScheduleById(id: number, enabled = true) {
+export function useScheduleById(id: number | string, enabled = true) {
+  const numericId = typeof id === 'string' ? parseInt(id) : id
   return useQuery({
-    queryKey: scheduleKeys.detail(id),
-    queryFn: () => ScheduleService.getById(id),
-    enabled: enabled && id > 0,
+    queryKey: scheduleKeys.detail(numericId),
+    queryFn: () => ScheduleService.getById(numericId),
+    enabled: enabled && numericId > 0,
     staleTime: 10 * 60 * 1000, // 10 minutes
   })
 }

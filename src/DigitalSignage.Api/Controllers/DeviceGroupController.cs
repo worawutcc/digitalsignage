@@ -10,6 +10,7 @@ namespace DigitalSignage.Api.Controllers;
 /// </summary>
 [ApiController]
 [Route("api/devicegroup")]
+[Route("api/admin/device-groups")]
 public class DeviceGroupController : ControllerBase
 {
     private readonly IDeviceGroupService _deviceGroupService;

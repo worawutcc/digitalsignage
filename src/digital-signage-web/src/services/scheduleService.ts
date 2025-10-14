@@ -12,12 +12,20 @@ export interface Schedule {
   startTime: string
   endTime: string
   isActive: boolean
+  priority: number
+  status: 'active' | 'inactive' | 'pending' | 'draft'
+  source?: string
   recurrence?: RecurrencePattern
   mediaFiles: MediaFile[]
   devices: Device[]
   createdAt: string
   updatedAt: string
   lastModified: string
+  
+  // Enhanced device and media count properties
+  deviceCount?: number
+  assignedDevices?: Device[]
+  totalDurationSeconds?: number
   
   // Enhanced user assignment properties
   assignedUsers?: User[]
@@ -39,10 +47,12 @@ export interface RecurrencePattern {
 
 export interface MediaFile {
   id: number
+  mediaId: number
   name: string
   fileName: string
   mediaType: 'Image' | 'Video' | 'Document'
   duration?: number
+  durationSeconds?: number
   order: number
 }
 

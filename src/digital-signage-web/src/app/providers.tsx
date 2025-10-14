@@ -11,6 +11,8 @@ import { store } from '@/store'
 import { ApiError } from '@/lib/api'
 import NotificationCenter from '@/components/notifications/NotificationCenter'
 import { RealTimeEventsClient } from '@/components/providers/RealTimeEventsClient'
+import { ErrorProvider } from '@/contexts/ErrorContext'
+import { ToastPortal } from '@/components/errors/ToastContainer'
 
 /**
  * Default React Query configuration options optimized for performance
@@ -73,6 +75,34 @@ interface ProvidersProps {
 }
 
 /**
+ * Connected ToastPortal component that gets data from Redux store
+ */
+function ConnectedToastPortal() {
+  const { useSelector, useDispatch } = require('react-redux')
+  const { dismissToast, dismissAllToasts } = require('@/store/slices/errorSlice')
+  const { RootState } = require('@/store')
+  
+  const dispatch = useDispatch()
+  const toasts = useSelector((state: any) => state.error.toasts)
+
+  const handleDismiss = (id: string) => {
+    dispatch(dismissToast(id))
+  }
+
+  const handleDismissAll = () => {
+    dispatch(dismissAllToasts())
+  }
+
+  return (
+    <ToastPortal
+      notifications={toasts}
+      onDismiss={handleDismiss}
+      onDismissAll={handleDismissAll}
+    />
+  )
+}
+
+/**
  * Combined providers component for Redux and React Query
  */
 export const Providers: React.FC<ProvidersProps> = ({ children }) => {
@@ -81,19 +111,22 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
 
   return (
     <ReduxProvider store={store}>
-      <QueryClientProvider client={queryClient}>
-        {children}
-        {/* Temporarily disable problematic components */}
-        {/* <RealTimeEventsClient /> */}
-        <NotificationCenter />
-        {/* Show React Query DevTools in development */}
-        {process.env.NODE_ENV === 'development' && (
-          <ReactQueryDevtools 
-            initialIsOpen={false}
-            position="bottom-right"
-          />
-        )}
-      </QueryClientProvider>
+      <ErrorProvider>
+        <QueryClientProvider client={queryClient}>
+          {children}
+          {/* Temporarily disable problematic components */}
+          {/* <RealTimeEventsClient /> */}
+          <NotificationCenter />
+          <ConnectedToastPortal />
+          {/* Show React Query DevTools in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <ReactQueryDevtools 
+              initialIsOpen={false}
+              position="bottom-right"
+            />
+          )}
+        </QueryClientProvider>
+      </ErrorProvider>
     </ReduxProvider>
   )
 }

@@ -31,6 +31,8 @@ import {
   DeviceConfigurationFormData,
   deviceConfigurationSchema 
 } from './DeviceConfigurationModal.types'
+import { useFormErrorHandling } from '@/hooks/useErrorHandling'
+import { GlobalFormErrors } from '@/components/errors/FormError'
 
 /**
  * Device Configuration Modal
@@ -51,6 +53,15 @@ export function DeviceConfigurationModal({
   // React Query mutations
   const createMutation = useCreateDeviceConfiguration()
   const updateMutation = useUpdateDeviceConfiguration()
+
+  // Error handling
+  const { 
+    errors: allFormErrors, 
+    globalError, 
+    clearAllErrors, 
+    handleValidationErrors,
+    setGlobalFormError 
+  } = useFormErrorHandling<DeviceConfigurationFormData>()
 
   // React Hook Form with Zod validation
   const {
@@ -91,47 +102,61 @@ export function DeviceConfigurationModal({
 
   // Form submission handler
   const onSubmit = async (data: DeviceConfigurationFormData) => {
-    // Transform form data to match backend DTO (capitalize orientation)
-    const configData: any = {
-      displayOrientation: (data.displayOrientation.charAt(0).toUpperCase() + 
-        data.displayOrientation.slice(1)) as 'Landscape' | 'Portrait',
-      refreshRate: data.refreshRate,
-      screenTimeout: data.screenTimeout,
-      powerManagement: data.powerManagement,
-      remoteManagementEnabled: data.remoteManagementEnabled,
-    }
-    
-    // Add optional properties only if they have values
-    if (data.resolution) configData.resolution = data.resolution
-    if (data.networkConfig) configData.networkConfig = data.networkConfig
-    if (data.appPermissions) configData.appPermissions = data.appPermissions
-    if (data.proxySettings) configData.proxySettings = data.proxySettings
-    
-    // Use appropriate mutation based on mode
-    const mutation = isEditMode ? updateMutation : createMutation
-    
-    mutation.mutate(
-      { deviceId, config: configData },
-      {
-        onSuccess: () => {
-          console.log('✅ Configuration saved successfully')
-          onSuccess?.()
-          handleClose()
-        },
-        onError: (error) => {
-          console.error('❌ Failed to save configuration:', error)
-          // Show user-friendly error message
-          const errorMessage = error instanceof Error 
-            ? error.message 
-            : 'Failed to save configuration. Please try again.'
-          alert(errorMessage)
-        },
+    // Clear previous errors
+    clearAllErrors()
+
+    try {
+      // Transform form data to match backend DTO (capitalize orientation)
+      const configData: any = {
+        displayOrientation: (data.displayOrientation.charAt(0).toUpperCase() + 
+          data.displayOrientation.slice(1)) as 'Landscape' | 'Portrait',
+        refreshRate: data.refreshRate,
+        screenTimeout: data.screenTimeout,
+        powerManagement: data.powerManagement,
+        remoteManagementEnabled: data.remoteManagementEnabled,
       }
-    )
+      
+      // Add optional properties only if they have values
+      if (data.resolution) configData.resolution = data.resolution
+      if (data.networkConfig) configData.networkConfig = data.networkConfig
+      if (data.appPermissions) configData.appPermissions = data.appPermissions
+      if (data.proxySettings) configData.proxySettings = data.proxySettings
+      
+      // Use appropriate mutation based on mode
+      const mutation = isEditMode ? updateMutation : createMutation
+      
+      mutation.mutate(
+        { deviceId, config: configData },
+        {
+          onSuccess: () => {
+            console.log('✅ Configuration saved successfully')
+            clearAllErrors()
+            onSuccess?.()
+            handleClose()
+          },
+          onError: (error: any) => {
+            console.error('❌ Failed to save configuration:', error)
+            
+            // Handle validation errors from API
+            if (error?.status === 400 && error?.errors) {
+              handleValidationErrors(error)
+            } else {
+              // Handle general errors
+              const errorMessage = error?.message || error?.detail || 'Failed to save configuration. Please try again.'
+              setGlobalFormError(errorMessage)
+            }
+          },
+        }
+      )
+    } catch (error) {
+      console.error('Form submission error:', error)
+      setGlobalFormError('An unexpected error occurred. Please try again.')
+    }
   }
 
   const handleClose = () => {
     reset()
+    clearAllErrors()
     onClose()
   }
 
@@ -154,6 +179,14 @@ export function DeviceConfigurationModal({
             <strong>Device:</strong> {deviceName || `Device #${deviceId}`}
           </p>
         </div>
+
+        {/* Global Form Errors */}
+        {(globalError || allFormErrors.length > 0) && (
+          <GlobalFormErrors
+            errors={allFormErrors}
+            onDismiss={clearAllErrors}
+          />
+        )}
 
         {/* Display Settings Section */}
         <div className="space-y-4">
