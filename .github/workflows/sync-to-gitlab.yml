@@ -8,7 +8,7 @@ on:
 
 jobs:
   sync-to-gitlab:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     
     steps:
       - name: Checkout repository
@@ -93,7 +93,7 @@ jobs:
 
   notify-sync-status:
     needs: sync-to-gitlab
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: always() # Run even if sync job fails
     
     steps:
