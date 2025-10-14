@@ -184,6 +184,10 @@ export const MediaPicker = memo(({
 
   // Get media type icon
   const getMediaTypeIcon = useCallback((mediaType: string) => {
+    if (!mediaType || typeof mediaType !== 'string') {
+      return FileText
+    }
+    
     const type = mediaType.toLowerCase()
     switch (type) {
       case 'image': return ImageIcon
@@ -448,7 +452,7 @@ export const MediaPicker = memo(({
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-gray-900 truncate">{media.name}</p>
                         <div className="flex items-center gap-4 text-sm text-gray-500">
-                          <span className="capitalize">{media.mediaType.toLowerCase()}</span>
+                          <span className="capitalize">{media.mediaType?.toLowerCase?.() || 'unknown'}</span>
                           <span>{formatFileSize(media.fileSize)}</span>
                           {media.duration && (
                             <span>{formatDuration(media.duration)}</span>

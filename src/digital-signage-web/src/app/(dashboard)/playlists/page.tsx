@@ -14,8 +14,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/DropdownMenu'
-import type { PlaylistDto } from '@/types/playlist'
-import { PlaylistStatus } from '@/types/playlist'
+import { PlaylistService } from '@/features/playlists/services/playlistService'
+import { PlaylistStatus } from '@/features/playlists/types'
+import type { 
+  PlaylistDto, 
+  PlaylistStatistics
+} from '@/features/playlists/types'
 
 interface PlaylistStats {
   totalPlaylists: number
@@ -24,76 +28,7 @@ interface PlaylistStats {
   averageDuration: number
 }
 
-// Mock API functions - will be replaced with real API
-const mockPlaylistApi = {
-  getAll: async (): Promise<PlaylistDto[]> => {
-    return [
-      {
-        id: 1,
-        name: 'Morning Announcements',
-        description: 'Daily morning content for lobby displays',
-        status: PlaylistStatus.Active,
-        isLooped: true,
-        loopCount: null,
-        priority: 1,
-        createdAt: '2024-01-15T10:30:00Z',
-        updatedAt: '2024-01-15T10:30:00Z',
-        createdByUserId: 1,
-        createdByUserName: 'John Doe',
-        playlistItems: [],
-        totalItems: 5,
-        totalDurationSeconds: 180
-      },
-      {
-        id: 2,
-        name: 'Product Showcase',
-        description: 'Latest products and promotions',
-        status: PlaylistStatus.Draft,
-        isLooped: true,
-        loopCount: 3,
-        priority: 2,
-        createdAt: '2024-01-14T16:45:00Z',
-        updatedAt: '2024-01-14T16:45:00Z',
-        createdByUserId: 2,
-        createdByUserName: 'Jane Smith',
-        playlistItems: [],
-        totalItems: 8,
-        totalDurationSeconds: 240
-      },
-      {
-        id: 3,
-        name: 'Emergency Alerts',
-        description: 'Critical emergency information',
-        status: PlaylistStatus.Archived,
-        isLooped: false,
-        loopCount: null,
-        priority: 10,
-        createdAt: '2024-01-10T09:15:00Z',
-        updatedAt: '2024-01-10T09:15:00Z',
-        createdByUserId: 1,
-        createdByUserName: 'Admin User',
-        playlistItems: [],
-        totalItems: 3,
-        totalDurationSeconds: 90
-      }
-    ]
-  },
-  getStats: async (): Promise<PlaylistStats> => {
-    return {
-      totalPlaylists: 12,
-      activePlaylists: 8,
-      totalAssignedDevices: 25,
-      averageDuration: 210
-    }
-  },
-  delete: async (id: number): Promise<void> => {
-    console.log('Delete playlist:', id)
-  },
-  duplicate: async (id: number): Promise<PlaylistDto> => {
-    console.log('Duplicate playlist:', id)
-    return {} as PlaylistDto
-  }
-}
+// API Integration - Using real PlaylistService
 
 export default function PlaylistsPage() {
   const router = useRouter()
@@ -108,17 +43,27 @@ export default function PlaylistsPage() {
   // API queries
   const { data: playlists = [], isLoading, error } = useQuery<PlaylistDto[]>({
     queryKey: ['playlists'],
-    queryFn: mockPlaylistApi.getAll
+    queryFn: PlaylistService.getAll,
+    refetchOnWindowFocus: false,
   })
 
-  const { data: stats } = useQuery<PlaylistStats>({
+  const { data: playlistStats } = useQuery({
     queryKey: ['playlist-stats'],
-    queryFn: mockPlaylistApi.getStats
+    queryFn: PlaylistService.getStatistics,
+    refetchOnWindowFocus: false,
   })
+
+  // Convert PlaylistStatistics to PlaylistStats format
+  const stats: PlaylistStats | undefined = playlistStats ? {
+    totalPlaylists: playlistStats.totalPlaylists,
+    activePlaylists: playlistStats.activePlaylists,
+    totalAssignedDevices: playlistStats.totalAssignedDevices,
+    averageDuration: playlistStats.averageDuration
+  } : undefined
 
   // Mutations
   const deleteMutation = useMutation({
-    mutationFn: mockPlaylistApi.delete,
+    mutationFn: (id: number) => PlaylistService.delete(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] })
       queryClient.invalidateQueries({ queryKey: ['playlist-stats'] })
@@ -126,7 +71,7 @@ export default function PlaylistsPage() {
   })
 
   const duplicateMutation = useMutation({
-    mutationFn: mockPlaylistApi.duplicate,
+    mutationFn: (id: number) => PlaylistService.duplicate(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] })
     }
@@ -161,8 +106,7 @@ export default function PlaylistsPage() {
         return 'info'
       case PlaylistStatus.Archived:
         return 'default'
-      case PlaylistStatus.Error:
-        return 'error'
+
       case PlaylistStatus.Scheduled:
         return 'info'
       default:
@@ -179,14 +123,8 @@ export default function PlaylistsPage() {
         return 'Draft'
       case PlaylistStatus.Archived:
         return 'Archived'
-      case PlaylistStatus.Inactive:
-        return 'Inactive'
       case PlaylistStatus.Scheduled:
         return 'Scheduled'
-      case PlaylistStatus.Expired:
-        return 'Expired'
-      case PlaylistStatus.Error:
-        return 'Error'
       default:
         return 'Unknown'
     }
@@ -208,10 +146,10 @@ export default function PlaylistsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             Playlists
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-300">
             Manage content playlists for your digital signage displays
           </p>
         </div>
@@ -290,19 +228,20 @@ export default function PlaylistsPage() {
             placeholder="Search playlists by name or description..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            className="dark:bg-gray-800 dark:text-white dark:border-gray-600"
           />
         </div>
         
         <select
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value as 'all' | PlaylistStatus)}
-          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:text-white"
         >
           <option value="all">All Status</option>
           <option value={PlaylistStatus.Active}>Active</option>
           <option value={PlaylistStatus.Draft}>Draft</option>
           <option value={PlaylistStatus.Archived}>Archived</option>
-          <option value={PlaylistStatus.Inactive}>Inactive</option>
+
           <option value={PlaylistStatus.Scheduled}>Scheduled</option>
         </select>
         

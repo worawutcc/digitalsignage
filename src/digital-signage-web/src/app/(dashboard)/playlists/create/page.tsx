@@ -20,34 +20,7 @@ import { Button } from '@/components/ui/Button'
 import { PlaylistEditor } from '@/features/playlists/components/PlaylistEditor'
 import type { CreatePlaylistRequest, PlaylistDto } from '@/types/playlist'
 import { PlaylistStatus } from '@/types/playlist'
-
-// Mock API function for creating playlist
-const mockPlaylistApi = {
-  create: async (data: CreatePlaylistRequest): Promise<PlaylistDto> => {
-    console.log('Creating playlist:', data)
-    
-    // Simulate API call with delay
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    // Return mock created playlist
-    return {
-      id: Date.now(), // Mock ID
-      name: data.name,
-      description: data.description || '',
-      status: data.status || PlaylistStatus.Draft,
-      isLooped: data.isLooped || false,
-      loopCount: data.loopCount || null,
-      priority: data.priority || 0,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      createdByUserId: 1, // Mock user ID
-      createdByUserName: 'Current User',
-      playlistItems: [],
-      totalItems: 0,
-      totalDurationSeconds: 0
-    }
-  }
-}
+import { PlaylistService } from '@/services/playlistService'
 
 export default function CreatePlaylistPage() {
   const router = useRouter()
@@ -56,17 +29,19 @@ export default function CreatePlaylistPage() {
 
   // Create playlist mutation
   const createPlaylistMutation = useMutation({
-    mutationFn: mockPlaylistApi.create,
-    onSuccess: (createdPlaylist) => {
+    mutationFn: PlaylistService.create,
+    onSuccess: (createdPlaylist: PlaylistDto) => {
+      console.log('✅ Playlist created successfully:', createdPlaylist)
+      
       // Invalidate and refetch playlists
       queryClient.invalidateQueries({ queryKey: ['playlists'] })
       queryClient.invalidateQueries({ queryKey: ['playlist-stats'] })
       
-      // Navigate to the created playlist's edit page
-      router.push(`/playlists/${createdPlaylist.id}/edit`)
+      // Navigate to main playlists page (not edit page as per requirement)
+      router.push('/playlists')
     },
     onError: (error) => {
-      console.error('Failed to create playlist:', error)
+      console.error('❌ Failed to create playlist:', error)
       // TODO: Show error toast/notification
     }
   })
@@ -76,18 +51,21 @@ export default function CreatePlaylistPage() {
       setIsSaving(true)
       
       const createData: CreatePlaylistRequest = {
-        name: playlistData.name,
-        description: playlistData.description,
-        status: PlaylistStatus.Draft, // New playlists start as draft
-        isLooped: playlistData.isLooped,
-        loopCount: playlistData.loopCount,
+        name: playlistData.name || '',
+        description: playlistData.description || '',
+        status: playlistData.status || PlaylistStatus.Draft,
+        isLooped: playlistData.isLooped || false,
+        loopCount: playlistData.loopCount || null,
         priority: playlistData.priority || 0,
-        playlistItems: [] // Empty for new playlists
+        playlistItems: playlistData.playlistItems || [] // Include selected media items
       }
 
+      console.log('🎬 Creating playlist with payload:', createData)
+      console.log('📋 Playlist items selected:', createData.playlistItems)
+      
       await createPlaylistMutation.mutateAsync(createData)
     } catch (error) {
-      console.error('Error creating playlist:', error)
+      console.error('❌ Error creating playlist:', error)
     } finally {
       setIsSaving(false)
     }
