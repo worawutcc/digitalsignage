@@ -281,4 +281,142 @@ public class PlaylistController : ControllerBase
             return StatusCode(500, "Internal server error");
         }
     }
+
+    // Enhanced UI Functionality Endpoints
+
+    /// <summary>
+    /// Reorder playlist items
+    /// </summary>
+    [HttpPatch("{id}/reorder")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> ReorderPlaylistItems(int id, [FromBody] UpdatePlaylistOrderRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            var success = await _playlistService.UpdateOrderAsync(id, request);
+            if (!success)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return Ok(new { message = "Playlist items reordered successfully" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error reordering playlist items for playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Perform bulk actions on multiple playlists
+    /// </summary>
+    [HttpPost("bulk-action")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> BulkAction([FromBody] BulkPlaylistActionRequest request)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // TODO: Get user ID from authentication context
+            var userId = 1; // Temporary hardcoded user ID
+
+            var success = await _playlistService.BulkActionAsync(request, userId);
+            if (!success)
+                return BadRequest("Failed to perform bulk action");
+
+            return Ok(new { message = $"Bulk action {request.Action} completed successfully", affectedCount = request.PlaylistIds.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error performing bulk action {Action} on playlists", request.Action);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get device assignments for a playlist
+    /// </summary>
+    [HttpGet("{id}/device-assignments")]
+    [ProducesResponseType(typeof(IEnumerable<DevicePlaylistDto>), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<IEnumerable<DevicePlaylistDto>>> GetDeviceAssignments(int id)
+    {
+        try
+        {
+            var assignments = await _playlistService.GetDeviceAssignmentsAsync(id);
+            return Ok(assignments);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting device assignments for playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Assign playlist to devices
+    /// </summary>
+    [HttpPost("{id}/assign-devices")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> AssignToDevices(int id, [FromBody] List<CreateDevicePlaylistRequest> assignments)
+    {
+        try
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // TODO: Get user ID from authentication context
+            var userId = 1; // Temporary hardcoded user ID
+
+            var success = await _playlistService.AssignToDevicesAsync(id, assignments, userId);
+            if (!success)
+                return NotFound($"Playlist with ID {id} not found");
+
+            return Ok(new { message = "Devices assigned successfully", assignmentCount = assignments.Count });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error assigning devices to playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Get analytics for a playlist
+    /// </summary>
+    [HttpGet("{id}/analytics")]
+    [ProducesResponseType(typeof(PlaylistAnalyticsReportDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistAnalyticsReportDto>> GetAnalytics(int id, [FromQuery] DateTime? startDate = null, [FromQuery] DateTime? endDate = null)
+    {
+        try
+        {
+            var analytics = await _playlistService.GetAnalyticsAsync(id, startDate, endDate);
+            return Ok(analytics);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid playlist ID {PlaylistId} for analytics", id);
+            return NotFound(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting analytics for playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
 }

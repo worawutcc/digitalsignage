@@ -31,6 +31,8 @@ public class AppDbContext : DbContext
     public DbSet<SceneItem> SceneItems { get; set; }
     public DbSet<PlaylistAssignment> PlaylistAssignments { get; set; }
     public DbSet<PlaybackState> PlaybackStates { get; set; }
+    public DbSet<DevicePlaylist> DevicePlaylists { get; set; }
+    public DbSet<PlaylistAnalytics> PlaylistAnalytics { get; set; }
     
     // Service Registry entities
     public DbSet<Service> Services { get; set; }
@@ -92,6 +94,8 @@ public class AppDbContext : DbContext
         modelBuilder.ApplyConfiguration(new SceneItemConfiguration());
         modelBuilder.ApplyConfiguration(new PlaylistAssignmentConfiguration());
         modelBuilder.ApplyConfiguration(new PlaybackStateConfiguration());
+        modelBuilder.ApplyConfiguration(new DevicePlaylistConfiguration());
+        modelBuilder.ApplyConfiguration(new PlaylistAnalyticsConfiguration());
         
         // Service Registry configurations
         modelBuilder.ApplyConfiguration(new ServiceConfiguration());

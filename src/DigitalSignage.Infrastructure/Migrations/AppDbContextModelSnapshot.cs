@@ -1128,6 +1128,91 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.ToTable("device_hardware_profiles", (string)null);
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.DevicePlaylist", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("AssignedBy")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("assigned_by");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("DeviceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_id");
+
+                    b.Property<bool>("IsActive")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true)
+                        .HasColumnName("is_active");
+
+                    b.Property<int>("PlaylistId")
+                        .HasColumnType("integer")
+                        .HasColumnName("playlist_id");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(1)
+                        .HasColumnName("priority");
+
+                    b.Property<DateTime?>("ScheduledEnd")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("scheduled_end");
+
+                    b.Property<DateTime?>("ScheduledStart")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("scheduled_start");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_DevicePlaylist_CreatedAt");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("PlaylistId");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_DevicePlaylist_UpdatedAt");
+
+                    b.HasIndex("DeviceId", "PlaylistId")
+                        .IsUnique();
+
+                    b.ToTable("device_playlists", (string)null);
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceRegistrationRequest", b =>
                 {
                     b.Property<int>("Id")
@@ -2126,6 +2211,16 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDefaultValue(false)
                         .HasColumnName("is_looped");
 
+                    b.Property<bool>("IsTemplate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("is_template");
+
+                    b.Property<DateTime?>("LastPlayedAt")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("last_played_at");
+
                     b.Property<int?>("LoopCount")
                         .HasColumnType("integer");
 
@@ -2134,6 +2229,12 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
+
+                    b.Property<int>("PlayCount")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("play_count");
 
                     b.Property<int>("Priority")
                         .ValueGeneratedOnAdd()
@@ -2144,6 +2245,11 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Property<int>("Status")
                         .HasColumnType("integer")
                         .HasColumnName("status");
+
+                    b.Property<string>("ThumbnailUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("thumbnail_url");
 
                     b.Property<DateTime>("UpdatedAt")
                         .ValueGeneratedOnAdd()
@@ -2172,6 +2278,89 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .HasDatabaseName("IX_Playlist_UpdatedAt");
 
                     b.ToTable("playlists", (string)null);
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.PlaylistAnalytics", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CompletedSuccessfully")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false)
+                        .HasColumnName("completed_successfully");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("created_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("CreatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("created_by");
+
+                    b.Property<int>("DeviceId")
+                        .HasColumnType("integer")
+                        .HasColumnName("device_id");
+
+                    b.Property<string>("ErrorMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("error_message");
+
+                    b.Property<int>("MediaItemsPlayed")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(0)
+                        .HasColumnName("media_items_played");
+
+                    b.Property<DateTime?>("PlayEndTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("play_end_time");
+
+                    b.Property<DateTime>("PlayStartTime")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("play_start_time");
+
+                    b.Property<int>("PlaylistId")
+                        .HasColumnType("integer")
+                        .HasColumnName("playlist_id");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("updated_at")
+                        .HasDefaultValueSql("CURRENT_TIMESTAMP");
+
+                    b.Property<int>("UpdatedBy")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(-1)
+                        .HasColumnName("updated_by");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_PlaylistAnalytics_CreatedAt");
+
+                    b.HasIndex("DeviceId");
+
+                    b.HasIndex("PlayStartTime");
+
+                    b.HasIndex("PlaylistId");
+
+                    b.HasIndex("UpdatedAt")
+                        .HasDatabaseName("IX_PlaylistAnalytics_UpdatedAt");
+
+                    b.ToTable("playlist_analytics", (string)null);
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.PlaylistAssignment", b =>
@@ -4136,6 +4325,25 @@ namespace DigitalSignage.Infrastructure.Migrations
                     b.Navigation("Device");
                 });
 
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.DevicePlaylist", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.Device", "Device")
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DigitalSignage.Domain.Entities.Playlist", "Playlist")
+                        .WithMany("DeviceAssignments")
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Device");
+
+                    b.Navigation("Playlist");
+                });
+
             modelBuilder.Entity("DigitalSignage.Domain.Entities.DeviceRegistrationRequest", b =>
                 {
                     b.HasOne("DigitalSignage.Domain.Entities.Device", "ApprovedDevice")
@@ -4273,6 +4481,25 @@ namespace DigitalSignage.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("DigitalSignage.Domain.Entities.PlaylistAnalytics", b =>
+                {
+                    b.HasOne("DigitalSignage.Domain.Entities.Device", "Device")
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("DigitalSignage.Domain.Entities.Playlist", "Playlist")
+                        .WithMany("Analytics")
+                        .HasForeignKey("PlaylistId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Device");
+
+                    b.Navigation("Playlist");
                 });
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.PlaylistAssignment", b =>
@@ -4608,6 +4835,10 @@ namespace DigitalSignage.Infrastructure.Migrations
 
             modelBuilder.Entity("DigitalSignage.Domain.Entities.Playlist", b =>
                 {
+                    b.Navigation("Analytics");
+
+                    b.Navigation("DeviceAssignments");
+
                     b.Navigation("PlaybackStates");
 
                     b.Navigation("PlaylistAssignments");

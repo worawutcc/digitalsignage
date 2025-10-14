@@ -1,0 +1,577 @@
+'use client';
+
+import React, { useState, memo } from 'react';
+import {
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  RadialBarChart,
+  RadialBar,
+} from 'recharts';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/Tabs';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/DropdownMenu';
+import {
+  TrendingUp,
+  TrendingDown,
+  Users,
+  Clock,
+  Play,
+  Eye,
+  MoreVertical,
+  Calendar,
+  Download,
+  RefreshCw,
+  Filter,
+  Activity,
+  Monitor,
+  BarChart3,
+  PieChart as PieChartIcon,
+} from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+/**
+ * Analytics data interfaces
+ */
+export interface PlaylistViewMetrics {
+  date: string;
+  views: number;
+  uniqueViews: number;
+  duration: number;
+}
+
+export interface DeviceMetrics {
+  deviceId: number;
+  deviceName: string;
+  views: number;
+  totalDuration: number;
+  lastViewed: string;
+  status: 'online' | 'offline' | 'error';
+}
+
+export interface MediaItemAnalytics {
+  mediaId: number;
+  mediaName: string;
+  mediaType: string;
+  views: number;
+  averageViewDuration: number;
+  skipRate: number;
+  thumbnail?: string;
+}
+
+export interface PlaylistAnalyticsData {
+  playlistId: number;
+  playlistName: string;
+  totalViews: number;
+  uniqueViews: number;
+  totalDuration: number;
+  averageViewTime: number;
+  conversionRate: number;
+  topDevices: DeviceMetrics[];
+  mediaAnalytics: MediaItemAnalytics[];
+  viewTrends: PlaylistViewMetrics[];
+  statusDistribution: {
+    active: number;
+    completed: number;
+    skipped: number;
+    error: number;
+  };
+  timeDistribution: {
+    hour: number;
+    views: number;
+  }[];
+}
+
+/**
+ * Props interface for PlaylistAnalytics component
+ */
+export interface PlaylistAnalyticsProps {
+  /** The playlist analytics data */
+  data?: PlaylistAnalyticsData;
+  /** Loading state */
+  loading?: boolean;
+  /** Error state */
+  error?: string | null;
+  /** Date range for analytics */
+  dateRange?: {
+    from: Date;
+    to: Date;
+  };
+  /** Callback when date range changes */
+  onDateRangeChange?: (range: { from: Date; to: Date }) => void;
+  /** Callback to refresh data */
+  onRefresh?: () => void;
+  /** Additional CSS classes */
+  className?: string;
+}
+
+/**
+ * Chart color palette
+ */
+const CHART_COLORS = {
+  primary: '#3b82f6',
+  secondary: '#10b981',
+  accent: '#f59e0b',
+  danger: '#ef4444',
+  muted: '#6b7280',
+  success: '#22c55e',
+  warning: '#eab308',
+  info: '#06b6d4',
+} as const;
+
+const PIE_COLORS = [CHART_COLORS.primary, CHART_COLORS.secondary, CHART_COLORS.accent, CHART_COLORS.danger];
+
+/**
+ * Format number with K/M suffixes
+ */
+const formatNumber = (num: number): string => {
+  if (num >= 1000000) {
+    return `${(num / 1000000).toFixed(1)}M`;
+  } else if (num >= 1000) {
+    return `${(num / 1000).toFixed(1)}K`;
+  }
+  return num.toString();
+};
+
+/**
+ * Format duration in seconds to human readable format
+ */
+const formatDuration = (seconds: number): string => {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours > 0) {
+    return `${hours}h ${minutes}m`;
+  }
+  return `${minutes}m`;
+};
+
+/**
+ * Metric card component for displaying key statistics
+ */
+interface MetricCardProps {
+  title: string;
+  value: string | number;
+  change?: number;
+  icon: React.ElementType;
+  description?: string;
+  trend?: 'up' | 'down' | 'neutral';
+}
+
+const MetricCard = memo(({ title, value, change, icon: Icon, description, trend }: MetricCardProps) => {
+  const trendIcon = trend === 'up' ? TrendingUp : trend === 'down' ? TrendingDown : null;
+  const TrendIcon = trendIcon;
+
+  return (
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <Icon className="h-4 w-4 text-muted-foreground" />
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{typeof value === 'number' ? formatNumber(value) : value}</div>
+        {change !== undefined && TrendIcon && (
+          <p className={cn(
+            "text-xs flex items-center gap-1 mt-1",
+            trend === 'up' ? "text-green-600" : trend === 'down' ? "text-red-600" : "text-muted-foreground"
+          )}>
+            <TrendIcon className="h-3 w-3" />
+            {change > 0 ? '+' : ''}{change}%
+          </p>
+        )}
+        {description && (
+          <p className="text-xs text-muted-foreground mt-1">{description}</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+});
+MetricCard.displayName = 'MetricCard';
+
+/**
+ * PlaylistAnalytics component provides comprehensive analytics visualization
+ * for playlist performance metrics including views, device usage, and media statistics
+ */
+const PlaylistAnalytics = memo(({
+  data,
+  loading = false,
+  error = null,
+  dateRange,
+  onDateRangeChange,
+  onRefresh,
+  className,
+}: PlaylistAnalyticsProps) => {
+  const [activeTab, setActiveTab] = useState('overview');
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className={cn("space-y-6", className)}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="h-8 w-48 bg-muted animate-pulse rounded" />
+            <div className="h-4 w-64 bg-muted animate-pulse rounded mt-2" />
+          </div>
+          <div className="h-10 w-32 bg-muted animate-pulse rounded" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
+          ))}
+        </div>
+        <div className="h-96 bg-muted animate-pulse rounded-lg" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div className={cn("flex items-center justify-center h-96 text-center", className)}>
+        <div className="space-y-4">
+          <div className="text-red-500 text-lg font-semibold">Analytics Error</div>
+          <p className="text-muted-foreground">{error}</p>
+          {onRefresh && (
+            <Button onClick={onRefresh} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Retry
+            </Button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // No data state
+  if (!data) {
+    return (
+      <div className={cn("flex items-center justify-center h-96 text-center", className)}>
+        <div className="space-y-4">
+          <Activity className="h-12 w-12 text-muted-foreground mx-auto" />
+          <div>
+            <h3 className="text-lg font-semibold">No Analytics Data</h3>
+            <p className="text-muted-foreground">Analytics data will appear here once the playlist starts receiving views.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("space-y-6", className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Analytics</h2>
+          <p className="text-muted-foreground">
+            Performance insights for {data.playlistName}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {onRefresh && (
+            <Button onClick={onRefresh} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem>
+                <Download className="h-4 w-4 mr-2" />
+                Export as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Download className="h-4 w-4 mr-2" />
+                Export as PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Key Metrics */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard
+          title="Total Views"
+          value={data.totalViews}
+          icon={Eye}
+          description="All-time views"
+          trend="up"
+          change={12}
+        />
+        <MetricCard
+          title="Unique Views"
+          value={data.uniqueViews}
+          icon={Users}
+          description="Distinct viewers"
+          trend="up"
+          change={8}
+        />
+        <MetricCard
+          title="Avg. View Time"
+          value={formatDuration(data.averageViewTime)}
+          icon={Clock}
+          description="Average viewing duration"
+          trend="neutral"
+        />
+        <MetricCard
+          title="Completion Rate"
+          value={`${data.conversionRate.toFixed(1)}%`}
+          icon={Play}
+          description="Views to completion"
+          trend="up"
+          change={5}
+        />
+      </div>
+
+      {/* Analytics Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="devices">Devices</TabsTrigger>
+          <TabsTrigger value="media">Media Items</TabsTrigger>
+          <TabsTrigger value="timing">Time Analysis</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          {/* View Trends Chart */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5" />
+                View Trends
+              </CardTitle>
+              <CardDescription>Daily view statistics over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <AreaChart data={data.viewTrends}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="date" 
+                    tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                    formatter={(value, name) => [formatNumber(Number(value)), name === 'views' ? 'Total Views' : 'Unique Views']}
+                  />
+                  <Legend />
+                  <Area 
+                    type="monotone" 
+                    dataKey="views" 
+                    stackId="1" 
+                    stroke={CHART_COLORS.primary} 
+                    fill={CHART_COLORS.primary} 
+                    fillOpacity={0.6}
+                    name="Total Views"
+                  />
+                  <Area 
+                    type="monotone" 
+                    dataKey="uniqueViews" 
+                    stackId="2" 
+                    stroke={CHART_COLORS.secondary} 
+                    fill={CHART_COLORS.secondary} 
+                    fillOpacity={0.6}
+                    name="Unique Views"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+
+          {/* Status Distribution */}
+          <div className="grid gap-4 md:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <PieChartIcon className="h-5 w-5" />
+                  Playback Status
+                </CardTitle>
+                <CardDescription>Distribution of playback outcomes</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={200}>
+                  <PieChart>
+                    <Pie
+                      data={[
+                        { name: 'Completed', value: data.statusDistribution.completed, color: CHART_COLORS.success },
+                        { name: 'Skipped', value: data.statusDistribution.skipped, color: CHART_COLORS.warning },
+                        { name: 'Active', value: data.statusDistribution.active, color: CHART_COLORS.primary },
+                        { name: 'Error', value: data.statusDistribution.error, color: CHART_COLORS.danger },
+                      ]}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {PIE_COLORS.map((color, index) => (
+                        <Cell key={`cell-${index}`} fill={color} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => formatNumber(Number(value))} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Performing Devices</CardTitle>
+                <CardDescription>Devices with highest engagement</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {data.topDevices.slice(0, 5).map((device, index) => (
+                  <div key={device.deviceId} className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-sm font-medium">
+                        {index + 1}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{device.deviceName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDuration(device.totalDuration)} total
+                        </p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{formatNumber(device.views)} views</p>
+                      <Badge variant={device.status === 'online' ? 'default' : device.status === 'error' ? 'destructive' : 'secondary'}>
+                        {device.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="devices" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5" />
+                Device Performance
+              </CardTitle>
+              <CardDescription>View statistics by device</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.topDevices}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="deviceName" />
+                  <YAxis />
+                  <Tooltip formatter={(value) => formatNumber(Number(value))} />
+                  <Legend />
+                  <Bar dataKey="views" fill={CHART_COLORS.primary} name="Total Views" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="media" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Media Item Performance</CardTitle>
+              <CardDescription>Individual media analytics within the playlist</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {data.mediaAnalytics.map((media) => (
+                  <div key={media.mediaId} className="flex items-center justify-between p-4 border rounded-lg">
+                    <div className="flex items-center gap-4">
+                      <div className="w-16 h-12 bg-muted rounded flex items-center justify-center">
+                        {media.thumbnail ? (
+                          <img 
+                            src={media.thumbnail} 
+                            alt={media.mediaName}
+                            className="w-full h-full object-cover rounded"
+                          />
+                        ) : (
+                          <div className="text-xs text-muted-foreground">{media.mediaType}</div>
+                        )}
+                      </div>
+                      <div>
+                        <h4 className="font-medium">{media.mediaName}</h4>
+                        <p className="text-sm text-muted-foreground capitalize">{media.mediaType}</p>
+                      </div>
+                    </div>
+                    <div className="text-right space-y-1">
+                      <p className="text-sm font-medium">{formatNumber(media.views)} views</p>
+                      <p className="text-xs text-muted-foreground">
+                        Avg: {formatDuration(media.averageViewDuration)}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Skip: {media.skipRate.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="timing" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Calendar className="h-5 w-5" />
+                Hourly View Distribution
+              </CardTitle>
+              <CardDescription>When your content is most viewed</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={data.timeDistribution}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="hour" 
+                    tickFormatter={(value) => `${value}:00`}
+                  />
+                  <YAxis />
+                  <Tooltip 
+                    labelFormatter={(value) => `${value}:00 - ${value + 1}:00`}
+                    formatter={(value) => [formatNumber(Number(value)), 'Views']}
+                  />
+                  <Bar dataKey="views" fill={CHART_COLORS.accent} name="Views" />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+});
+
+PlaylistAnalytics.displayName = 'PlaylistAnalytics';
+
+export { PlaylistAnalytics };

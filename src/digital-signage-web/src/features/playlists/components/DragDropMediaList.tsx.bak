@@ -1,0 +1,485 @@
+'use client'
+
+import { useState, useRef, useEffect } from 'react'
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+  DragStartEvent,
+  DragOverlay,
+} from '@dnd-kit/core'
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable'
+import {
+  useSortable,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
+import { cn } from '@/lib/utils'
+import { 
+  GripVertical, 
+  Trash2, 
+  Play, 
+  Pause, 
+  Image as ImageIcon, 
+  Video, 
+  FileText, 
+  Music, 
+  Edit, 
+  Clock,
+  Settings,
+  Eye,
+  EyeOff
+} from 'lucide-react'
+
+interface PlaylistMediaItem {
+  id: number
+  mediaId: number
+  position: number
+  duration?: number
+  media: {
+    id: number
+    name: string
+    type: 'image' | 'video' | 'html' | 'audio'
+    url: string
+    thumbnailUrl?: string
+    duration?: number
+    sizeInBytes: number
+  }
+}
+
+interface DragDropMediaListProps {
+  items: PlaylistMediaItem[]
+  onReorder: (items: PlaylistMediaItem[]) => void
+  onRemove: (itemId: number) => void
+  onEditDuration?: (itemId: number, duration: number) => void
+  onPreview?: (item: PlaylistMediaItem) => void
+  previewMode?: boolean
+  className?: string
+}
+
+// Sortable Item Component
+function SortableMediaItem({ 
+  item, 
+  onRemove, 
+  onEditDuration, 
+  onPreview, 
+  previewMode = false,
+  isOverlay = false 
+}: { 
+  item: PlaylistMediaItem
+  onRemove: (itemId: number) => void
+  onEditDuration?: (itemId: number, duration: number) => void
+  onPreview?: (item: PlaylistMediaItem) => void
+  previewMode?: boolean
+  isOverlay?: boolean
+}) {
+  const [isEditing, setIsEditing] = useState(false)
+  const [editDuration, setEditDuration] = useState(item.duration || item.media.duration || 0)
+  const [isPlaying, setIsPlaying] = useState(false)
+
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ 
+    id: item.id,
+    disabled: previewMode || isOverlay
+  })
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  }
+
+  // Get media type icon
+  const getMediaTypeIcon = (type: string) => {
+    switch (type) {
+      case 'image': return ImageIcon
+      case 'video': return Video
+      case 'audio': return Music
+      case 'html': return FileText
+      default: return FileText
+    }
+  }
+
+  // Format duration
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Format file size
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 B'
+    const k = 1024
+    const sizes = ['B', 'KB', 'MB', 'GB']
+    const i = Math.floor(Math.log(bytes) / Math.log(k))
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i]
+  }
+
+  const handleSaveDuration = () => {
+    onEditDuration?.(item.id, editDuration)
+    setIsEditing(false)
+  }
+
+  const handleCancelEdit = () => {
+    setEditDuration(item.duration || item.media.duration || 0)
+    setIsEditing(false)
+  }
+
+  const MediaIcon = getMediaTypeIcon(item.media.type)
+  const displayDuration = item.duration || item.media.duration || 0
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={cn(
+        'group relative bg-white border rounded-lg shadow-sm hover:shadow-md transition-all',
+        isDragging && 'opacity-50 z-50',
+        previewMode && 'border-blue-200 bg-blue-50',
+        isOverlay && 'shadow-lg border-blue-400'
+      )}
+    >
+      <div className="flex items-center gap-4 p-4">
+        {/* Drag Handle */}
+        {!previewMode && (
+          <div
+            {...listeners}
+            {...attributes}
+            className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <GripVertical className="h-5 w-5" />
+          </div>
+        )}
+
+        {/* Position Badge */}
+        <div className="flex-shrink-0 w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center text-sm font-medium text-gray-600">
+          {item.position}
+        </div>
+
+        {/* Thumbnail */}
+        <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center flex-shrink-0 overflow-hidden">
+          {item.media.thumbnailUrl ? (
+            <img
+              src={item.media.thumbnailUrl}
+              alt={item.media.name}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <MediaIcon className="h-6 w-6 text-gray-400" />
+          )}
+          
+          {/* Play Status Indicator */}
+          {previewMode && isPlaying && (
+            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+              <Play className="h-6 w-6 text-white" />
+            </div>
+          )}
+        </div>
+
+        {/* Media Details */}
+        <div className="flex-1 min-w-0">
+          <h4 className="font-medium text-gray-900 truncate" title={item.media.name}>
+            {item.media.name}
+          </h4>
+          <div className="flex items-center gap-4 text-sm text-gray-500 mt-1">
+            <span className="capitalize">{item.media.type}</span>
+            <span>{formatFileSize(item.media.sizeInBytes)}</span>
+            {displayDuration > 0 && (
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span>{formatDuration(displayDuration)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Duration Editor */}
+        {isEditing ? (
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              value={editDuration}
+              onChange={(e) => setEditDuration(Number(e.target.value))}
+              placeholder="Duration (seconds)"
+              className="w-24 h-8 text-sm"
+              min="1"
+              step="1"
+            />
+            <Button size="sm" onClick={handleSaveDuration}>
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={handleCancelEdit}>
+              Cancel
+            </Button>
+          </div>
+        ) : (
+          /* Action Buttons */
+          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            {/* Preview Button */}
+            {onPreview && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onPreview(item)}
+                className="h-8 w-8 p-0"
+                title="Preview"
+              >
+                {previewMode ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
+            )}
+
+            {/* Play/Pause Button for Preview Mode */}
+            {previewMode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsPlaying(!isPlaying)}
+                className="h-8 w-8 p-0"
+                title={isPlaying ? 'Pause' : 'Play'}
+              >
+                {isPlaying ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
+              </Button>
+            )}
+
+            {/* Duration Edit Button */}
+            {onEditDuration && !previewMode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsEditing(true)}
+                className="h-8 w-8 p-0"
+                title="Edit Duration"
+              >
+                <Edit className="h-4 w-4" />
+              </Button>
+            )}
+
+            {/* Settings Button */}
+            {!previewMode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                title="Item Settings"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            )}
+
+            {/* Remove Button */}
+            {!previewMode && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemove(item.id)}
+                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                title="Remove from playlist"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export function DragDropMediaList({
+  items,
+  onReorder,
+  onRemove,
+  onEditDuration,
+  onPreview,
+  previewMode = false,
+  className
+}: DragDropMediaListProps) {
+  const [activeItem, setActiveItem] = useState<PlaylistMediaItem | null>(null)
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  )
+
+  // Calculate total duration
+  const totalDuration = items.reduce((total, item) => {
+    const duration = item.duration || item.media.duration || 0
+    return total + duration
+  }, 0)
+
+  const formatTotalDuration = (seconds: number): string => {
+    const hours = Math.floor(seconds / 3600)
+    const minutes = Math.floor((seconds % 3600) / 60)
+    const secs = seconds % 60
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m ${secs}s`
+    } else if (minutes > 0) {
+      return `${minutes}m ${secs}s`
+    } else {
+      return `${secs}s`
+    }
+  }
+
+  function handleDragStart(event: DragStartEvent) {
+    const { active } = event
+    const item = items.find(item => item.id === active.id)
+    setActiveItem(item || null)
+  }
+
+  function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event
+    setActiveItem(null)
+
+    if (over && active.id !== over.id) {
+      const oldIndex = items.findIndex(item => item.id === active.id)
+      const newIndex = items.findIndex(item => item.id === over.id)
+      
+      if (oldIndex !== -1 && newIndex !== -1) {
+        const reorderedItems = arrayMove(items, oldIndex, newIndex).map((item, index) => ({
+          ...item,
+          position: index + 1
+        }))
+        onReorder(reorderedItems)
+      }
+    }
+  }
+
+  if (items.length === 0) {
+    return (
+      <div className={cn('flex flex-col items-center justify-center h-64 text-center', className)}>
+        <FileText className="h-12 w-12 text-gray-400 mb-4" />
+        <h3 className="text-lg font-medium text-gray-900 mb-2">No media in playlist</h3>
+        <p className="text-gray-600">
+          {previewMode 
+            ? 'This playlist is empty' 
+            : 'Add media files from the picker to build your playlist'
+          }
+        </p>
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn('flex flex-col h-full', className)}>
+      {/* Header with Stats */}
+      <div className="p-4 border-b bg-gray-50">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4 text-sm text-gray-600">
+            <span>
+              <strong>{items.length}</strong> items
+            </span>
+            {totalDuration > 0 && (
+              <span>
+                Total: <strong>{formatTotalDuration(totalDuration)}</strong>
+              </span>
+            )}
+          </div>
+          
+          {previewMode && (
+            <div className="flex items-center gap-2 text-sm text-blue-600">
+              <Eye className="h-4 w-4" />
+              <span>Preview Mode</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Drag and Drop List */}
+      <div className="flex-1 overflow-auto p-4">
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={handleDragStart}
+          onDragEnd={handleDragEnd}
+        >
+          <SortableContext 
+            items={items.map(item => item.id)} 
+            strategy={verticalListSortingStrategy}
+          >
+            <div className="space-y-3">
+              {items.map((item) => (
+                <SortableMediaItem
+                  key={item.id}
+                  item={item}
+                  onRemove={onRemove}
+                  onEditDuration={onEditDuration}
+                  onPreview={onPreview}
+                  previewMode={previewMode}
+                />
+              ))}
+            </div>
+          </SortableContext>
+
+          <DragOverlay>
+            {activeItem && (
+              <SortableMediaItem
+                item={activeItem}
+                onRemove={onRemove}
+                onEditDuration={onEditDuration}
+                onPreview={onPreview}
+                previewMode={previewMode}
+                isOverlay
+              />
+            )}
+          </DragOverlay>
+        </DndContext>
+      </div>
+
+      {/* Footer Actions */}
+      {!previewMode && items.length > 0 && (
+        <div className="p-4 border-t bg-gray-50">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => items.forEach(item => onRemove(item.id))}
+              >
+                Clear All
+              </Button>
+              
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  // Reverse the order
+                  const reversed = [...items].reverse().map((item, index) => ({
+                    ...item,
+                    position: index + 1
+                  }))
+                  onReorder(reversed)
+                }}
+              >
+                Reverse Order
+              </Button>
+            </div>
+
+            <div className="text-sm text-gray-600">
+              Drag items to reorder
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+export default DragDropMediaList

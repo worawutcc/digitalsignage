@@ -16,6 +16,13 @@ public class PlaylistDto
     public int? CreatedByUserId { get; set; }
     public string? CreatedByUserName { get; set; }
     
+    // Enhanced properties for UI functionality
+    public string? ThumbnailUrl { get; set; }
+    public DateTime? LastPlayedAt { get; set; }
+    public int PlayCount { get; set; }
+    public bool IsTemplate { get; set; }
+    public int DeviceAssignmentsCount { get; set; }
+    
     public List<PlaylistItemDto> PlaylistItems { get; set; } = new();
     public int TotalItems => PlaylistItems.Count;
     public int TotalDurationSeconds => PlaylistItems.Sum(x => x.DurationSeconds);
@@ -28,6 +35,7 @@ public class PlaylistItemDto
     public int MediaId { get; set; }
     public string MediaName { get; set; } = string.Empty;
     public string MediaFileName { get; set; } = string.Empty;
+    public string? MediaThumbnailUrl { get; set; }
     public MediaType MediaType { get; set; }
     public int OrderIndex { get; set; }
     public int DurationSeconds { get; set; }

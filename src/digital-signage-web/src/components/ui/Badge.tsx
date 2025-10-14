@@ -29,7 +29,10 @@ export function Badge({
         size === 'md' && 'px-2.5 py-0.5 text-xs',
         size === 'lg' && 'px-3 py-1 text-sm',
         // Color variants
-        variant === 'default' && 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+        variant === 'default' && 'bg-primary text-primary-foreground hover:bg-primary/80',
+        variant === 'secondary' && 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        variant === 'destructive' && 'bg-destructive text-destructive-foreground hover:bg-destructive/80',
+        variant === 'outline' && 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
         variant === 'success' && 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
         variant === 'warning' && 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
         variant === 'error' && 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',

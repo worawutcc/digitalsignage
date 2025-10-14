@@ -1,0 +1,118 @@
+name: Sync to GitLab
+
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  sync-to-gitlab:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetch full history for proper sync
+          token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Setup Git configuration
+        run: |
+          git config --global user.name "GitHub Actions Bot"
+          git config --global user.email "actions@github.com"
+      
+      - name: Add GitLab remote
+        run: |
+          # Remove existing gitlab remote if exists
+          git remote remove gitlab 2>/dev/null || true
+          
+          # Add GitLab remote with token authentication
+          git remote add gitlab https://oauth2:${{ secrets.GITLAB_TOKEN }}@git.mrfox.store/ai/digital-signage.git
+          
+          # Verify remote was added
+          git remote -v
+      
+      - name: Fetch GitLab branches
+        run: |
+          git fetch gitlab --prune
+        continue-on-error: true # Continue if GitLab repo doesn't exist yet
+      
+      - name: Push to GitLab
+        run: |
+          # Get current branch name
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          
+          echo "Syncing branch: $BRANCH_NAME"
+          
+          # Push current branch to GitLab
+          git push gitlab HEAD:$BRANCH_NAME --force-with-lease
+          
+          # Push tags if any
+          git push gitlab --tags --force-with-lease
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+      
+      - name: Sync status notification
+        if: always()
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "✅ Successfully synced branch '$BRANCH_NAME' to GitLab"
+          else
+            echo "❌ Failed to sync branch '$BRANCH_NAME' to GitLab"
+          fi
+      
+      - name: Create GitLab merge request (for develop branch)
+        if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          
+          # Install GitLab CLI (glab)
+          curl -s https://gitlab.com/api/v4/projects/gitlab-org%2Fcli/releases/permalink/latest | \
+            grep "browser_download_url.*linux_amd64.tar.gz" | \
+            cut -d '"' -f 4 | \
+            wget -qi -
+          
+          tar -xzf glab_*_linux_amd64.tar.gz
+          sudo mv bin/glab /usr/local/bin/
+          
+          # Configure glab for custom GitLab instance
+          echo "${{ secrets.GITLAB_TOKEN }}" | glab auth login --hostname git.mrfox.store --stdin
+          
+          # Create merge request if it doesn't exist
+          glab mr create \
+            --title "Auto-sync: develop to main" \
+            --description "Automatically synced develop branch from GitHub to GitLab" \
+            --source-branch "develop" \
+            --target-branch "main" \
+            --repo "ai/digital-signage" \
+            --yes || echo "Merge request might already exist"
+        continue-on-error: true # Don't fail the workflow if MR creation fails
+
+  notify-sync-status:
+    needs: sync-to-gitlab
+    runs-on: ubuntu-latest
+    if: always() # Run even if sync job fails
+    
+    steps:
+      - name: Notify sync completion
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branch = context.ref.replace('refs/heads/', '');
+            const status = '${{ needs.sync-to-gitlab.result }}';
+            const emoji = status === 'success' ? '✅' : '❌';
+            
+            // Create a comment on PR if this is a pull request
+            if (context.eventName === 'pull_request') {
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: `${emoji} GitLab sync ${status} for branch \`${branch}\``
+              });
+            }
+            
+            console.log(`${emoji} GitLab sync ${status} for branch: ${branch}`);

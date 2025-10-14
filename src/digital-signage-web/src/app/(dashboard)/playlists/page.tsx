@@ -1,105 +1,198 @@
 'use client'
 
-import React, { useState } from 'react'
-import { PlaylistAssignmentSummary } from '@/features/playlists/components/PlaylistAssignmentSummary'
+import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { 
-  Plus, 
-  Search, 
-  Filter,
-  Grid3x3,
-  List,
-  Play,
-  Pause,
-  Edit,
-  Trash2,
-  Copy,
-  Clock,
-  Monitor,
-  MoreHorizontal,
-  Calendar,
-  AlertCircle,
-  Loader2,
-  Music
-} from 'lucide-react'
+import { Plus, Grid3x3, List, Music, Play, Monitor, Clock, Loader2, AlertCircle, MoreVertical, Edit, Copy, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Input } from '@/components/ui/Input'
-import PlaylistService from '@/features/playlists/services/playlistService'
+// Using basic divs instead of Card component
 import {
-  PlaylistDto,
-  PlaylistStatus,
-  PlaylistStatistics,
-  formatPlaylistDuration,
-  getPlaylistStatusLabel,
-  getPlaylistStatusColor
-} from '@/features/playlists/types'
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger
+} from '@/components/ui/DropdownMenu'
+import type { PlaylistDto } from '@/types/playlist'
+import { PlaylistStatus } from '@/types/playlist'
+
+interface PlaylistStats {
+  totalPlaylists: number
+  activePlaylists: number
+  totalAssignedDevices: number
+  averageDuration: number
+}
+
+// Mock API functions - will be replaced with real API
+const mockPlaylistApi = {
+  getAll: async (): Promise<PlaylistDto[]> => {
+    return [
+      {
+        id: 1,
+        name: 'Morning Announcements',
+        description: 'Daily morning content for lobby displays',
+        status: PlaylistStatus.Active,
+        isLooped: true,
+        loopCount: null,
+        priority: 1,
+        createdAt: '2024-01-15T10:30:00Z',
+        updatedAt: '2024-01-15T10:30:00Z',
+        createdByUserId: 1,
+        createdByUserName: 'John Doe',
+        playlistItems: [],
+        totalItems: 5,
+        totalDurationSeconds: 180
+      },
+      {
+        id: 2,
+        name: 'Product Showcase',
+        description: 'Latest products and promotions',
+        status: PlaylistStatus.Draft,
+        isLooped: true,
+        loopCount: 3,
+        priority: 2,
+        createdAt: '2024-01-14T16:45:00Z',
+        updatedAt: '2024-01-14T16:45:00Z',
+        createdByUserId: 2,
+        createdByUserName: 'Jane Smith',
+        playlistItems: [],
+        totalItems: 8,
+        totalDurationSeconds: 240
+      },
+      {
+        id: 3,
+        name: 'Emergency Alerts',
+        description: 'Critical emergency information',
+        status: PlaylistStatus.Archived,
+        isLooped: false,
+        loopCount: null,
+        priority: 10,
+        createdAt: '2024-01-10T09:15:00Z',
+        updatedAt: '2024-01-10T09:15:00Z',
+        createdByUserId: 1,
+        createdByUserName: 'Admin User',
+        playlistItems: [],
+        totalItems: 3,
+        totalDurationSeconds: 90
+      }
+    ]
+  },
+  getStats: async (): Promise<PlaylistStats> => {
+    return {
+      totalPlaylists: 12,
+      activePlaylists: 8,
+      totalAssignedDevices: 25,
+      averageDuration: 210
+    }
+  },
+  delete: async (id: number): Promise<void> => {
+    console.log('Delete playlist:', id)
+  },
+  duplicate: async (id: number): Promise<PlaylistDto> => {
+    console.log('Duplicate playlist:', id)
+    return {} as PlaylistDto
+  }
+}
 
 export default function PlaylistsPage() {
   const router = useRouter()
   const queryClient = useQueryClient()
+  
+  // View and filter state
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
-  const [searchTerm, setSearchTerm] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState<'all' | PlaylistStatus>('all')
+  const [selectedItems, setSelectedItems] = useState<number[]>([])
 
-  // Fetch playlists
-  const { data: playlists = [], isLoading, error } = useQuery<PlaylistDto[], Error>({
+  // API queries
+  const { data: playlists = [], isLoading, error } = useQuery<PlaylistDto[]>({
     queryKey: ['playlists'],
-    queryFn: () => PlaylistService.getAll()
+    queryFn: mockPlaylistApi.getAll
   })
 
-  // Fetch statistics
-  const { data: stats } = useQuery<PlaylistStatistics>({
+  const { data: stats } = useQuery<PlaylistStats>({
     queryKey: ['playlist-stats'],
-    queryFn: () => PlaylistService.getStatistics()
+    queryFn: mockPlaylistApi.getStats
   })
 
-  // Delete mutation
+  // Mutations
   const deleteMutation = useMutation({
-    mutationFn: (id: number) => PlaylistService.delete(id),
+    mutationFn: mockPlaylistApi.delete,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] })
       queryClient.invalidateQueries({ queryKey: ['playlist-stats'] })
     }
   })
 
-  // Duplicate mutation
   const duplicateMutation = useMutation({
-    mutationFn: (id: number) => PlaylistService.duplicate(id),
+    mutationFn: mockPlaylistApi.duplicate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['playlists'] })
-    }
-  })
-
-  // Activate mutation
-  const activateMutation = useMutation({
-    mutationFn: (id: number) => PlaylistService.activate(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playlists'] })
-      queryClient.invalidateQueries({ queryKey: ['playlist-stats'] })
-    }
-  })
-
-  // Deactivate mutation
-  const deactivateMutation = useMutation({
-    mutationFn: (id: number) => PlaylistService.deactivate(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['playlists'] })
-      queryClient.invalidateQueries({ queryKey: ['playlist-stats'] })
     }
   })
 
   // Filter playlists
-  const filteredPlaylists = playlists.filter(playlist => {
-    const matchesSearch = !searchTerm || 
-      playlist.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (playlist.description?.toLowerCase().includes(searchTerm.toLowerCase()) ?? false)
-    
-    const matchesStatus = statusFilter === 'all' || playlist.status === statusFilter
-    
-    return matchesSearch && matchesStatus
-  })
+  const filteredPlaylists = useMemo(() => {
+    return playlists.filter(playlist => {
+      const matchesSearch = !searchQuery || 
+        playlist.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        playlist.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      
+      const matchesStatus = statusFilter === 'all' || playlist.status === statusFilter
+      
+      return matchesSearch && matchesStatus
+    })
+  }, [playlists, searchQuery, statusFilter])
 
+  // Format duration helper
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Get status badge variant
+  const getStatusVariant = (status: PlaylistStatus) => {
+    switch (status) {
+      case PlaylistStatus.Active:
+        return 'success'
+      case PlaylistStatus.Draft:
+        return 'info'
+      case PlaylistStatus.Archived:
+        return 'default'
+      case PlaylistStatus.Error:
+        return 'error'
+      case PlaylistStatus.Scheduled:
+        return 'info'
+      default:
+        return 'default'
+    }
+  }
+
+  // Get status label
+  const getStatusLabel = (status: PlaylistStatus) => {
+    switch (status) {
+      case PlaylistStatus.Active:
+        return 'Active'
+      case PlaylistStatus.Draft:
+        return 'Draft'
+      case PlaylistStatus.Archived:
+        return 'Archived'
+      case PlaylistStatus.Inactive:
+        return 'Inactive'
+      case PlaylistStatus.Scheduled:
+        return 'Scheduled'
+      case PlaylistStatus.Expired:
+        return 'Expired'
+      case PlaylistStatus.Error:
+        return 'Error'
+      default:
+        return 'Unknown'
+    }
+  }
+
+  // Event handlers
   const handleDelete = (id: number) => {
     if (confirm('Are you sure you want to delete this playlist?')) {
       deleteMutation.mutate(id)
@@ -110,390 +203,233 @@ export default function PlaylistsPage() {
     duplicateMutation.mutate(id)
   }
 
-  const handleToggleActive = (playlist: PlaylistDto) => {
-    if (playlist.status === PlaylistStatus.Active) {
-      deactivateMutation.mutate(playlist.id)
-    } else {
-      activateMutation.mutate(playlist.id)
-    }
-  }
-
   return (
     <div className="space-y-6">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Playlists
-            </h1>
-            <p className="text-gray-600 dark:text-gray-400">
-              Manage content playlists for your digital signage displays
-            </p>
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Playlists
+          </h1>
+          <p className="text-gray-600">
+            Manage content playlists for your digital signage displays
+          </p>
+        </div>
+        <Button onClick={() => router.push('/playlists/create')}>
+          <Plus className="h-4 w-4 mr-2" />
+          Create Playlist
+        </Button>
+      </div>
+
+      {/* Stats */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white p-6 rounded-lg border shadow-sm">
+            <div className="flex items-center">
+              <Music className="h-8 w-8 text-blue-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Total Playlists
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalPlaylists}
+                </p>
+              </div>
+            </div>
           </div>
-          <Button onClick={() => router.push('/playlists/create')}>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Playlist
+
+          <div className="bg-white p-6 rounded-lg border shadow-sm">
+            <div className="flex items-center">
+              <Play className="h-8 w-8 text-green-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Active
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.activePlaylists}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg border shadow-sm">
+            <div className="flex items-center">
+              <Monitor className="h-8 w-8 text-purple-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Assigned Devices
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.totalAssignedDevices}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white p-6 rounded-lg border shadow-sm">
+            <div className="flex items-center">
+              <Clock className="h-8 w-8 text-orange-500" />
+              <div className="ml-4">
+                <p className="text-sm font-medium text-gray-600">
+                  Avg Duration
+                </p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {formatDuration(stats.averageDuration)}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <Input
+            type="text"
+            placeholder="Search playlists by name or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+        
+        <select
+          value={statusFilter}
+          onChange={(e) => setStatusFilter(e.target.value as 'all' | PlaylistStatus)}
+          className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="all">All Status</option>
+          <option value={PlaylistStatus.Active}>Active</option>
+          <option value={PlaylistStatus.Draft}>Draft</option>
+          <option value={PlaylistStatus.Archived}>Archived</option>
+          <option value={PlaylistStatus.Inactive}>Inactive</option>
+          <option value={PlaylistStatus.Scheduled}>Scheduled</option>
+        </select>
+        
+        <div className="flex items-center gap-2">
+          <Button
+            variant={viewMode === 'grid' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('grid')}
+          >
+            <Grid3x3 className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+          >
+            <List className="h-4 w-4" />
           </Button>
         </div>
+      </div>
 
-        {/* Stats */}
-        {stats && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-              <div className="flex items-center">
-                <Music className="h-8 w-8 text-blue-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Total Playlists
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats?.totalPlaylists ?? 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-              <div className="flex items-center">
-                <Play className="h-8 w-8 text-green-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Active
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats?.activePlaylists ?? 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-              <div className="flex items-center">
-                <Monitor className="h-8 w-8 text-purple-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Assigned Devices
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats?.totalAssignedDevices ?? 0}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg border shadow-sm">
-              <div className="flex items-center">
-                <Clock className="h-8 w-8 text-orange-500" />
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-                    Avg Duration
-                  </p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                    {stats ? formatPlaylistDuration(stats.averageDuration) : '0:00'}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Controls */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex gap-2">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-              <Input
-                placeholder="Search playlists..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 w-64"
-              />
-            </div>
-            <Button variant="outline">
-              <Filter className="h-4 w-4 mr-2" />
-              Filter
-            </Button>
-          </div>
-
-          <div className="flex gap-2">
-            <Button
-              variant={viewMode === 'grid' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('grid')}
-            >
-              <Grid3x3 className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'list' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setViewMode('list')}
-            >
-              <List className="h-4 w-4" />
-            </Button>
+      {/* Content */}
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="flex items-center gap-2 text-gray-500">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading playlists...</span>
           </div>
         </div>
-
-        {/* Loading State */}
-        {isLoading && (
-          <div className="flex justify-center items-center py-20">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-500" />
+      ) : error ? (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <p className="text-lg font-medium text-gray-900">Failed to load playlists</p>
+            <p className="text-gray-600">Please try again later</p>
           </div>
-        )}
-
-        {/* Error State */}
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start">
-            <AlertCircle className="h-5 w-5 text-red-500 mr-3 flex-shrink-0 mt-0.5" />
-            <div>
-              <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                Error loading playlists
-              </h3>
-              <p className="text-sm text-red-700 dark:text-red-300 mt-1">
-                {error.message}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && !error && filteredPlaylists.length === 0 && (
-          <div className="text-center py-20">
-            <Music className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-              No playlists found
-            </h3>
-            <p className="text-gray-500 dark:text-gray-400 mb-4">
-              {searchTerm || statusFilter !== 'all'
-                ? 'Try adjusting your search or filters'
-                : 'Get started by creating your first playlist'}
-            </p>
-            {!searchTerm && statusFilter === 'all' && (
+        </div>
+      ) : filteredPlaylists.length === 0 ? (
+        <div className="text-center py-12">
+          <Music className="mx-auto h-12 w-12 text-gray-400" />
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No playlists found</h3>
+          <p className="mt-1 text-sm text-gray-500">
+            {searchQuery || statusFilter !== 'all'
+              ? 'Try adjusting your search or filters'
+              : 'Get started by creating your first playlist.'
+            }
+          </p>
+          {!searchQuery && statusFilter === 'all' && (
+            <div className="mt-6">
               <Button onClick={() => router.push('/playlists/create')}>
                 <Plus className="h-4 w-4 mr-2" />
-                Create Playlist
+                Create your first playlist
               </Button>
-            )}
-          </div>
-        )}
-
-        {/* Playlists Grid/List */}
-        {!isLoading && !error && filteredPlaylists.length > 0 && (
-          <>
-            {viewMode === 'grid' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredPlaylists.map((playlist) => (
-              <div key={playlist.id} className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm hover:shadow-md transition-shadow">
-                <div className="p-6">
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-                        {playlist.name}
-                      </h3>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                        {playlist.description}
-                      </p>
-                    </div>
-                    <div className="flex gap-1">
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleToggleActive(playlist)}
-                        disabled={activateMutation.isPending || deactivateMutation.isPending}
-                        title={playlist.status === PlaylistStatus.Active ? 'Deactivate' : 'Activate'}
-                      >
-                        {playlist.status === PlaylistStatus.Active ? (
-                          <Pause className="h-4 w-4" />
-                        ) : (
-                          <Play className="h-4 w-4" />
-                        )}
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm"
-                        onClick={() => handleDelete(playlist.id)}
-                        disabled={deleteMutation.isPending}
-                        title="Delete"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between mb-4">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPlaylistStatusColor(playlist.status)}`}>
-                      {getPlaylistStatusLabel(playlist.status)}
-                    </span>
-                    <span className="text-sm text-gray-500">
-                      {playlist.playlistItems?.length ?? 0} items
-                    </span>
-                  </div>
-
-                  <div className="space-y-2 mb-4">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Duration:</span>
-                      <span className="font-medium">{formatPlaylistDuration(playlist.totalDurationSeconds)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Loop:</span>
-                      <span className="font-medium">{playlist.isLooped ? 'Yes' : 'No'}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600 dark:text-gray-400">Priority:</span>
-                      <span className="font-medium">{playlist.priority}</span>
-                    </div>
-                  </div>
-
-                  {/* Assignment Summary UI */}
-                  <div className="mb-4">
-                    <PlaylistAssignmentSummary playlistId={playlist.id} />
-                  </div>
-
-                  {playlist.status === PlaylistStatus.Scheduled && (
-                    <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                      <div className="flex items-center mb-2">
-                        <Calendar className="h-4 w-4 text-blue-500 mr-2" />
-                        <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
-                          Scheduled
-                        </span>
-                      </div>
-                      <div className="text-xs text-blue-600 dark:text-blue-400">
-                        Created: {new Date(playlist.createdAt).toLocaleDateString()}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="flex gap-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => router.push(`/playlists/edit/${playlist.id}`)}
-                    >
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className={viewMode === 'grid' 
+          ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6'
+          : 'space-y-4'
+        }>
+          {filteredPlaylists.map((playlist) => (
+            <div key={playlist.id} className="bg-white p-6 rounded-lg border shadow-sm hover:shadow-lg transition-shadow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="space-y-1">
+                  <h3 className="text-lg font-semibold">{playlist.name}</h3>
+                  <Badge variant={getStatusVariant(playlist.status)}>
+                    {getStatusLabel(playlist.status)}
+                  </Badge>
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => router.push(`/playlists/${playlist.id}`)}>
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="flex-1"
-                      onClick={() => handleDuplicate(playlist.id)}
-                      disabled={duplicateMutation.isPending}
-                    >
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleDuplicate(playlist.id)}>
                       <Copy className="h-4 w-4 mr-2" />
                       Duplicate
-                    </Button>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => handleDelete(playlist.id)}
+                      className="text-red-600"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              <div className="space-y-3">
+                {playlist.description && (
+                  <p className="text-sm text-gray-600">
+                    {playlist.description}
+                  </p>
+                )}
+                
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Items:</span>
+                    <span className="font-medium">{playlist.totalItems}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Duration:</span>
+                    <span className="font-medium">{formatDuration(playlist.totalDurationSeconds)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Priority:</span>
+                    <span className="font-medium">{playlist.priority}</span>
                   </div>
                 </div>
+
+                <div className="pt-3 border-t text-xs text-gray-500">
+                  <p>Created by {playlist.createdByUserName}</p>
+                  <p>{new Date(playlist.updatedAt || playlist.createdAt).toLocaleDateString()}</p>
+                </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-lg border shadow-sm">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left p-4">Name</th>
-                    <th className="text-left p-4">Status</th>
-                    <th className="text-left p-4">Items</th>
-                    <th className="text-left p-4">Duration</th>
-                    <th className="text-left p-4">Loop</th>
-                    <th className="text-left p-4">Modified</th>
-                    <th className="text-left p-4">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredPlaylists.map((playlist) => (
-                    <tr key={playlist.id} className="border-b hover:bg-gray-50 dark:hover:bg-gray-800">
-                      <td className="p-4">
-                        <div>
-                          <div className="font-medium text-gray-900 dark:text-white">
-                            {playlist.name}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {playlist.description}
-                          </div>
-                          {playlist.status === PlaylistStatus.Scheduled && (
-                            <div className="flex items-center mt-1">
-                              <Calendar className="h-3 w-3 text-blue-500 mr-1" />
-                              <span className="text-xs text-blue-600">
-                                Created: {new Date(playlist.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="p-4">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${getPlaylistStatusColor(playlist.status)}`}>
-                          {getPlaylistStatusLabel(playlist.status)}
-                        </span>
-                      </td>
-                      <td className="p-4 text-sm text-gray-500">
-                        {playlist.playlistItems?.length ?? 0}
-                      </td>
-                      <td className="p-4 text-sm text-gray-500">
-                        {formatPlaylistDuration(playlist.totalDurationSeconds)}
-                      </td>
-                      <td className="p-4 text-sm text-gray-500">
-                        {playlist.isLooped ? 'Yes' : 'No'}
-                      </td>
-                      <td className="p-4 text-sm text-gray-500">
-                        {playlist.updatedAt ? new Date(playlist.updatedAt).toLocaleDateString() : new Date(playlist.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="p-4">
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleToggleActive(playlist)}
-                            disabled={activateMutation.isPending || deactivateMutation.isPending}
-                            title={playlist.status === PlaylistStatus.Active ? 'Deactivate' : 'Activate'}
-                          >
-                            {playlist.status === PlaylistStatus.Active ? (
-                              <Pause className="h-4 w-4" />
-                            ) : (
-                              <Play className="h-4 w-4" />
-                            )}
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => router.push(`/playlists/edit/${playlist.id}`)}
-                            title="Edit"
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDuplicate(playlist.id)}
-                            disabled={duplicateMutation.isPending}
-                            title="Duplicate"
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleDelete(playlist.id)}
-                            disabled={deleteMutation.isPending}
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
-          </div>
-            )}
-          </>
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

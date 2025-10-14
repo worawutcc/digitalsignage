@@ -12,8 +12,11 @@ import { MediaType } from './media'
 export enum PlaylistStatus {
   Draft = 0,
   Active = 1,
-  Scheduled = 2,
-  Archived = 3
+  Inactive = 2,
+  Scheduled = 3,
+  Expired = 4,
+  Error = 5,
+  Archived = 6
 }
 
 /**
@@ -30,6 +33,16 @@ export enum TransitionEffect {
   Reveal = 6,
   Dissolve = 7
 }
+
+/**
+ * Bulk Action Type for playlist operations
+ */
+export type BulkActionType = 'activate' | 'deactivate' | 'delete' | 'archive' | 'duplicate';
+
+/**
+ * Playlist type alias for backward compatibility
+ */
+export type Playlist = PlaylistDto;
 
 /**
  * Playlist Item DTO
@@ -156,6 +169,115 @@ export interface PlaylistAssignmentSummary {
   assignments: PlaylistAssignmentDto[]
 }
 
+/**
+ * Bulk Operations
+ */
+export interface BulkPlaylistActionRequest {
+  playlistIds: number[]
+  action: 'activate' | 'deactivate' | 'archive' | 'delete' | 'duplicate'
+  targetStatus?: PlaylistStatus
+}
+
+/**
+ * Reorder Playlist Items
+ */
+export interface UpdatePlaylistOrderRequest {
+  items: {
+    id: number
+    orderIndex: number
+  }[]
+}
+
+/**
+ * Device Playlist Assignment
+ */
+export interface DevicePlaylistAssignment {
+  id: number
+  deviceId: number
+  playlistId: number
+  priority: number
+  scheduledStart?: string
+  scheduledEnd?: string
+  isActive: boolean
+  assignedAt: string
+  assignedBy: string
+  deviceName?: string
+}
+
+/**
+ * Playlist Analytics
+ */
+export interface PlaylistAnalytics {
+  id: number
+  playlistId: number
+  deviceId: number
+  playStartTime: string
+  playEndTime?: string
+  completedSuccessfully: boolean
+  errorMessage?: string
+  mediaItemsPlayed: number
+  deviceName?: string
+}
+
+/**
+ * Enhanced Request Types for API
+ */
+export interface UpdatePlaylistOrderRequest {
+  items: {
+    id: number
+    orderIndex: number
+  }[]
+}
+
+export interface BulkPlaylistActionRequest {
+  playlistIds: number[]
+  action: 'activate' | 'deactivate' | 'archive' | 'delete' | 'duplicate'
+  targetStatus?: PlaylistStatus
+}
+
+export interface CreateDevicePlaylistRequest {
+  deviceId: number
+  priority?: number
+  scheduledStart?: string
+  scheduledEnd?: string
+  isActive?: boolean
+}
+
+export interface PlaylistAnalyticsReportDto {
+  playlistId: number
+  playlistName: string
+  totalPlays: number
+  successfulPlays: number
+  failedPlays: number
+  successRate: number
+  averageDuration: string // TimeSpan as string
+  lastPlayed?: string
+  deviceSummaries: DevicePlaybackSummary[]
+}
+
+export interface DevicePlaybackSummary {
+  deviceId: number
+  deviceName: string
+  playCount: number
+  successfulPlays: number
+  lastPlayed?: string
+}
+
+/**
+ * UI State Management
+ */
+export interface PlaylistGridViewSettings {
+  view: 'grid' | 'list'
+  itemsPerPage: number
+  currentPage: number
+}
+
+export interface PlaylistDragDropContext {
+  activeId: string | number | null
+  isDragging: boolean
+  draggedItem?: PlaylistItemDto
+}
+
 export interface PlaylistAssignmentDto {
   id: number
   playlistId: number
@@ -192,7 +314,10 @@ export const getPlaylistStatusLabel = (status: PlaylistStatus): string => {
   switch (status) {
     case PlaylistStatus.Draft: return 'Draft'
     case PlaylistStatus.Active: return 'Active'
+    case PlaylistStatus.Inactive: return 'Inactive'
     case PlaylistStatus.Scheduled: return 'Scheduled'
+    case PlaylistStatus.Expired: return 'Expired'
+    case PlaylistStatus.Error: return 'Error'
     case PlaylistStatus.Archived: return 'Archived'
     default: return 'Unknown'
   }
@@ -202,7 +327,10 @@ export const getPlaylistStatusColor = (status: PlaylistStatus): string => {
   switch (status) {
     case PlaylistStatus.Draft: return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200'
     case PlaylistStatus.Active: return 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200'
+    case PlaylistStatus.Inactive: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     case PlaylistStatus.Scheduled: return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200'
+    case PlaylistStatus.Expired: return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200'
+    case PlaylistStatus.Error: return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200'
     case PlaylistStatus.Archived: return 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200'
     default: return 'bg-gray-100 text-gray-800'
   }

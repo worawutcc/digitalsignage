@@ -38,4 +38,11 @@ public interface IPlaylistService
     
     // Statistics
     Task<PlaylistStatisticsDto> GetStatisticsAsync();
+
+    // Enhanced UI functionality
+    Task<bool> UpdateOrderAsync(int playlistId, UpdatePlaylistOrderRequest request);
+    Task<bool> BulkActionAsync(BulkPlaylistActionRequest request, int userId);
+    Task<List<DevicePlaylistDto>> GetDeviceAssignmentsAsync(int playlistId);
+    Task<PlaylistAnalyticsReportDto> GetAnalyticsAsync(int playlistId, DateTime? startDate = null, DateTime? endDate = null);
+    Task<bool> AssignToDevicesAsync(int playlistId, List<CreateDevicePlaylistRequest> assignments, int userId);
 }

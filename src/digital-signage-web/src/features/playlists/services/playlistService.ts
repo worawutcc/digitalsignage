@@ -299,6 +299,80 @@ export class PlaylistService {
     return this.create(data, userId)
   }
 
+  // Enhanced UI functionality methods
+
+  /**
+   * Update playlist item order
+   */
+  static async updateOrder(id: number, request: any): Promise<void> {
+    try {
+      await apiClient.patch(`/api/playlist/${id}/reorder`, request)
+      console.log(`🔄 Updated order for playlist ${id}`)
+    } catch (error) {
+      console.error(`❌ Failed to update order for playlist ${id}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Perform bulk actions on multiple playlists
+   */
+  static async bulkAction(request: any): Promise<void> {
+    try {
+      await apiClient.post('/api/playlist/bulk-action', request)
+      console.log(`🔄 Performed bulk action ${request.action} on ${request.playlistIds.length} playlists`)
+    } catch (error) {
+      console.error(`❌ Failed to perform bulk action ${request.action}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Get device assignments for a playlist
+   */
+  static async getDeviceAssignments(id: number): Promise<any[]> {
+    try {
+      const response = await apiClient.get<any[]>(`/api/playlist/${id}/device-assignments`)
+      console.log(`🔗 Device assignments for playlist ${id}:`, response.data)
+      return Array.isArray(response.data) ? response.data : []
+    } catch (error) {
+      console.error(`❌ Failed to fetch device assignments for playlist ${id}:`, error)
+      return []
+    }
+  }
+
+  /**
+   * Assign playlist to devices
+   */
+  static async assignToDevices(id: number, assignments: any[]): Promise<void> {
+    try {
+      await apiClient.post(`/api/playlist/${id}/assign-devices`, assignments)
+      console.log(`🔗 Assigned playlist ${id} to ${assignments.length} devices`)
+    } catch (error) {
+      console.error(`❌ Failed to assign playlist ${id} to devices:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Get analytics for a playlist
+   */
+  static async getAnalytics(id: number, startDate?: Date, endDate?: Date): Promise<any> {
+    try {
+      const params = new URLSearchParams()
+      if (startDate) params.append('startDate', startDate.toISOString())
+      if (endDate) params.append('endDate', endDate.toISOString())
+
+      const url = `/api/playlist/${id}/analytics${params.toString() ? '?' + params.toString() : ''}`
+      const response = await apiClient.get<any>(url)
+      console.log(`📊 Analytics for playlist ${id}:`, response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ Failed to fetch analytics for playlist ${id}:`, error)
+      throw error
+    }
+  }
+
   /**
    * Validate playlist before creation/update
    */
