@@ -23,6 +23,11 @@ public class Schedule : BaseEntity
     /// Priority for conflict resolution (1-10, higher = more priority)
     /// </summary>
     public int Priority { get; set; } = 5;
+    
+    /// <summary>
+    /// Source of schedule creation (UI, API, Import, Template, etc.)
+    /// </summary>
+    public string Source { get; set; } = "Default";
 
     // Navigation properties
     /// <summary>

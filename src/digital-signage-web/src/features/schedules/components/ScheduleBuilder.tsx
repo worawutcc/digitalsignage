@@ -35,7 +35,7 @@ const scheduleSchema = z.object({
         id: z.string(),
         startTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
         endTime: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format (HH:MM)'),
-        daysOfWeek: z.array(z.number()),
+        daysOfWeek: z.array(z.number()).default([0, 1, 2, 3, 4, 5, 6]), // Default to all days
         timezone: z.string(),
       })
     )
@@ -52,7 +52,7 @@ const scheduleSchema = z.object({
       z.object({
         deviceId: z.number(),  // Device ID as number
         groupId: z.number().optional(),
-        name: z.string(),
+        name: z.string().min(1, 'Device name is required'),
         type: z.enum(['specific', 'group']),
       })
     )
@@ -61,9 +61,9 @@ const scheduleSchema = z.object({
     .array(
       z.object({
         id: z.string(),  // Local form field ID
-        mediaId: z.number(),  // Media ID as number
-        mediaName: z.string(),
-        order: z.number(),
+        mediaId: z.number().min(1, 'Media ID is required'),  // Media ID as number
+        mediaName: z.string().min(1, 'Media name is required'),
+        order: z.number().min(0, 'Order must be 0 or greater'),
         duration: z.number().min(1, 'Duration must be at least 1 second'),
         transition: z.enum(['fade', 'slide', 'zoom', 'none']).optional(),
       })
@@ -126,6 +126,7 @@ export function ScheduleBuilder({
     control,
     handleSubmit,
     watch,
+    setValue,
     formState: { errors },
   } = useForm<ScheduleFormData>({
     resolver: zodResolver(scheduleSchema),
@@ -252,7 +253,9 @@ export function ScheduleBuilder({
     clearAllErrors()
     
     try {
-      console.log('💾 Form submitted with data:', data)
+      console.log('� FORM SUBMISSION STARTED')
+      console.log('�💾 Form submitted with data:', data)
+      console.log('📊 Form validation state:', { isFormValid, tabValidation })
       
       // ⚠️ FORM VALIDATION: Check for obvious issues
       if (!data.timeSlots || data.timeSlots.length === 0) {
@@ -324,7 +327,35 @@ export function ScheduleBuilder({
         </nav>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6">
+      <form 
+        onSubmit={handleSubmit(
+          (data) => {
+            console.log('📝 React Hook Form handleSubmit SUCCESS with data:', data)
+            onSubmit(data)
+          },
+          (errors) => {
+            console.log('❌ React Hook Form handleSubmit FAILED with errors:', errors)
+            console.log('🔍 Detailed error breakdown:')
+            Object.entries(errors).forEach(([field, error]) => {
+              console.log(`  • ${field}:`, error)
+              if (field === 'timeSlots' && error?.message) {
+                console.log(`    timeSlots error message: ${error.message}`)
+              }
+            })
+            
+            // Debug form data structure vs schema expectations
+            console.log('🧪 Current form data for debugging:')
+            console.log('  - timeSlots:', formData.timeSlots)
+            console.log('  - targetDevices:', formData.targetDevices)
+            console.log('  - content:', formData.content)
+            
+            if (formData.timeSlots && formData.timeSlots.length > 0) {
+              console.log('🕐 First timeSlot structure:', formData.timeSlots[0])
+            }
+          }
+        )} 
+        className="p-6"
+      >
         {/* Global Form Errors */}
         {(globalError || allFormErrors.length > 0) && (
           <div className="mb-6">
@@ -497,22 +528,37 @@ export function ScheduleBuilder({
                     Days of Week
                   </label>
                   <div className="flex gap-2">
-                    {DAYS_OF_WEEK.map((day) => (
-                      <label
-                        key={day.value}
-                        className="flex items-center justify-center w-10 h-10 border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50"
-                      >
-                        <input
-                          type="checkbox"
-                          value={day.value}
-                          {...register(`timeSlots.${index}.daysOfWeek`)}
-                          className="sr-only peer"
-                        />
-                        <span className="text-xs font-medium peer-checked:text-blue-600 peer-checked:font-bold">
-                          {day.label}
-                        </span>
-                      </label>
-                    ))}
+                    {DAYS_OF_WEEK.map((day) => {
+                      const currentDaysOfWeek = watch(`timeSlots.${index}.daysOfWeek`) || []
+                      const isChecked = currentDaysOfWeek.includes(day.value)
+                      
+                      return (
+                        <label
+                          key={day.value}
+                          className={`flex items-center justify-center w-10 h-10 border rounded-md cursor-pointer transition-colors ${
+                            isChecked 
+                              ? 'border-blue-600 bg-blue-50 text-blue-600' 
+                              : 'border-gray-300 hover:bg-gray-50 text-gray-700'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              const currentDays = watch(`timeSlots.${index}.daysOfWeek`) || []
+                              const newDays = e.target.checked
+                                ? [...currentDays, day.value]
+                                : currentDays.filter((d: number) => d !== day.value)
+                              setValue(`timeSlots.${index}.daysOfWeek`, newDays, { shouldValidate: true })
+                            }}
+                            className="sr-only"
+                          />
+                          <span className="text-xs font-medium">
+                            {day.label}
+                          </span>
+                        </label>
+                      )
+                    })}
                   </div>
                 </div>
               </div>
@@ -857,6 +903,11 @@ export function ScheduleBuilder({
           <button
             type="submit"
             disabled={!isFormValid}
+            onClick={() => {
+              console.log('🖱️ Save button clicked! isFormValid:', isFormValid)
+              console.log('📊 Current form data:', formData)
+              console.log('✅ Tab validation:', tabValidation)
+            }}
             title={
               !isFormValid
                 ? 'Please complete all required sections (Basic Info, Time Slots, Target Devices, Content)'

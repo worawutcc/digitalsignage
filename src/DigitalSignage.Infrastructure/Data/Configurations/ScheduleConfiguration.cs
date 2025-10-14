@@ -12,7 +12,9 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
         // Apply BaseEntity configuration
         BaseEntityConfiguration.ConfigureBaseEntity(builder);
 
-        builder.ToTable("schedules");
+        builder.ToTable("schedules", t => 
+            t.HasCheckConstraint("CK_Schedule_Source", 
+                "source IN ('Default', 'API', 'Import', 'Template', 'Bulk', 'System')"));
 
         // Schedule-specific configuration
         builder.HasKey(e => e.Id);
@@ -43,6 +45,14 @@ public class ScheduleConfiguration : IEntityTypeConfiguration<Schedule>
                .IsRequired()
                .HasDefaultValue(5)
                .HasComment("Priority level 1-10 for schedule conflict resolution, higher = more important");
+        
+        // Configure Source for tracking creation method
+        builder.Property(e => e.Source)
+               .HasColumnName("source")
+               .HasMaxLength(50)
+               .IsRequired()
+               .HasDefaultValue("Default")
+               .HasComment("Source of schedule creation: Default, API, Import, Template, Bulk, System");
         
         // Configure enum conversion
         builder.Property(e => e.Status)

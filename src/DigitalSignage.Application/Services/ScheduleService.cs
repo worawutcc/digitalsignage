@@ -379,7 +379,20 @@ public class ScheduleService : IScheduleService
                 IsRecurring = s.IsRecurring,
                 RecurrencePattern = s.RecurrencePattern,
                 CreatedAt = s.CreatedAt,
-                UpdatedAt = s.UpdatedAt
+                UpdatedAt = s.UpdatedAt,
+                
+                // Enhanced fields
+                DeviceCount = s.ScheduleDevices.Count,
+                MediaFiles = s.ScheduleMedias.Select(sm => new ScheduleMediaItemDto
+                {
+                    MediaId = sm.MediaId,
+                    Order = sm.Order,
+                    DurationSeconds = sm.DurationSeconds
+                }).ToList(),
+                TotalDurationSeconds = s.ScheduleMedias.Sum(sm => sm.DurationSeconds),
+                
+                // For list view, don't include full device details (performance optimization)
+                AssignedDevices = null
             }).ToList();
 
             _logger.LogInformation("Retrieved {Count} schedules", scheduleDtos.Count);
@@ -426,7 +439,29 @@ public class ScheduleService : IScheduleService
                 IsRecurring = schedule.IsRecurring,
                 RecurrencePattern = schedule.RecurrencePattern,
                 CreatedAt = schedule.CreatedAt,
-                UpdatedAt = schedule.UpdatedAt
+                UpdatedAt = schedule.UpdatedAt,
+                
+                // Enhanced fields with device count and media files
+                DeviceCount = schedule.ScheduleDevices.Count,
+                MediaFiles = schedule.ScheduleMedias.Select(sm => new ScheduleMediaItemDto
+                {
+                    MediaId = sm.MediaId,
+                    Order = sm.Order,
+                    DurationSeconds = sm.DurationSeconds
+                }).ToList(),
+                
+                // Calculate total duration
+                TotalDurationSeconds = schedule.ScheduleMedias.Sum(sm => sm.DurationSeconds),
+                
+                // Include device details if requested
+                AssignedDevices = schedule.ScheduleDevices.Select(sd => new ScheduleDeviceDto
+                {
+                    DeviceId = sd.DeviceId,
+                    DeviceName = sd.Device?.Name ?? "Unknown",
+                    DeviceLocation = sd.Device?.Location ?? "Unknown",
+                    DeviceStatus = sd.Device?.Status.ToString() ?? "Unknown",
+                    DevicePriority = sd.DevicePriority
+                }).ToList()
             };
         }
         catch (Exception ex)
@@ -482,7 +517,11 @@ public class ScheduleService : IScheduleService
         try
         {
             _logger.LogInformation("Searching schedules term={Term} status={Status} deviceId={DeviceId} isActive={IsActive}", term, status, deviceId, isActive);
-            var query = _context.Set<Schedule>().AsQueryable();
+            var query = _context.Set<Schedule>()
+                .Include(s => s.ScheduleDevices)
+                    .ThenInclude(sd => sd.Device)
+                .Include(s => s.ScheduleMedias)
+                .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(term))
             {
@@ -646,6 +685,7 @@ public class ScheduleService : IScheduleService
             var list = await query
                 .Include(s => s.ScheduleDevices)
                     .ThenInclude(sd => sd.Device)
+                .Include(s => s.ScheduleMedias)
                 .OrderBy(s => s.StartDate)
                 .ThenBy(s => s.StartTime)
                 .ToListAsync();
@@ -662,7 +702,10 @@ public class ScheduleService : IScheduleService
     /// <summary>
     /// Reusable mapper
     /// </summary>
-    private static ScheduleDto MapScheduleToDto(Schedule s) => new()
+    /// <summary>
+    /// Map Schedule entity to ScheduleDto with enhanced properties
+    /// </summary>
+    private ScheduleDto MapScheduleToDto(Schedule s) => new()
     {
         Id = s.Id,
         Name = s.Name,
@@ -675,6 +718,21 @@ public class ScheduleService : IScheduleService
         IsRecurring = s.IsRecurring,
         RecurrencePattern = s.RecurrencePattern,
         CreatedAt = s.CreatedAt,
-        UpdatedAt = s.UpdatedAt
+        UpdatedAt = s.UpdatedAt,
+        
+        // Enhanced fields
+        DeviceCount = s.ScheduleDevices?.Count ?? 0,
+        MediaFiles = s.ScheduleMedias?.Select(sm => new ScheduleMediaItemDto
+        {
+            MediaId = sm.MediaId,
+            Order = sm.Order,
+            DurationSeconds = sm.DurationSeconds
+        }).ToList() ?? new List<ScheduleMediaItemDto>(),
+        
+        TotalDurationSeconds = s.ScheduleMedias?.Sum(sm => sm.DurationSeconds) ?? 0,
+        
+        // Don't include full device details for performance (can be added later if needed)
+        AssignedDevices = null
     };
+
 }

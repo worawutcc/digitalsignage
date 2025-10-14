@@ -17,6 +17,7 @@ public class ScheduleStatisticsDto
 
 /// <summary>
 /// Schedule DTO for application service responses
+/// Enhanced with device count and media files information
 /// </summary>
 public class ScheduleDto
 {
@@ -32,6 +33,43 @@ public class ScheduleDto
     public string? RecurrencePattern { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+    
+    /// <summary>
+    /// Source of schedule creation (UI, API, Import, Template, etc.)
+    /// </summary>
+    public string Source { get; set; } = "Default";
+    
+    /// <summary>
+    /// Number of devices assigned to this schedule (from ScheduleDevice relationship)
+    /// </summary>
+    public int DeviceCount { get; set; }
+    
+    /// <summary>
+    /// List of media files assigned to this schedule
+    /// </summary>
+    public List<ScheduleMediaItemDto> MediaFiles { get; set; } = new List<ScheduleMediaItemDto>();
+    
+    /// <summary>
+    /// List of assigned devices (optional, for detailed views)
+    /// </summary>
+    public List<ScheduleDeviceDto>? AssignedDevices { get; set; }
+    
+    /// <summary>
+    /// Total duration in seconds of all media files
+    /// </summary>
+    public int TotalDurationSeconds { get; set; }
+}
+
+/// <summary>
+/// Device assignment details for a schedule
+/// </summary>
+public class ScheduleDeviceDto
+{
+    public int DeviceId { get; set; }
+    public string DeviceName { get; set; } = string.Empty;
+    public string DeviceLocation { get; set; } = string.Empty;
+    public string DeviceStatus { get; set; } = string.Empty;
+    public int? DevicePriority { get; set; }
 }
 
 /// <summary>
