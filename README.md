@@ -8,38 +8,58 @@ A comprehensive digital signage management system built with **Clean Architectur
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 
-## ✨ New Feature: Post-Upload Assignment (Oct 2025)
+## ✨ Recent Features
 
-A quick assignment workflow was added to the admin UI to let content managers assign uploaded media to users or schedules immediately after upload. This improves authoring speed and reduces follow-up steps.
+### Enhanced Playlist UI (Feature 036 - Oct 2025)
 
-Key points:
-- Shows a Post-Upload Actions dialog after a successful upload with four actions: Assign to Users, Add to Schedule, Upload More, Done.
-- Provides a Quick Assign dialog (React Hook Form + Zod) to create a schedule or select an existing schedule and pick users.
-- Backend endpoint: `POST /api/media/{id}/quick-assign` performs schedule creation (optional) and user assignments atomically.
+A complete redesign of the playlist management interface with modern UI patterns and improved user experience:
 
-Files added/changed for this feature:
-- Frontend:
-  - `src/digital-signage-web/src/components/media/PostUploadActionsDialog.tsx` (NEW)
-  - `src/digital-signage-web/src/components/media/QuickAssignDialog.tsx` (NEW)
-  - `src/digital-signage-web/src/hooks/useQuickAssign.ts` (UPDATED)
-  - `src/digital-signage-web/src/services/api/userApi.ts` (NEW)
-  - `src/digital-signage-web/src/services/api/scheduleApi.ts` (NEW)
-  - `src/digital-signage-web/src/types/quickAssign.ts` (NEW)
-  - `src/digital-signage-web/src/app/media/components/UploadMediaModal.tsx` (UPDATED - integrated dialogs)
-- Backend:
-  - `src/DigitalSignage.Application/DTOs/Media/QuickAssignRequestDto.cs` (NEW)
-  - `src/DigitalSignage.Application/DTOs/Media/QuickAssignResponseDto.cs` (NEW)
-  - `src/DigitalSignage.Application/Services/MediaService.cs` (UPDATED - QuickAssignAsync)
-  - `src/DigitalSignage.Api/Controllers/MediaController.cs` (UPDATED - POST /api/media/{id}/quick-assign)
+**Key Improvements:**
+- **Drag & Drop Support**: Reorder media items with smooth animations using @dnd-kit
+- **Scene Templates**: Pre-built templates for common layouts (single zone, side-by-side, multi-zone grid)
+- **Real-time Preview**: Live preview of playlist content with duration calculations
+- **Smart Validation**: Form validation with Zod schemas and React Hook Form
+- **Responsive Design**: Optimized for all screen sizes with Tailwind CSS 4
+- **Type-Safe API Integration**: Full TypeScript support with typed Axios client
 
-Quick test (local):
+**New Components:**
+- Playlist List with search/filter capabilities
+- Create Playlist wizard with step-by-step flow
+- Edit Playlist with media assignment and ordering
+- Playlist Analytics with view counts and performance metrics
+- Scene Editor with drag-drop zone configuration
 
-2. Upload a media file via Admin UI (Media → Upload).
-3. After upload completes, confirm Post-Upload Actions dialog appears.
-4. Choose "Assign to Users" → confirm Quick Assign dialog loads real users and schedules.
+**Technical Stack:**
+- React Hook Form + Zod for form state management
+- React Query for server state caching
+- Redux Toolkit for global UI state
+- Framer Motion for smooth animations
+- Radix UI for accessible components
 
-Environment note:
-- Ensure `NEXT_PUBLIC_API_URL` points to your running backend (e.g. `http://localhost:5100`). See Frontend Setup below.
+### Post-Upload Assignment (Oct 2025)
+
+A quick assignment workflow added to streamline media-to-schedule assignments:
+
+**Key Features:**
+- Post-Upload Actions dialog with 4 quick actions (Assign to Users, Add to Schedule, Upload More, Done)
+- Quick Assign dialog for immediate schedule creation/assignment
+- Atomic backend operation via `POST /api/media/{id}/quick-assign`
+- User selection with real-time data fetching
+- Schedule creation or selection in a single flow
+
+**Files Added/Updated:**
+- Frontend: `PostUploadActionsDialog.tsx`, `QuickAssignDialog.tsx`, `useQuickAssign.ts` hook
+- Backend: `QuickAssignRequestDto.cs`, `QuickAssignResponseDto.cs`, enhanced `MediaService`
+
+**Quick Test:**
+1. Upload a media file via Admin UI (Media → Upload)
+2. Post-Upload Actions dialog appears automatically
+3. Choose "Assign to Users" → Quick Assign dialog loads real users/schedules
+4. Create or select schedule, pick users, submit
+
+**Environment Setup:**
+- Ensure `NEXT_PUBLIC_API_URL` points to backend (e.g. `http://localhost:5100`)
+- See Frontend Setup section for complete configuration
 
 ## 🏗️ Architecture
 
@@ -213,9 +233,14 @@ npm run dev
 
 ### Production Build (Frontend)
 ```bash
-npm run build
+# Clean build cache and rebuild
+rm -rf .next && npm run build
+
+# Start production server
 npm run start
 ```
+
+**Note:** If you encounter TypeScript build errors, cleaning the `.next` cache directory usually resolves the issue.
 
 ## 🗄️ Database Schema
 
@@ -294,10 +319,55 @@ npm run dev
 # Production build
 npm run build
 
+# Clean build (recommended if TypeScript errors occur)
+rm -rf .next && npm run build
+
 # Start production server
 npm run start
 
 # Code formatting
+npm run format
+
+# Check formatting
+npm run format:check
+```
+
+#### Development Workflow (Recommended)
+
+For the best development experience, use separate terminal sessions:
+
+**Terminal 1 - Backend API:**
+```bash
+cd /path/to/digital_signage
+dotnet watch run --project src/DigitalSignage.Api --environment Development
+```
+
+**Terminal 2 - Frontend UI:**
+```bash
+cd /path/to/digital_signage/src/digital-signage-web
+npm run dev
+```
+
+**Terminal 3 - Database/Utilities:**
+```bash
+# For migrations, testing, etc.
+cd /path/to/digital_signage
+
+# Create migration
+dotnet ef migrations add <Name> -p src/DigitalSignage.Infrastructure -s src/DigitalSignage.Api
+
+# Update database
+dotnet ef database update -p src/DigitalSignage.Infrastructure -s src/DigitalSignage.Api
+
+# Run tests
+dotnet test
+```
+
+This setup provides:
+- ✅ Hot reload for both frontend and backend
+- ✅ Real-time error feedback
+- ✅ Separate logs for easier debugging
+- ✅ Independent service restart capabilities
 npm run format
 ```
 
@@ -1192,11 +1262,90 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Discussions**: [Ask questions in GitHub Discussions](https://github.com/your-org/digital-signage/discussions)
 
 ### Common Issues & Troubleshooting
-1. **Database connection errors**: Verify PostgreSQL is running and connection string is correct
-2. **AWS S3 upload failures**: Check IAM permissions and bucket configuration
-3. **JWT authentication issues**: Ensure secret key is properly configured and tokens haven't expired
-4. **Frontend build errors**: Clear `.next` cache and `node_modules`, then rebuild
-5. **CORS errors**: Verify allowed origins in backend CORS configuration
+
+#### Backend Issues
+1. **Database connection errors**: 
+   - Verify PostgreSQL is running: `pg_isready` or check services
+   - Verify connection string in `appsettings.Development.json`
+   - Check database exists: `psql -l`
+
+2. **DateTime/Timezone errors** (`Cannot apply binary operation on types 'timestamp with time zone' and 'timestamp without time zone'`):
+   - All DateTime columns must use `timestamp without time zone`
+   - Service layer must use `DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)`
+   - Never use `GETUTCDATE()` in PostgreSQL migrations (use `NOW() AT TIME ZONE 'UTC'`)
+   - See `.github/copilot-instructions.md` for detailed DateTime remediation guide
+
+3. **AWS S3 upload failures**: 
+   - Check IAM permissions and bucket configuration
+   - Verify AWS credentials in environment variables or appsettings
+   - Test bucket access with AWS CLI: `aws s3 ls s3://your-bucket-name`
+
+4. **JWT authentication issues**: 
+   - Ensure secret key is properly configured and tokens haven't expired
+   - Check token expiry time in configuration
+   - Verify token format: `Authorization: Bearer <token>`
+
+5. **Migration errors**:
+   - Ensure connection string is correct
+   - Check if database is accessible
+   - Run `dotnet ef database update` with `-v` flag for verbose output
+   - Reset database if needed: `dotnet ef database drop -f` then `dotnet ef database update`
+
+#### Frontend Issues
+1. **Build errors** (`File is not a module` or TypeScript errors):
+   - **Solution**: Clean `.next` cache: `rm -rf .next && npm run build`
+   - Clear node_modules if persists: `rm -rf node_modules .next && npm install && npm run build`
+   - Check for circular dependencies in imports
+
+2. **API connection errors** (Network errors, CORS):
+   - Verify backend is running on correct port (default: 5100)
+   - Check `NEXT_PUBLIC_API_URL` in `.env.local` matches backend URL
+   - Verify CORS configuration in `Program.cs` includes frontend origin
+   - Check browser console for specific CORS error messages
+
+3. **WebSocket connection failures**:
+   - Ensure `NEXT_PUBLIC_ENABLE_WEBSOCKET=true` in `.env.local`
+   - Check `NEXT_PUBLIC_WS_URL` points to correct WebSocket endpoint
+   - Verify JWT token is valid and not expired
+   - Check SignalR hub registration in backend
+
+4. **Page not found / Routing issues**:
+   - Verify file structure follows Next.js 15 App Router conventions
+   - Check for correct file naming: `page.tsx`, `layout.tsx`, `route.ts`
+   - Clear `.next` cache and rebuild
+
+5. **Hydration errors**:
+   - Ensure server and client render the same content
+   - Check for browser-only APIs used during SSR
+   - Use `'use client'` directive where needed
+
+#### Database Issues
+1. **Connection pool exhaustion**:
+   - Check for unclosed connections in code
+   - Verify connection string has appropriate pool size
+   - Monitor active connections: `SELECT count(*) FROM pg_stat_activity;`
+
+2. **Slow queries**:
+   - Enable query logging in PostgreSQL
+   - Check for missing indexes
+   - Use `EXPLAIN ANALYZE` to diagnose query performance
+
+#### Quick Reset (Development Only)
+```bash
+# Complete reset of development environment
+cd /path/to/digital_signage
+
+# Backend: Reset database
+dotnet ef database drop -f -p src/DigitalSignage.Infrastructure -s src/DigitalSignage.Api
+dotnet ef database update -p src/DigitalSignage.Infrastructure -s src/DigitalSignage.Api
+
+# Frontend: Clean rebuild
+cd src/digital-signage-web
+rm -rf .next node_modules package-lock.json
+npm install
+npm run build
+npm run dev
+```
 
 ### Useful Resources
 - [ASP.NET Core Documentation](https://docs.microsoft.com/en-us/aspnet/core/)
@@ -1210,17 +1359,22 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 #### Backend Stack
 - .NET Version: **8.0**
 - Entity Framework Core: **9.0**
-- PostgreSQL: **14+**
-- AWS SDK: **4.0+**
+- PostgreSQL: **14+** (with `timestamp without time zone`)
+- AWS SDK S3: **3.x**
 - log4net: **2.0+**
+- SignalR: **9.0**
 
 #### Frontend Stack
-- Next.js: **15.5+**
-- React: **19.1+**
+- Next.js: **15.5.4** (App Router)
+- React: **18.3.1**
 - TypeScript: **5.x**
-- Tailwind CSS: **4.x**
-- Redux Toolkit: **2.x**
-- React Query: **5.x**
+- Tailwind CSS: **4.1+**
+- Redux Toolkit: **2.9.0**
+- React Query (TanStack): **4.41.0**
+- React Hook Form: **7.63.0**
+- Zod: **3.x** (validation)
+- Axios: **1.12.2**
+- Lucide React: **0.544.0** (icons)
 
 #### Development Tools
 - Docker: **20.x+**
@@ -1228,12 +1382,18 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - npm: **10.x+**
 
 ### Project Status
-- ✅ **Backend API**: Production-ready with comprehensive features
-- ✅ **Admin Interface**: Fully functional Next.js 15 dashboard
-- ✅ **Android TV Support**: QR code + PIN registration implemented
+- ✅ **Backend API**: Production-ready with comprehensive features (.NET 8 + EF Core 9)
+- ✅ **Admin Interface**: Fully functional Next.js 15 dashboard with App Router
+- ✅ **Enhanced Playlist UI**: Modern drag-drop interface with scene templates (Feature 036)
+- ✅ **Post-Upload Assignment**: Quick workflow for immediate media-to-schedule assignment
+- ✅ **Android TV Support**: QR code + PIN registration workflow implemented
 - ✅ **User-Based Content**: Personalized content delivery with three-tier priority (Feature 019)
-- 🚧 **Mobile App**: Planned for future release
-- 🚧 **Advanced Analytics**: In development
+- ✅ **Real-time Updates**: SignalR WebSocket integration for live notifications
+- ✅ **RBAC System**: Complete role-based access control with permission management
+- ✅ **Audit Trail**: Automatic logging of all entity changes with BaseEntity pattern
+- 🚧 **Mobile App**: Planned for future release (React Native)
+- 🚧 **Advanced Analytics**: Enhanced reporting and dashboards in development
+- 🚧 **Multi-Tenancy**: Planned for enterprise deployment
 
 ---
 

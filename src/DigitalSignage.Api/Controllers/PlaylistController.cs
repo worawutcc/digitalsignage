@@ -260,6 +260,63 @@ public class PlaylistController : ControllerBase
     }
 
     /// <summary>
+    /// Add a media item to playlist
+    /// </summary>
+    [HttpPost("{id}/items")]
+    [ProducesResponseType(typeof(PlaylistItemDto), StatusCodes.Status201Created)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<PlaylistItemDto>> AddPlaylistItem(int id, [FromBody] CreatePlaylistItemRequest request)
+    {
+        if (!ModelState.IsValid)
+            return BadRequest(ModelState);
+
+        try
+        {
+            var playlistItem = await _playlistService.AddItemAsync(id, request);
+            if (playlistItem == null)
+                return NotFound($"Playlist with ID {id} not found or media not found");
+
+            return CreatedAtAction(nameof(GetPlaylist), new { id }, playlistItem);
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid request for adding item to playlist {PlaylistId}", id);
+            return BadRequest(ex.Message);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding item to playlist {PlaylistId}", id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Remove a media item from playlist
+    /// </summary>
+    [HttpDelete("{id}/items/{itemId}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<IActionResult> RemovePlaylistItem(int id, int itemId)
+    {
+        try
+        {
+            var removed = await _playlistService.RemoveItemAsync(id, itemId);
+            if (!removed)
+                return NotFound($"Playlist item with ID {itemId} not found in playlist {id}");
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing item {ItemId} from playlist {PlaylistId}", itemId, id);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
     /// Get assignment summary for a playlist
     /// </summary>
     [HttpGet("{id}/assignment-summary")]

@@ -149,7 +149,7 @@ export function PlaylistItemBuilder({
       mediaName: media.name,
       mediaFileName: media.fileName,
       mediaType: mediaType,
-      orderIndex: items.length,
+      orderIndex: items.length + 1, // Start from 1, not 0
       durationSeconds: media.duration || 10,
       useCustomDuration: false,
       transitionEffect: TransitionEffect.Fade,
@@ -165,7 +165,7 @@ export function PlaylistItemBuilder({
     if (onAddItem) {
       const request: CreatePlaylistItemRequest = {
         mediaId: media.id,
-        orderIndex: items.length,
+        orderIndex: items.length + 1, // Start from 1, not 0
         durationSeconds: newItem.durationSeconds,
         useCustomDuration: false,
         transitionEffect: TransitionEffect.Fade,
@@ -179,9 +179,9 @@ export function PlaylistItemBuilder({
   const handleRemoveItem = (index: number) => {
     const item = items[index]
     const newItems = items.filter((_, i) => i !== index)
-    // Re-index items
+    // Re-index items (start from 1, not 0)
     newItems.forEach((item, i) => {
-      item.orderIndex = i
+      item.orderIndex = i + 1
     })
     onItemsChange(newItems)
     
@@ -216,9 +216,9 @@ export function PlaylistItemBuilder({
     newItems.splice(draggedIndex, 1)
     newItems.splice(index, 0, draggedItem)
 
-    // Re-index
+    // Re-index (start from 1, not 0)
     newItems.forEach((item, i) => {
-      item.orderIndex = i
+      item.orderIndex = i + 1
     })
 
     setDraggedIndex(index)

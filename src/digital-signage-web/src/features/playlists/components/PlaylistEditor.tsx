@@ -15,6 +15,15 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Playlist } from '@/types/playlist';
+import type { 
+  PlaylistDto, 
+  PlaylistItemDto, 
+  CreatePlaylistItemRequest 
+} from '../types';
+import { TransitionEffect } from '@/types/playlist';
+import type { MediaType } from '@/types/media';
+import { MediaPicker } from './MediaPicker';
+import { PlaylistService } from '../services/playlistService';
 
 interface PlaylistEditorProps {
   playlist?: Playlist;
@@ -42,6 +51,9 @@ export function PlaylistEditor({
     isLooped: playlist?.isLooped || false,
     priority: playlist?.priority || 0
   });
+  const [playlistItems, setPlaylistItems] = useState<PlaylistItemDto[]>(
+    (playlist as any)?.playlistItems || []
+  );
 
   // Handle form field changes
   const handleFieldChange = useCallback((field: string, value: any) => {
@@ -51,9 +63,30 @@ export function PlaylistEditor({
 
   // Handle save
   const handleSave = useCallback(() => {
-    onSave?.(formData);
+    // Convert PlaylistItemDto to CreatePlaylistItemRequest for new playlists
+    const playlistItemsForCreate = playlistItems.map((item, index) => ({
+      mediaId: item.mediaId,
+      orderIndex: index + 1, // 1-based indexing
+      durationSeconds: item.durationSeconds || 10,
+      useCustomDuration: item.useCustomDuration || false,
+      transitionEffect: item.transitionEffect || TransitionEffect.Cut,
+      transitionDurationMs: item.transitionDurationMs || 0,
+      isConditional: item.isConditional || false,
+      startTime: item.startTime || null,
+      endTime: item.endTime || null
+    }));
+
+    const completeData = {
+      ...formData,
+      playlistItems: playlistItemsForCreate
+    };
+
+    console.log('💾 PlaylistEditor saving data:', completeData);
+    console.log('📋 Playlist items to save:', playlistItemsForCreate);
+    
+    onSave?.(completeData);
     setIsDirty(false);
-  }, [formData, onSave]);
+  }, [formData, playlistItems, onSave]);
 
   // Handle back navigation
   const handleBack = useCallback(() => {
@@ -65,6 +98,78 @@ export function PlaylistEditor({
     onCancel?.();
     router.back();
   }, [isDirty, onCancel, router]);
+
+  // Handle media selection change
+  const handleMediaSelectionChange = useCallback((mediaIds: number[]) => {
+    if (isEditing && playlist?.id) {
+      // For existing playlists, add new media items via API
+      handleAddMediaToExistingPlaylist(mediaIds);
+    } else {
+      // For new playlists, just update local state
+      handleMediaSelectionForNewPlaylist(mediaIds);
+    }
+  }, [isEditing, playlist?.id, playlistItems]);
+
+  // Handle adding media to existing playlist (API call)
+  const handleAddMediaToExistingPlaylist = useCallback(async (mediaIds: number[]) => {
+    if (!playlist?.id || mediaIds.length === 0) return;
+
+    try {
+      for (const mediaId of mediaIds) {
+        const request: CreatePlaylistItemRequest = {
+          mediaId,
+          orderIndex: playlistItems.length + 1,
+          durationSeconds: 10,
+          useCustomDuration: false
+        };
+
+        const newItem = await PlaylistService.addItem(playlist.id, request);
+        setPlaylistItems(prev => [...prev, newItem]);
+      }
+      setIsDirty(true);
+    } catch (error) {
+      console.error('❌ Error adding media to existing playlist:', error);
+    }
+  }, [playlist?.id, playlistItems.length]);
+
+  // Handle media selection for new playlist (local state only)
+  const handleMediaSelectionForNewPlaylist = useCallback((mediaIds: number[]) => {
+    console.log('📋 Media selection changed for new playlist:', mediaIds);
+    
+    // Convert media IDs to playlist items for local state
+    const newPlaylistItems: PlaylistItemDto[] = mediaIds.map((mediaId, index) => ({
+      id: -mediaId, // Use negative ID for temporary items
+      playlistId: playlist?.id || 0, // Will be set when playlist is created
+      mediaId,
+      mediaName: `Media ${mediaId}`, // Placeholder - will be resolved later
+      mediaFileName: `media_${mediaId}`, // Placeholder
+      mediaType: 'Image' as MediaType, // Default - will be resolved later
+      orderIndex: index + 1,
+      durationSeconds: 10,
+      useCustomDuration: false,
+      transitionEffect: TransitionEffect.Cut,
+      transitionDurationMs: 0,
+      isConditional: false,
+      startTime: null,
+      endTime: null
+    }));
+
+    setPlaylistItems(newPlaylistItems);
+    setIsDirty(true);
+  }, []);
+
+  // Handle removing media from playlist
+  const handleRemoveMedia = useCallback(async (itemId: number) => {
+    if (!playlist?.id) return;
+
+    try {
+      await PlaylistService.removeItem(playlist.id, itemId);
+      setPlaylistItems(prev => prev.filter(item => item.id !== itemId));
+      setIsDirty(true);
+    } catch (error) {
+      console.error('Error removing media from playlist:', error);
+    }
+  }, [playlist?.id]);
 
   // Calculate metrics
   const itemCount = playlist?.playlistItems?.length || 0;
@@ -185,7 +290,7 @@ export function PlaylistEditor({
         {activeView === 'details' && (
           <div className="max-w-2xl space-y-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Playlist Name *
               </label>
               <Input
@@ -197,14 +302,14 @@ export function PlaylistEditor({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Description
               </label>
               <textarea
                 value={formData.description}
                 onChange={(e) => handleFieldChange('description', e.target.value)}
                 placeholder="Enter playlist description"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
                 rows={4}
               />
             </div>
@@ -216,14 +321,14 @@ export function PlaylistEditor({
                     type="checkbox"
                     checked={formData.isLooped}
                     onChange={(e) => handleFieldChange('isLooped', e.target.checked)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 dark:border-gray-600 text-blue-600 dark:text-blue-400 focus:ring-blue-500 dark:focus:ring-blue-400 bg-white dark:bg-gray-800"
                   />
-                  <span className="text-sm font-medium text-gray-700">Loop Playlist</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Loop Playlist</span>
                 </label>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Priority
                 </label>
                 <Input
@@ -239,12 +344,13 @@ export function PlaylistEditor({
         )}
 
         {activeView === 'media' && (
-          <div className="text-center py-12">
-            <Upload className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No media selected</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Media picker component will be added in the next phase
-            </p>
+          <div className="h-full">
+            <MediaPicker
+              selectedMedia={playlistItems.map(item => item.mediaId)}
+              onSelectionChange={handleMediaSelectionChange}
+              multiSelect={true}
+              showFilters={true}
+            />
           </div>
         )}
 

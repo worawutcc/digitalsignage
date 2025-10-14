@@ -7,6 +7,7 @@
 import { apiClient } from '@/lib/api'
 import type {
   PlaylistDto,
+  PlaylistItemDto,
   CreatePlaylistRequest,
   CreatePlaylistItemRequest,
   UpdatePlaylistRequest,
@@ -246,6 +247,39 @@ export class PlaylistService {
     }
 
     return filtered
+  }
+
+  /**
+   * Add a media item to playlist
+   */
+  static async addItem(playlistId: number, request: CreatePlaylistItemRequest): Promise<PlaylistItemDto> {
+    try {
+      console.log(`➕ Adding item to playlist ${playlistId}:`, request)
+      const response = await apiClient.post(
+        `/api/playlist/${playlistId}/items`,
+        request
+      )
+      
+      console.log('✅ Item added to playlist:', response.data)
+      return response.data
+    } catch (error) {
+      console.error(`❌ Failed to add item to playlist ${playlistId}:`, error)
+      throw error
+    }
+  }
+
+  /**
+   * Remove a media item from playlist
+   */
+  static async removeItem(playlistId: number, itemId: number): Promise<void> {
+    try {
+      console.log(`➖ Removing item ${itemId} from playlist ${playlistId}`)
+      await apiClient.delete(`/api/playlist/${playlistId}/items/${itemId}`)
+      console.log(`✅ Item ${itemId} removed from playlist`)
+    } catch (error) {
+      console.error(`❌ Failed to remove item ${itemId} from playlist ${playlistId}:`, error)
+      throw error
+    }
   }
 
   /**
