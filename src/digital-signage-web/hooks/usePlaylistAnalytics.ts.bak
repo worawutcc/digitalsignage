@@ -1,0 +1,497 @@
+'use client';
+
+import { useQuery, useMutation, useQueryClient, UseQueryResult, UseMutationResult } from '@tanstack/react-query';
+import { HubConnection, HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
+import { analyticsService } from '@/services/analyticsService';
+
+/**
+ * React Query hooks for playlist analytics data management
+ * Follows UI copilot patterns with TypeScript strict mode and performance optimization
+ * Uses shared NotificationHub for all real-time communications
+ */
+
+// Base URL configuration
+const PLAYLIST_ANALYTICS_BASE_URL = '/api/analytics/playlists';
+
+// SignalR connection for real-time updates (using shared NotificationHub)
+let playlistConnection: HubConnection | null = null;
+
+// ================================
+// QUERY KEY FACTORY
+// ================================
+
+export const playlistAnalyticsQueryKeys = {
+  all: ['playlist-analytics'] as const,
+  lists: () => [...playlistAnalyticsQueryKeys.all, 'list'] as const,
+  list: (filters: Record<string, any>) => [...playlistAnalyticsQueryKeys.lists(), { filters }] as const,
+  details: () => [...playlistAnalyticsQueryKeys.all, 'detail'] as const,
+  detail: (id: number) => [...playlistAnalyticsQueryKeys.details(), id] as const,
+  overview: (id: number) => [...playlistAnalyticsQueryKeys.detail(id), 'overview'] as const,
+  devices: (id: number) => [...playlistAnalyticsQueryKeys.detail(id), 'devices'] as const,
+  media: (id: number) => [...playlistAnalyticsQueryKeys.detail(id), 'media'] as const,
+  trends: (id: number, period: string) => [...playlistAnalyticsQueryKeys.detail(id), 'trends', period] as const,
+  comparison: (ids: number[]) => [...playlistAnalyticsQueryKeys.all, 'comparison', ids.sort()] as const,
+  export: (id: number, format: string) => [...playlistAnalyticsQueryKeys.detail(id), 'export', format] as const,
+  realtime: (id: number) => [...playlistAnalyticsQueryKeys.detail(id), 'realtime'] as const
+};
+
+// ================================
+// TYPE DEFINITIONS
+// ================================
+
+export interface PlaylistAnalyticsOverview {
+  playlistId: number;
+  playlistName: string;
+  totalViews: number;
+  totalDuration: number;
+  averageViewDuration: number;
+  viewsToday: number;
+  viewsThisWeek: number;
+  viewsThisMonth: number;
+  deviceCount: number;
+  activeDeviceCount: number;
+  lastViewedAt: string;
+  performance: {
+    score: number;
+    trend: 'up' | 'down' | 'stable';
+    comparison: string;
+  };
+}
+
+export interface PlaylistDeviceMetrics {
+  deviceId: number;
+  deviceName: string;
+  location: string;
+  status: string;
+  totalViews: number;
+  totalDuration: number;
+  averageViewDuration: number;
+  lastViewedAt: string;
+  viewsToday: number;
+  performance: {
+    score: number;
+    trend: 'up' | 'down' | 'stable';
+  };
+}
+
+export interface PlaylistMediaMetrics {
+  mediaId: number;
+  mediaName: string;
+  mediaType: string;
+  totalViews: number;
+  totalDuration: number;
+  averageViewDuration: number;
+  skipRate: number;
+  engagement: {
+    score: number;
+    rating: string;
+  };
+}
+
+export interface PlaylistViewTrend {
+  date: string;
+  views: number;
+  duration: number;
+  devices: number;
+  engagement: number;
+}
+
+export interface PlaylistAnalyticsFilters {
+  dateRange: {
+    startDate: string;
+    endDate: string;
+  };
+  deviceIds?: number[];
+  groupBy: 'hour' | 'day' | 'week' | 'month';
+  timezone?: string;
+}
+
+export interface PlaylistAnalyticsExport {
+  format: 'pdf' | 'excel' | 'csv';
+  sections: Array<'overview' | 'devices' | 'media' | 'trends'>;
+  filters: PlaylistAnalyticsFilters;
+}
+
+// ================================
+// CORE DATA HOOKS
+// ================================
+
+/**
+ * Hook to get comprehensive playlist analytics data
+ */
+export function usePlaylistAnalyticsData(
+  playlistId: number,
+  filters: PlaylistAnalyticsFilters,
+  options?: {
+    enabled?: boolean;
+    refetchInterval?: number;
+  }
+): UseQueryResult<PlaylistAnalyticsOverview> {
+  return useQuery(
+    playlistAnalyticsQueryKeys.overview(playlistId),
+    () => analyticsService.getPlaylistAnalytics(playlistId, filters),
+    {
+      enabled: options?.enabled ?? true,
+      refetchInterval: options?.refetchInterval ?? 30000, // 30 seconds
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      cacheTime: 10 * 60 * 1000 // 10 minutes (gcTime renamed to cacheTime in v4)
+    }
+  );
+}
+
+/**
+ * Hook to get playlist device metrics
+ */
+export function usePlaylistDeviceMetrics(
+  playlistId: number,
+  filters: PlaylistAnalyticsFilters,
+  options?: {
+    enabled?: boolean;
+  }
+): UseQueryResult<PlaylistDeviceMetrics[]> {
+  return useQuery({
+    queryKey: playlistAnalyticsQueryKeys.devices(playlistId),
+    queryFn: () => analyticsService.getPlaylistDeviceMetrics(playlistId, filters),
+    enabled: options?.enabled ?? true,
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    gcTime: 10 * 60 * 1000
+  });
+}
+
+/**
+ * Hook to get playlist media performance metrics
+ */
+export function usePlaylistMediaMetrics(
+  playlistId: number,
+  filters: PlaylistAnalyticsFilters,
+  options?: {
+    enabled?: boolean;
+  }
+): UseQueryResult<PlaylistMediaMetrics[]> {
+  return useQuery({
+    queryKey: playlistAnalyticsQueryKeys.media(playlistId),
+    queryFn: () => analyticsService.getPlaylistMediaMetrics(playlistId, filters),
+    enabled: options?.enabled ?? true,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000
+  });
+}
+
+/**
+ * Hook to get playlist view trends over time
+ */
+export function usePlaylistViewTrends(
+  playlistId: number,
+  period: string,
+  filters: PlaylistAnalyticsFilters,
+  options?: {
+    enabled?: boolean;
+  }
+): UseQueryResult<PlaylistViewTrend[]> {
+  return useQuery({
+    queryKey: playlistAnalyticsQueryKeys.trends(playlistId, period),
+    queryFn: () => analyticsService.getPlaylistViewTrends(playlistId, period, filters),
+    enabled: options?.enabled ?? true,
+    staleTime: 1 * 60 * 1000, // 1 minute
+    gcTime: 5 * 60 * 1000
+  });
+}
+
+// ================================
+// COMPREHENSIVE HOOKS
+// ================================
+
+/**
+ * Hook to get complete playlist analytics (all data types)
+ */
+export function usePlaylistAnalyticsComplete(
+  playlistId: number,
+  filters: PlaylistAnalyticsFilters,
+  options?: {
+    enabled?: boolean;
+  }
+) {
+  const overview = usePlaylistAnalyticsData(playlistId, filters, options);
+  const devices = usePlaylistDeviceMetrics(playlistId, filters, options);
+  const media = usePlaylistMediaMetrics(playlistId, filters, options);
+  const trends = usePlaylistViewTrends(playlistId, filters.groupBy, filters, options);
+
+  return useMemo(() => ({
+    overview: overview.data,
+    devices: devices.data || [],
+    media: media.data || [],
+    trends: trends.data || [],
+    isLoading: overview.isLoading || devices.isLoading || media.isLoading || trends.isLoading,
+    isError: overview.isError || devices.isError || media.isError || trends.isError,
+    error: overview.error || devices.error || media.error || trends.error,
+    refetch: () => {
+      overview.refetch();
+      devices.refetch();
+      media.refetch();
+      trends.refetch();
+    }
+  }), [overview, devices, media, trends]);
+}
+
+// ================================
+// REAL-TIME HOOKS
+// ================================
+
+/**
+ * Hook to manage SignalR connection for real-time playlist analytics updates
+ */
+export function usePlaylistAnalyticsRealtime(
+  playlistId: number,
+  onAnalyticsUpdate?: (data: PlaylistAnalyticsOverview) => void
+) {
+  const queryClient = useQueryClient();
+  const connectionRef = useRef<HubConnection | null>(null);
+
+  // Initialize SignalR connection
+  useEffect(() => {
+    const initializeConnection = async () => {
+      try {
+        if (!playlistConnection) {
+          playlistConnection = new HubConnectionBuilder()
+            .withUrl('/ws') // Use shared NotificationHub endpoint
+            .withAutomaticReconnect({
+              nextRetryDelayInMilliseconds: (retryContext) => {
+                // Exponential backoff with jitter
+                const delay = Math.min(1000 * Math.pow(2, retryContext.previousRetryCount), 30000);
+                return delay + Math.random() * 1000;
+              }
+            })
+            .configureLogging(LogLevel.Information)
+            .build();
+        }
+
+        connectionRef.current = playlistConnection;
+
+        if (playlistConnection.state === 'Disconnected') {
+          await playlistConnection.start();
+          console.log('📊 Connected to playlist analytics real-time updates');
+
+          // Join playlist updates group
+          await playlistConnection.invoke('JoinPlaylistUpdates');
+          
+          // Subscribe to specific playlist
+          await playlistConnection.invoke('SubscribeToPlaylist', playlistId);
+        }
+
+        // Listen for playlist analytics updates
+        playlistConnection.on('ReceiveEvent', (event: any) => {
+          if (event.Type === 'playlist_analytics_updated') {
+            const payload = JSON.parse(event.Payload);
+            if (payload.PlaylistId === playlistId) {
+              // Invalidate and refetch analytics data
+              queryClient.invalidateQueries({
+                queryKey: playlistAnalyticsQueryKeys.detail(playlistId)
+              });
+
+              // Call custom handler if provided
+              if (onAnalyticsUpdate && payload.AnalyticsData) {
+                onAnalyticsUpdate(payload.AnalyticsData);
+              }
+            }
+          }
+        });
+
+        // Handle other playlist events
+        playlistConnection.on('ReceiveEvent', (event: any) => {
+          if (['playlist_updated', 'playlist_items_reordered', 'device_playlist_assigned', 'device_playlist_unassigned'].includes(event.Type)) {
+            const payload = JSON.parse(event.Payload);
+            if (payload.PlaylistId === playlistId) {
+              // Invalidate affected queries
+              queryClient.invalidateQueries({
+                queryKey: playlistAnalyticsQueryKeys.detail(playlistId)
+              });
+            }
+          }
+        });
+
+      } catch (error) {
+        console.error('Failed to connect to playlist analytics real-time updates:', error);
+      }
+    };
+
+    initializeConnection();
+
+    // Cleanup on unmount
+    return () => {
+      if (connectionRef.current && connectionRef.current.state === 'Connected') {
+        connectionRef.current.invoke('UnsubscribeFromPlaylist', playlistId);
+        connectionRef.current.invoke('LeavePlaylistUpdates');
+      }
+    };
+  }, [playlistId, queryClient, onAnalyticsUpdate]);
+
+  return {
+    connection: connectionRef.current,
+    isConnected: connectionRef.current?.state === 'Connected'
+  };
+}
+
+// ================================
+// MUTATION HOOKS
+// ================================
+
+/**
+ * Hook to export playlist analytics
+ */
+export function useExportPlaylistAnalytics(): UseMutationResult<
+  Blob,
+  Error,
+  { playlistId: number; exportConfig: PlaylistAnalyticsExport }
+> {
+  return useMutation({
+    mutationFn: ({ playlistId, exportConfig }) =>
+      analyticsService.exportPlaylistAnalytics(playlistId, exportConfig),
+    onSuccess: (blob, { playlistId }) => {
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `playlist-${playlistId}-analytics-${new Date().toISOString().split('T')[0]}.${blob.type.includes('pdf') ? 'pdf' : blob.type.includes('excel') ? 'xlsx' : 'csv'}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    }
+  });
+}
+
+// ================================
+// COMPARISON HOOKS
+// ================================
+
+/**
+ * Hook to compare multiple playlists analytics
+ */
+export function usePlaylistAnalyticsComparison(
+  playlistIds: number[],
+  filters: PlaylistAnalyticsFilters,
+  options?: {
+    enabled?: boolean;
+  }
+): UseQueryResult<PlaylistAnalyticsOverview[]> {
+  return useQuery({
+    queryKey: playlistAnalyticsQueryKeys.comparison(playlistIds),
+    queryFn: () => 
+      Promise.all(
+        playlistIds.map(id => analyticsService.getPlaylistAnalytics(id, filters))
+      ),
+    enabled: (options?.enabled ?? true) && playlistIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000
+  });
+}
+
+// ================================
+// UTILITY HOOKS
+// ================================
+
+/**
+ * Hook to prefetch playlist analytics data
+ */
+export function usePrefetchPlaylistAnalytics() {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (playlistId: number, filters: PlaylistAnalyticsFilters) => {
+      // Prefetch overview data
+      queryClient.prefetchQuery({
+        queryKey: playlistAnalyticsQueryKeys.overview(playlistId),
+        queryFn: () => analyticsService.getPlaylistAnalytics(playlistId, filters),
+        staleTime: 5 * 60 * 1000
+      });
+
+      // Prefetch device metrics
+      queryClient.prefetchQuery({
+        queryKey: playlistAnalyticsQueryKeys.devices(playlistId),
+        queryFn: () => analyticsService.getPlaylistDeviceMetrics(playlistId, filters),
+        staleTime: 2 * 60 * 1000
+      });
+
+      // Prefetch media metrics
+      queryClient.prefetchQuery({
+        queryKey: playlistAnalyticsQueryKeys.media(playlistId),
+        queryFn: () => analyticsService.getPlaylistMediaMetrics(playlistId, filters),
+        staleTime: 5 * 60 * 1000
+      });
+    },
+    [queryClient]
+  );
+}
+
+/**
+ * Hook to invalidate playlist analytics cache
+ */
+export function useInvalidatePlaylistAnalytics() {
+  const queryClient = useQueryClient();
+
+  return useCallback(
+    (playlistId?: number) => {
+      if (playlistId) {
+        queryClient.invalidateQueries({
+          queryKey: playlistAnalyticsQueryKeys.detail(playlistId)
+        });
+      } else {
+        queryClient.invalidateQueries({
+          queryKey: playlistAnalyticsQueryKeys.all
+        });
+      }
+    },
+    [queryClient]
+  );
+}
+
+// ================================
+// PERFORMANCE OPTIMIZATION UTILITIES
+// ================================
+
+export const PlaylistAnalyticsHookUtils = {
+  /**
+   * Create optimized filters for efficient API calls
+   */
+  createOptimizedFilters: (
+    baseFilters: PlaylistAnalyticsFilters,
+    optimization: 'minimal' | 'balanced' | 'complete' = 'balanced'
+  ): PlaylistAnalyticsFilters => {
+    const groupByMap = {
+      minimal: 'day' as const,
+      balanced: 'hour' as const,
+      complete: 'hour' as const
+    };
+
+    return {
+      ...baseFilters,
+      groupBy: groupByMap[optimization]
+    };
+  },
+
+  /**
+   * Calculate cache time based on data freshness requirements
+   */
+  calculateCacheTime: (dataType: 'realtime' | 'frequent' | 'standard' | 'historical') => {
+    const times = {
+      realtime: { staleTime: 30 * 1000, gcTime: 2 * 60 * 1000 },
+      frequent: { staleTime: 2 * 60 * 1000, gcTime: 5 * 60 * 1000 },
+      standard: { staleTime: 5 * 60 * 1000, gcTime: 10 * 60 * 1000 },
+      historical: { staleTime: 30 * 60 * 1000, gcTime: 60 * 60 * 1000 }
+    };
+
+    return times[dataType];
+  },
+
+  /**
+   * Batch multiple playlist queries for efficiency
+   */
+  batchPlaylistQueries: (playlistIds: number[], maxBatchSize: number = 5) => {
+    const batches: number[][] = [];
+    for (let i = 0; i < playlistIds.length; i += maxBatchSize) {
+      batches.push(playlistIds.slice(i, i + maxBatchSize));
+    }
+    return batches;
+  }
+};

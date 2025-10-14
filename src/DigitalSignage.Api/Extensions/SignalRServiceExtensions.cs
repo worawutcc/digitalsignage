@@ -41,6 +41,7 @@ public static class SignalRServiceExtensions
     /// </summary>
     public static IEndpointRouteBuilder MapSignalRHubs(this IEndpointRouteBuilder endpoints)
     {
+        // Single hub for all real-time communications including playlists
         endpoints.MapHub<NotificationHub>("/ws");
         return endpoints;
     }

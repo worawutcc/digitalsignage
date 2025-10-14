@@ -488,6 +488,14 @@ public class PlaylistService : IPlaylistService
             UpdatedAt = playlist.UpdatedAt,
             CreatedByUserId = playlist.CreatedByUserId,
             CreatedByUserName = playlist.CreatedByUser?.Username,
+            
+            // Enhanced properties for UI functionality
+            ThumbnailUrl = playlist.ThumbnailUrl,
+            LastPlayedAt = playlist.LastPlayedAt,
+            PlayCount = playlist.PlayCount,
+            IsTemplate = playlist.IsTemplate,
+            DeviceAssignmentsCount = playlist.DeviceAssignments?.Count ?? 0,
+            
             PlaylistItems = playlist.PlaylistItems.OrderBy(pi => pi.OrderIndex).Select(MapToItemDto).ToList()
         };
     }
@@ -501,6 +509,7 @@ public class PlaylistService : IPlaylistService
             MediaId = item.MediaId,
             MediaName = item.Media?.Name ?? "",
             MediaFileName = item.Media?.FileName ?? "",
+            MediaThumbnailUrl = null, // TODO: Add ThumbnailUrl to Media entity later
             MediaType = item.Media?.Type ?? MediaType.Image,
             OrderIndex = item.OrderIndex,
             DurationSeconds = item.DurationSeconds,
@@ -600,5 +609,224 @@ public class PlaylistService : IPlaylistService
         };
 
         return statistics;
+    }
+
+    // Enhanced UI functionality methods
+    public async Task<bool> UpdateOrderAsync(int playlistId, UpdatePlaylistOrderRequest request)
+    {
+        var playlist = await _context.Set<Playlist>()
+            .Include(p => p.PlaylistItems)
+            .FirstOrDefaultAsync(p => p.Id == playlistId);
+            
+        if (playlist == null)
+            return false;
+
+        foreach (var itemUpdate in request.Items)
+        {
+            var item = playlist.PlaylistItems.FirstOrDefault(pi => pi.Id == itemUpdate.Id);
+            if (item != null)
+            {
+                item.OrderIndex = itemUpdate.OrderIndex;
+                item.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+            }
+        }
+
+        playlist.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        await _context.SaveChangesAsync();
+        
+        _logger.LogInformation("Updated playlist order for playlist {PlaylistId}", playlistId);
+        return true;
+    }
+
+    public async Task<bool> BulkActionAsync(BulkPlaylistActionRequest request, int userId)
+    {
+        var playlists = await _context.Set<Playlist>()
+            .Where(p => request.PlaylistIds.Contains(p.Id))
+            .ToListAsync();
+
+        foreach (var playlist in playlists)
+        {
+            switch (request.Action)
+            {
+                case BulkPlaylistAction.Activate:
+                    playlist.Status = PlaylistStatus.Active;
+                    break;
+                case BulkPlaylistAction.Deactivate:
+                    playlist.Status = PlaylistStatus.Inactive;
+                    break;
+                case BulkPlaylistAction.Archive:
+                    playlist.Status = PlaylistStatus.Archived;
+                    break;
+                case BulkPlaylistAction.Delete:
+                    _context.Set<Playlist>().Remove(playlist);
+                    continue;
+                case BulkPlaylistAction.Duplicate:
+                    await DuplicatePlaylistInternal(playlist, userId);
+                    continue;
+            }
+
+            if (request.TargetStatus.HasValue)
+                playlist.Status = request.TargetStatus.Value;
+
+            playlist.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Performed bulk action {Action} on {Count} playlists", request.Action, playlists.Count);
+        return true;
+    }
+
+    public async Task<List<DevicePlaylistDto>> GetDeviceAssignmentsAsync(int playlistId)
+    {
+        var assignments = await _context.Set<DevicePlaylist>()
+            .Include(dp => dp.Device)
+            .Include(dp => dp.Playlist)
+            .Where(dp => dp.PlaylistId == playlistId)
+            .ToListAsync();
+
+        return assignments.Select(dp => new DevicePlaylistDto
+        {
+            Id = dp.Id,
+            DeviceId = dp.DeviceId,
+            PlaylistId = dp.PlaylistId,
+            DeviceName = dp.Device.Name,
+            PlaylistName = dp.Playlist.Name,
+            Priority = dp.Priority,
+            ScheduledStart = dp.ScheduledStart,
+            ScheduledEnd = dp.ScheduledEnd,
+            IsActive = dp.IsActive,
+            CreatedAt = dp.CreatedAt,
+            AssignedBy = dp.AssignedBy
+        }).ToList();
+    }
+
+    public async Task<PlaylistAnalyticsReportDto> GetAnalyticsAsync(int playlistId, DateTime? startDate = null, DateTime? endDate = null)
+    {
+        var playlist = await _context.Set<Playlist>()
+            .FirstOrDefaultAsync(p => p.Id == playlistId);
+            
+        if (playlist == null)
+            throw new ArgumentException($"Playlist with ID {playlistId} not found");
+
+        var query = _context.Set<PlaylistAnalytics>()
+            .Include(pa => pa.Device)
+            .Where(pa => pa.PlaylistId == playlistId);
+
+        if (startDate.HasValue)
+            query = query.Where(pa => pa.PlayStartTime >= startDate.Value);
+        if (endDate.HasValue)
+            query = query.Where(pa => pa.PlayStartTime <= endDate.Value);
+
+        var analytics = await query.ToListAsync();
+
+        var deviceSummaries = analytics
+            .GroupBy(a => new { a.DeviceId, a.Device.Name })
+            .Select(g => new DevicePlaybackSummary
+            {
+                DeviceId = g.Key.DeviceId,
+                DeviceName = g.Key.Name,
+                PlayCount = g.Count(),
+                SuccessfulPlays = g.Count(a => a.CompletedSuccessfully),
+                LastPlayed = g.Max(a => a.PlayStartTime)
+            }).ToList();
+
+        var durations = analytics
+            .Where(a => a.PlayEndTime.HasValue)
+            .Select(a => a.PlayEndTime!.Value.Subtract(a.PlayStartTime))
+            .ToList();
+
+        return new PlaylistAnalyticsReportDto
+        {
+            PlaylistId = playlistId,
+            PlaylistName = playlist.Name,
+            TotalPlays = analytics.Count,
+            SuccessfulPlays = analytics.Count(a => a.CompletedSuccessfully),
+            FailedPlays = analytics.Count(a => !a.CompletedSuccessfully),
+            AverageDuration = durations.Any() 
+                ? TimeSpan.FromTicks((long)durations.Average(d => d.Ticks))
+                : TimeSpan.Zero,
+            LastPlayed = analytics.Any() ? analytics.Max(a => a.PlayStartTime) : null,
+            DeviceSummaries = deviceSummaries
+        };
+    }
+
+    public async Task<bool> AssignToDevicesAsync(int playlistId, List<CreateDevicePlaylistRequest> assignments, int userId)
+    {
+        var playlist = await _context.Set<Playlist>()
+            .FirstOrDefaultAsync(p => p.Id == playlistId);
+            
+        if (playlist == null)
+            return false;
+
+        foreach (var assignment in assignments)
+        {
+            var devicePlaylist = new DevicePlaylist
+            {
+                DeviceId = assignment.DeviceId,
+                PlaylistId = playlistId,
+                Priority = assignment.Priority,
+                ScheduledStart = assignment.ScheduledStart,
+                ScheduledEnd = assignment.ScheduledEnd,
+                IsActive = assignment.IsActive,
+                AssignedBy = $"User:{userId}",
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            };
+
+            _context.Set<DevicePlaylist>().Add(devicePlaylist);
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Assigned playlist {PlaylistId} to {Count} devices", playlistId, assignments.Count);
+        return true;
+    }
+
+    private async Task<Playlist> DuplicatePlaylistInternal(Playlist original, int userId)
+    {
+        var duplicate = new Playlist
+        {
+            Name = $"{original.Name} (Copy)",
+            Description = original.Description,
+            Status = PlaylistStatus.Draft,
+            IsLooped = original.IsLooped,
+            LoopCount = original.LoopCount,
+            Priority = original.Priority,
+            IsTemplate = false,
+            CreatedByUserId = userId,
+            CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+            UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+        };
+
+        _context.Set<Playlist>().Add(duplicate);
+        await _context.SaveChangesAsync();
+
+        // Copy playlist items
+        var items = await _context.Set<PlaylistItem>()
+            .Where(pi => pi.PlaylistId == original.Id)
+            .ToListAsync();
+
+        foreach (var item in items)
+        {
+            var duplicateItem = new PlaylistItem
+            {
+                PlaylistId = duplicate.Id,
+                MediaId = item.MediaId,
+                OrderIndex = item.OrderIndex,
+                DurationSeconds = item.DurationSeconds,
+                UseCustomDuration = item.UseCustomDuration,
+                TransitionEffect = item.TransitionEffect,
+                TransitionDurationMs = item.TransitionDurationMs,
+                IsConditional = item.IsConditional,
+                StartTime = item.StartTime,
+                EndTime = item.EndTime,
+                CreatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified),
+                UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified)
+            };
+
+            _context.Set<PlaylistItem>().Add(duplicateItem);
+        }
+
+        await _context.SaveChangesAsync();
+        return duplicate;
     }
 }

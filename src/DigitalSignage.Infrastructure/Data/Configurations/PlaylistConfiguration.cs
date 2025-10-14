@@ -41,6 +41,23 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
             .HasColumnName("is_looped")
             .HasDefaultValue(false);
 
+        // Enhanced properties for UI functionality
+        builder.Property(p => p.ThumbnailUrl)
+            .HasColumnName("thumbnail_url")
+            .HasMaxLength(500);
+
+        builder.Property(p => p.LastPlayedAt)
+            .HasColumnName("last_played_at")
+            .HasColumnType("timestamp without time zone");
+
+        builder.Property(p => p.PlayCount)
+            .HasColumnName("play_count")
+            .HasDefaultValue(0);
+
+        builder.Property(p => p.IsTemplate)
+            .HasColumnName("is_template")
+            .HasDefaultValue(false);
+
         // Foreign Keys
         builder.Property(p => p.CreatedByUserId)
             .HasColumnName("created_by_user_id");
@@ -69,6 +86,16 @@ public class PlaylistConfiguration : IEntityTypeConfiguration<Playlist>
         builder.HasMany(p => p.PlaybackStates)
             .WithOne(ps => ps.Playlist)
             .HasForeignKey(ps => ps.PlaylistId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(p => p.DeviceAssignments)
+            .WithOne(dp => dp.Playlist)
+            .HasForeignKey(dp => dp.PlaylistId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        builder.HasMany(p => p.Analytics)
+            .WithOne(pa => pa.Playlist)
+            .HasForeignKey(pa => pa.PlaylistId)
             .OnDelete(DeleteBehavior.Cascade);
     }
 }

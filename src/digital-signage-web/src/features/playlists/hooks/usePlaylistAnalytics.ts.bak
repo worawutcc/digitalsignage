@@ -1,0 +1,406 @@
+import { useQuery, useQueries, UseQueryResult } from '@tanstack/react-query';
+import { analyticsService } from '@/services/analyticsService';
+import type { 
+  PlaylistAnalyticsData,
+  PlaylistViewMetrics,
+  DeviceMetrics,
+  MediaItemAnalytics
+} from '@/features/playlists/components/PlaylistAnalytics';
+
+/**
+ * Query key factory for playlist analytics
+ * Provides consistent query keys and helps with cache management
+ */
+export const playlistAnalyticsKeys = {
+  all: ['playlist-analytics'] as const,
+  playlist: (playlistId: number) => [...playlistAnalyticsKeys.all, playlistId] as const,
+  analytics: (playlistId: number, dateRange?: { from: Date; to: Date }) => 
+    [...playlistAnalyticsKeys.playlist(playlistId), 'analytics', dateRange] as const,
+  trends: (playlistId: number, days?: number) => 
+    [...playlistAnalyticsKeys.playlist(playlistId), 'trends', days] as const,
+  devices: (playlistId: number) => 
+    [...playlistAnalyticsKeys.playlist(playlistId), 'devices'] as const,
+  media: (playlistId: number) => 
+    [...playlistAnalyticsKeys.playlist(playlistId), 'media'] as const,
+  summary: (playlistId: number) => 
+    [...playlistAnalyticsKeys.playlist(playlistId), 'summary'] as const,
+} as const;
+
+/**
+ * Configuration options for playlist analytics queries
+ */
+export interface PlaylistAnalyticsOptions {
+  /** Enable/disable the query */
+  enabled?: boolean;
+  /** Refetch interval in milliseconds */
+  refetchInterval?: number;
+  /** Stale time in milliseconds */
+  staleTime?: number;
+  /** Cache time in milliseconds */
+  cacheTime?: number;
+}
+
+/**
+ * Hook for getting comprehensive playlist analytics data
+ * @param playlistId - ID of the playlist
+ * @param dateRange - Optional date range filter
+ * @param options - Query configuration options
+ */
+export function usePlaylistAnalyticsData(
+  playlistId: number,
+  dateRange?: { from: Date; to: Date },
+  options: PlaylistAnalyticsOptions = {}
+): UseQueryResult<PlaylistAnalyticsData, Error> {
+  const {
+    enabled = !!playlistId,
+    refetchInterval,
+    staleTime = 5 * 60 * 1000, // 5 minutes
+    cacheTime = 10 * 60 * 1000, // 10 minutes
+  } = options;
+
+  return useQuery({
+    queryKey: playlistAnalyticsKeys.analytics(playlistId, dateRange) as readonly unknown[],
+    queryFn: () => analyticsService.getPlaylistAnalytics(playlistId, dateRange),
+    enabled,
+    refetchInterval,
+    staleTime,
+    gcTime: cacheTime,
+    refetchOnWindowFocus: false,
+    retry: (failureCount, error) => {
+      // Don't retry on 404 or 403 errors
+      if (error && 'status' in error && (error.status === 404 || error.status === 403)) {
+        return false;
+      }
+      return failureCount < 3;
+    },
+  });
+}
+
+/**
+ * Hook for getting playlist view trends over time
+ * @param playlistId - ID of the playlist
+ * @param days - Number of days to look back
+ * @param options - Query configuration options
+ */
+export function usePlaylistViewTrends(
+  playlistId: number,
+  days: number = 30,
+  options: PlaylistAnalyticsOptions = {}
+): UseQueryResult<PlaylistViewMetrics[], Error> {
+  const {
+    enabled = !!playlistId,
+    refetchInterval,
+    staleTime = 5 * 60 * 1000,
+    cacheTime = 10 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: playlistAnalyticsKeys.trends(playlistId, days),
+    queryFn: () => analyticsService.getPlaylistViewTrends(playlistId, days),
+    enabled,
+    refetchInterval,
+    staleTime,
+    cacheTime,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook for getting device performance metrics for a playlist
+ * @param playlistId - ID of the playlist
+ * @param options - Query configuration options
+ */
+export function usePlaylistDeviceMetrics(
+  playlistId: number,
+  options: PlaylistAnalyticsOptions = {}
+): UseQueryResult<DeviceMetrics[], Error> {
+  const {
+    enabled = !!playlistId,
+    refetchInterval = 2 * 60 * 1000, // 2 minutes for device status
+    staleTime = 1 * 60 * 1000, // 1 minute for device data
+    cacheTime = 5 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: playlistAnalyticsKeys.devices(playlistId),
+    queryFn: () => analyticsService.getPlaylistDeviceMetrics(playlistId),
+    enabled,
+    refetchInterval,
+    staleTime,
+    cacheTime,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook for getting media item analytics within a playlist
+ * @param playlistId - ID of the playlist
+ * @param options - Query configuration options
+ */
+export function usePlaylistMediaAnalytics(
+  playlistId: number,
+  options: PlaylistAnalyticsOptions = {}
+): UseQueryResult<MediaItemAnalytics[], Error> {
+  const {
+    enabled = !!playlistId,
+    refetchInterval,
+    staleTime = 5 * 60 * 1000,
+    cacheTime = 10 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: playlistAnalyticsKeys.media(playlistId),
+    queryFn: () => analyticsService.getPlaylistMediaAnalytics(playlistId),
+    enabled,
+    refetchInterval,
+    staleTime,
+    cacheTime,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook for getting playlist performance summary
+ * @param playlistId - ID of the playlist
+ * @param options - Query configuration options
+ */
+export function usePlaylistSummary(
+  playlistId: number,
+  options: PlaylistAnalyticsOptions = {}
+) {
+  const {
+    enabled = !!playlistId,
+    refetchInterval,
+    staleTime = 2 * 60 * 1000, // 2 minutes for summary data
+    cacheTime = 5 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: playlistAnalyticsKeys.summary(playlistId),
+    queryFn: () => analyticsService.getPlaylistSummary(playlistId),
+    enabled,
+    refetchInterval,
+    staleTime,
+    cacheTime,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Combined hook that fetches all playlist analytics data in parallel
+ * Useful for comprehensive analytics dashboards
+ * @param playlistId - ID of the playlist
+ * @param dateRange - Optional date range filter
+ * @param options - Query configuration options
+ */
+export function usePlaylistAnalyticsComplete(
+  playlistId: number,
+  dateRange?: { from: Date; to: Date },
+  options: PlaylistAnalyticsOptions = {}
+) {
+  const {
+    enabled = !!playlistId,
+    refetchInterval,
+    staleTime = 5 * 60 * 1000,
+    cacheTime = 10 * 60 * 1000,
+  } = options;
+
+  const queries = useQueries({
+    queries: [
+      {
+        queryKey: playlistAnalyticsKeys.analytics(playlistId, dateRange),
+        queryFn: () => analyticsService.getPlaylistAnalytics(playlistId, dateRange),
+        enabled,
+        refetchInterval,
+        staleTime,
+        cacheTime,
+        refetchOnWindowFocus: false,
+      },
+      {
+        queryKey: playlistAnalyticsKeys.trends(playlistId, 30),
+        queryFn: () => analyticsService.getPlaylistViewTrends(playlistId, 30),
+        enabled,
+        refetchInterval,
+        staleTime,
+        cacheTime,
+        refetchOnWindowFocus: false,
+      },
+      {
+        queryKey: playlistAnalyticsKeys.devices(playlistId),
+        queryFn: () => analyticsService.getPlaylistDeviceMetrics(playlistId),
+        enabled,
+        refetchInterval,
+        staleTime,
+        cacheTime,
+        refetchOnWindowFocus: false,
+      },
+      {
+        queryKey: playlistAnalyticsKeys.media(playlistId),
+        queryFn: () => analyticsService.getPlaylistMediaAnalytics(playlistId),
+        enabled,
+        refetchInterval,
+        staleTime,
+        cacheTime,
+        refetchOnWindowFocus: false,
+      },
+      {
+        queryKey: playlistAnalyticsKeys.summary(playlistId),
+        queryFn: () => analyticsService.getPlaylistSummary(playlistId),
+        enabled,
+        refetchInterval,
+        staleTime,
+        cacheTime,
+        refetchOnWindowFocus: false,
+      },
+    ],
+  });
+
+  const [analyticsQuery, trendsQuery, devicesQuery, mediaQuery, summaryQuery] = queries;
+
+  return {
+    // Individual query results
+    analytics: analyticsQuery,
+    trends: trendsQuery,
+    devices: devicesQuery,
+    media: mediaQuery,
+    summary: summaryQuery,
+
+    // Combined states
+    isLoading: queries.some((query) => query.isLoading),
+    isError: queries.some((query) => query.isError),
+    isFetching: queries.some((query) => query.isFetching),
+    
+    // All data loaded successfully
+    isSuccess: queries.every((query) => query.isSuccess),
+    
+    // Combined data (only available when all queries succeed)
+    data: queries.every((query) => query.isSuccess) ? {
+      analytics: analyticsQuery.data,
+      trends: trendsQuery.data,
+      devices: devicesQuery.data,
+      media: mediaQuery.data,
+      summary: summaryQuery.data,
+    } : undefined,
+
+    // Combined errors
+    errors: queries.map((query) => query.error).filter(Boolean),
+
+    // Refetch all
+    refetch: () => Promise.all(queries.map((query) => query.refetch())),
+  };
+}
+
+/**
+ * Hook for exporting playlist analytics data
+ * @param playlistId - ID of the playlist
+ * @param format - Export format
+ * @param dateRange - Optional date range filter
+ */
+export function useExportPlaylistAnalytics() {
+  return {
+    exportAnalytics: async (
+      playlistId: number,
+      format: 'csv' | 'pdf',
+      dateRange?: { from: Date; to: Date }
+    ) => {
+      try {
+        const blob = await analyticsService.exportPlaylistAnalytics(playlistId, format, dateRange);
+        
+        if (blob) {
+          // Create download link
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = `playlist-${playlistId}-analytics.${format}`;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          URL.revokeObjectURL(url);
+          
+          return { success: true };
+        }
+        
+        return { success: false, error: 'Failed to generate export' };
+      } catch (error) {
+        console.error('[useExportPlaylistAnalytics] Export failed:', error);
+        return { 
+          success: false, 
+          error: error instanceof Error ? error.message : 'Export failed' 
+        };
+      }
+    },
+  };
+}
+
+/**
+ * Real-time analytics hook that automatically refreshes data
+ * @param playlistId - ID of the playlist
+ * @param refreshInterval - Refresh interval in milliseconds (default: 30 seconds)
+ */
+export function usePlaylistAnalyticsRealtime(
+  playlistId: number,
+  refreshInterval: number = 30 * 1000 // 30 seconds
+) {
+  return usePlaylistAnalyticsComplete(playlistId, undefined, {
+    enabled: !!playlistId,
+    refetchInterval: refreshInterval,
+    staleTime: refreshInterval / 2, // Half of refresh interval
+    gcTime: refreshInterval * 2, // Double refresh interval
+  });
+}
+
+/**
+ * Analytics comparison hook for comparing two time periods
+ * @param playlistId - ID of the playlist
+ * @param currentPeriod - Current time period
+ * @param previousPeriod - Previous time period for comparison
+ */
+export function usePlaylistAnalyticsComparison(
+  playlistId: number,
+  currentPeriod: { from: Date; to: Date },
+  previousPeriod: { from: Date; to: Date }
+) {
+  const currentAnalytics = usePlaylistAnalyticsData(playlistId, currentPeriod);
+  const previousAnalytics = usePlaylistAnalyticsData(playlistId, previousPeriod);
+
+  const calculateChange = (current: number, previous: number): number => {
+    if (previous === 0) return current > 0 ? 100 : 0;
+    return ((current - previous) / previous) * 100;
+  };
+
+  const comparison = {
+    isLoading: currentAnalytics.isLoading || previousAnalytics.isLoading,
+    isError: currentAnalytics.isError || previousAnalytics.isError,
+    isSuccess: currentAnalytics.isSuccess && previousAnalytics.isSuccess,
+    
+    data: currentAnalytics.data && previousAnalytics.data ? {
+      current: currentAnalytics.data,
+      previous: previousAnalytics.data,
+      changes: {
+        totalViews: calculateChange(
+          currentAnalytics.data.totalViews, 
+          previousAnalytics.data.totalViews
+        ),
+        uniqueViews: calculateChange(
+          currentAnalytics.data.uniqueViews, 
+          previousAnalytics.data.uniqueViews
+        ),
+        averageViewTime: calculateChange(
+          currentAnalytics.data.averageViewTime, 
+          previousAnalytics.data.averageViewTime
+        ),
+        conversionRate: calculateChange(
+          currentAnalytics.data.conversionRate, 
+          previousAnalytics.data.conversionRate
+        ),
+      },
+    } : undefined,
+    
+    refetch: () => Promise.all([
+      currentAnalytics.refetch(),
+      previousAnalytics.refetch(),
+    ]),
+  };
+
+  return comparison;
+}

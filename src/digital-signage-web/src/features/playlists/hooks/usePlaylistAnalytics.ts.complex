@@ -1,0 +1,127 @@
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
+import { analyticsService } from '@/services/analyticsService';
+import type { 
+  PlaylistAnalyticsData,
+  PlaylistViewMetrics,
+  DeviceMetrics,
+  MediaItemAnalytics
+} from '@/features/playlists/components/PlaylistAnalytics';
+
+/**
+ * Simple query key factory for playlist analytics
+ */
+export const playlistAnalyticsKeys = {
+  all: ['playlist-analytics'],
+  playlist: (playlistId: number) => ['playlist-analytics', playlistId],
+  analytics: (playlistId: number, dateRange?: { from: Date; to: Date }) => 
+    ['playlist-analytics', playlistId, 'analytics', dateRange],
+  trends: (playlistId: number, days?: number) => 
+    ['playlist-analytics', playlistId, 'trends', days],
+  devices: (playlistId: number) => 
+    ['playlist-analytics', playlistId, 'devices'],
+  media: (playlistId: number) => 
+    ['playlist-analytics', playlistId, 'media'],
+  comparison: (playlistIds: number[]) => 
+    ['playlist-analytics', 'comparison', playlistIds],
+  realtime: (playlistId: number) => 
+    ['playlist-analytics', playlistId, 'realtime'],
+};
+
+interface UsePlaylistAnalyticsOptions {
+  enabled?: boolean;
+  refetchInterval?: number;
+  staleTime?: number;
+  cacheTime?: number;
+}
+
+/**
+ * Hook to fetch analytics data for a specific playlist
+ */
+export function usePlaylistAnalytics(
+  playlistId: number | undefined,
+  dateRange?: { from: Date; to: Date },
+  options: UsePlaylistAnalyticsOptions = {}
+) {
+  const {
+    enabled = !!playlistId,
+    refetchInterval,
+    staleTime = 5 * 60 * 1000, // 5 minutes
+    cacheTime = 10 * 60 * 1000, // 10 minutes
+  } = options;
+
+  return useQuery({
+    queryKey: ['playlist-analytics', playlistId, 'analytics', dateRange],
+    queryFn: () => analyticsService.getPlaylistAnalytics(playlistId!, dateRange),
+    enabled,
+    refetchInterval,
+    staleTime,
+    gcTime,
+    refetchOnWindowFocus: false,
+  });
+}
+
+/**
+ * Hook to fetch view metrics for a playlist
+ */
+export function usePlaylistViewMetrics(
+  playlistId: number | undefined,
+  options: UsePlaylistAnalyticsOptions = {}
+) {
+  const {
+    enabled = !!playlistId,
+    staleTime = 5 * 60 * 1000,
+    cacheTime = 10 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: ['playlist-analytics', playlistId, 'view-metrics'],
+    queryFn: () => analyticsService.getPlaylistViewMetrics(playlistId!),
+    enabled,
+    staleTime,
+    gcTime,
+  });
+}
+
+/**
+ * Hook to fetch device metrics for a playlist
+ */
+export function usePlaylistDeviceMetrics(
+  playlistId: number | undefined,
+  options: UsePlaylistAnalyticsOptions = {}
+) {
+  const {
+    enabled = !!playlistId,
+    staleTime = 5 * 60 * 1000,
+    cacheTime = 10 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: ['playlist-analytics', playlistId, 'devices'],
+    queryFn: () => analyticsService.getPlaylistDeviceMetrics(playlistId!),
+    enabled,
+    staleTime,
+    gcTime,
+  });
+}
+
+/**
+ * Hook to fetch media item analytics for a playlist
+ */
+export function usePlaylistMediaAnalytics(
+  playlistId: number | undefined,
+  options: UsePlaylistAnalyticsOptions = {}
+) {
+  const {
+    enabled = !!playlistId,
+    staleTime = 5 * 60 * 1000,
+    cacheTime = 10 * 60 * 1000,
+  } = options;
+
+  return useQuery({
+    queryKey: ['playlist-analytics', playlistId, 'media'],
+    queryFn: () => analyticsService.getPlaylistMediaAnalytics(playlistId!),
+    enabled,
+    staleTime,
+    gcTime,
+  });
+}

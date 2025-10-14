@@ -445,6 +445,295 @@ public class NotificationHub : Hub
     }
 
     #endregion
+
+    #region Playlist Management Events
+
+    /// <summary>
+    /// Join playlist updates group for real-time notifications
+    /// </summary>
+    public async Task JoinPlaylistUpdates()
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, "PlaylistUpdates");
+        _logger.LogInformation("Client {ConnectionId} joined PlaylistUpdates group", Context.ConnectionId);
+    }
+
+    /// <summary>
+    /// Leave playlist updates group
+    /// </summary>
+    public async Task LeavePlaylistUpdates()
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, "PlaylistUpdates");
+        _logger.LogInformation("Client {ConnectionId} left PlaylistUpdates group", Context.ConnectionId);
+    }
+
+    /// <summary>
+    /// Subscribe to specific playlist updates
+    /// </summary>
+    public async Task SubscribeToPlaylist(int playlistId)
+    {
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"Playlist_{playlistId}");
+        _logger.LogInformation("Client {ConnectionId} subscribed to Playlist_{PlaylistId} updates", Context.ConnectionId, playlistId);
+    }
+
+    /// <summary>
+    /// Unsubscribe from specific playlist updates
+    /// </summary>
+    public async Task UnsubscribeFromPlaylist(int playlistId)
+    {
+        await Groups.RemoveFromGroupAsync(Context.ConnectionId, $"Playlist_{playlistId}");
+        _logger.LogInformation("Client {ConnectionId} unsubscribed from Playlist_{PlaylistId} updates", Context.ConnectionId, playlistId);
+    }
+
+    /// <summary>
+    /// Notify about playlist creation
+    /// </summary>
+    public async Task NotifyPlaylistCreated(int playlistId, string playlistName, string createdBy)
+    {
+        var payload = new
+        {
+            PlaylistId = playlistId,
+            PlaylistName = playlistName,
+            CreatedBy = createdBy,
+            CreatedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify all playlist subscribers
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_created",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about playlist updates
+    /// </summary>
+    public async Task NotifyPlaylistUpdated(int playlistId, string playlistName, string updatedBy)
+    {
+        var payload = new
+        {
+            PlaylistId = playlistId,
+            PlaylistName = playlistName,
+            UpdatedBy = updatedBy,
+            UpdatedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify specific playlist subscribers
+        await Clients.Group($"Playlist_{playlistId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_updated",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify all playlist subscribers
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_updated",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about playlist deletion
+    /// </summary>
+    public async Task NotifyPlaylistDeleted(int playlistId, string playlistName, string deletedBy)
+    {
+        var payload = new
+        {
+            PlaylistId = playlistId,
+            PlaylistName = playlistName,
+            DeletedBy = deletedBy,
+            DeletedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify all playlist subscribers
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_deleted",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about playlist item reordering
+    /// </summary>
+    public async Task NotifyPlaylistItemsReordered(int playlistId, string playlistName, string updatedBy)
+    {
+        var payload = new
+        {
+            PlaylistId = playlistId,
+            PlaylistName = playlistName,
+            UpdatedBy = updatedBy,
+            UpdatedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify specific playlist subscribers
+        await Clients.Group($"Playlist_{playlistId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_items_reordered",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify all playlist subscribers
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_items_reordered",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about device playlist assignment
+    /// </summary>
+    public async Task NotifyDevicePlaylistAssigned(int deviceId, string deviceName, int playlistId, string playlistName, string assignedBy)
+    {
+        var payload = new
+        {
+            DeviceId = deviceId,
+            DeviceName = deviceName,
+            PlaylistId = playlistId,
+            PlaylistName = playlistName,
+            AssignedBy = assignedBy,
+            AssignedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify device subscribers
+        await Clients.Group($"device:{deviceId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_assigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify playlist subscribers
+        await Clients.Group($"Playlist_{playlistId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_assigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify all device and playlist subscribers
+        await Clients.Group("device:all").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_assigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_assigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about device playlist unassignment
+    /// </summary>
+    public async Task NotifyDevicePlaylistUnassigned(int deviceId, string deviceName, int playlistId, string playlistName, string unassignedBy)
+    {
+        var payload = new
+        {
+            DeviceId = deviceId,
+            DeviceName = deviceName,
+            PlaylistId = playlistId,
+            PlaylistName = playlistName,
+            UnassignedBy = unassignedBy,
+            UnassignedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify device subscribers
+        await Clients.Group($"device:{deviceId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_unassigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify playlist subscribers
+        await Clients.Group($"Playlist_{playlistId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_unassigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify all device and playlist subscribers
+        await Clients.Group("device:all").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_unassigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "device_playlist_unassigned",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about playlist analytics update
+    /// </summary>
+    public async Task NotifyPlaylistAnalyticsUpdate(int playlistId, string playlistName, object analyticsData)
+    {
+        var payload = new
+        {
+            PlaylistId = playlistId,
+            PlaylistName = playlistName,
+            AnalyticsData = analyticsData,
+            UpdatedAt = DateTime.UtcNow.ToString("O")
+        };
+
+        // Notify specific playlist subscribers
+        await Clients.Group($"Playlist_{playlistId}").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_analytics_updated",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+
+        // Notify all playlist subscribers
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "playlist_analytics_updated",
+            Payload = SerializePayload(payload),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    /// <summary>
+    /// Notify about bulk playlist operation progress
+    /// </summary>
+    public async Task NotifyBulkPlaylistOperationProgress(string operationType, int totalPlaylists, int processedPlaylists, int successCount, int failureCount)
+    {
+        await Clients.Group("PlaylistUpdates").SendAsync("ReceiveEvent", new RealtimeEventDto
+        {
+            Type = "bulk_playlist_operation_progress",
+            Payload = SerializePayload(new
+            {
+                OperationType = operationType,
+                TotalPlaylists = totalPlaylists,
+                ProcessedPlaylists = processedPlaylists,
+                SuccessCount = successCount,
+                FailureCount = failureCount,
+                IsComplete = processedPlaylists >= totalPlaylists
+            }),
+            Timestamp = DateTime.UtcNow.ToString("O")
+        });
+    }
+
+    #endregion
     
     private int? GetUserId()
     {

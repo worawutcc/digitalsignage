@@ -26,6 +26,11 @@ public static class RepositoryServiceExtensions
         services.AddScoped<IScheduleRepository, ScheduleRepository>();
         services.AddScoped<IMediaRepository, MediaRepository>();
         services.AddScoped<IAssignmentRepository, AssignmentRepository>();
+        
+        // Enhanced Playlist Repositories (Feature 036)
+        services.AddScoped<IDevicePlaylistRepository, DevicePlaylistRepository>();
+        services.AddScoped<IPlaylistAnalyticsRepository, PlaylistAnalyticsRepository>();
+        
         // TODO: Add DeviceHardwareProfileRepository when created
 
         return services;

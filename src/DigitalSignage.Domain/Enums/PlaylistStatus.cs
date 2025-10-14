@@ -6,5 +6,7 @@ public enum PlaylistStatus
     Active = 1,
     Inactive = 2,
     Scheduled = 3,
-    Expired = 4
+    Expired = 4,
+    Error = 5,
+    Archived = 6
 }

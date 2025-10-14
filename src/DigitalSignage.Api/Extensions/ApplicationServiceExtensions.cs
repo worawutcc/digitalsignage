@@ -85,7 +85,12 @@ public static class ApplicationServiceExtensions
     services.AddScoped<IQRCodeRepository, DigitalSignage.Infrastructure.Repositories.QRCodeRepository>();
 
     // AutoMapper registration (scan all profiles in Application Mappings assembly)
-    services.AddAutoMapper(typeof(DigitalSignage.Application.Mappings.UserDeviceAssociationProfile));
+    services.AddAutoMapper(
+        typeof(DigitalSignage.Application.Mappings.UserDeviceAssociationProfile),
+        typeof(DigitalSignage.Application.Mappings.PlaylistMappingProfile),
+        typeof(DigitalSignage.Application.Mappings.AssignmentProfile),
+        typeof(DigitalSignage.Application.Mappings.PermissionMappingProfile)
+    );
 
         // DbContext mapping for services that need generic DbContext
         services.AddScoped<DbContext>(provider => provider.GetRequiredService<AppDbContext>());

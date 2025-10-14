@@ -7,13 +7,15 @@ import {
   Monitor,
   FileText,
   Calendar,
-  Settings
+  Settings,
+  Music
 } from 'lucide-react';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Displays', href: '/displays', icon: Monitor },
   { name: 'Content', href: '/content', icon: FileText },
+  { name: 'Playlists', href: '/playlists', icon: Music },
   { name: 'Schedule', href: '/schedule', icon: Calendar },
   { name: 'Settings', href: '/settings', icon: Settings },
 ];

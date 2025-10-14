@@ -21,6 +21,8 @@ public class CreatePlaylistRequest
     
     [Range(0, 100)]
     public int Priority { get; set; } = 0;
+
+    public bool IsTemplate { get; set; } = false;
     
     public List<CreatePlaylistItemRequest> PlaylistItems { get; set; } = new();
 }
