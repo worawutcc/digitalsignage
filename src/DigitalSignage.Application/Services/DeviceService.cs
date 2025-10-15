@@ -967,4 +967,86 @@ public class DeviceService : IDeviceService
             throw;
         }
     }
+
+    /// <summary>
+    /// Update device group assignment
+    /// </summary>
+    public async Task<DeviceGroupUpdateResponseDto> UpdateDeviceGroupAsync(int deviceId, UpdateDeviceGroupDto updateDto, int userId)
+    {
+        try
+        {
+            // Find device
+            var device = await _context.Set<Device>()
+                .Include(d => d.DeviceGroup)
+                .FirstOrDefaultAsync(d => d.Id == deviceId);
+
+            if (device == null)
+            {
+                throw new InvalidOperationException($"Device with ID {deviceId} not found");
+            }
+
+            // Validate device group if provided
+            DeviceGroup? newDeviceGroup = null;
+            if (updateDto.DeviceGroupId.HasValue)
+            {
+                newDeviceGroup = await _context.Set<DeviceGroup>()
+                    .FirstOrDefaultAsync(dg => dg.Id == updateDto.DeviceGroupId.Value);
+
+                if (newDeviceGroup == null)
+                {
+                    throw new InvalidOperationException($"Device group with ID {updateDto.DeviceGroupId.Value} not found");
+                }
+            }
+
+            var oldDeviceGroupId = device.DeviceGroupId;
+            var oldDeviceGroupName = device.DeviceGroup?.Name;
+
+            // Update device group
+            device.DeviceGroupId = updateDto.DeviceGroupId;
+            device.UpdatedBy = userId;
+            device.UpdatedAt = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified);
+
+            // Create audit log with proper DateTime handling for PostgreSQL
+            var registrationRecord = new RegistrationRecord
+            {
+                DeviceId = deviceId,
+                Action = RegistrationAction.Updated,
+                Details = System.Text.Json.JsonSerializer.Serialize(new 
+                { 
+                    Changes = new[] { $"DeviceGroupId: {oldDeviceGroupId} -> {updateDto.DeviceGroupId}" }
+                }),
+                IpAddress = "127.0.0.1", // Should come from HTTP context
+                UserId = userId,
+                Success = true,
+                Timestamp = DateTime.SpecifyKind(DateTime.UtcNow, DateTimeKind.Unspecified) // PostgreSQL compatibility
+            };
+
+            _context.Set<RegistrationRecord>().Add(registrationRecord);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation(
+                "Device {DeviceId} group changed from {OldGroup} to {NewGroup} by user {UserId}",
+                deviceId, oldDeviceGroupId, updateDto.DeviceGroupId, userId);
+
+            // Return response
+            return new DeviceGroupUpdateResponseDto
+            {
+                DeviceId = device.Id,
+                DeviceName = device.Name,
+                PreviousGroupId = oldDeviceGroupId,
+                PreviousGroupName = oldDeviceGroupName,
+                NewGroupId = updateDto.DeviceGroupId,
+                NewGroupName = newDeviceGroup?.Name,
+                UpdatedAt = device.UpdatedAt,
+                Message = updateDto.DeviceGroupId.HasValue 
+                    ? $"Device successfully assigned to group '{newDeviceGroup?.Name}'"
+                    : "Device successfully removed from all groups"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating device group for device {DeviceId}", deviceId);
+            throw;
+        }
+    }
 }

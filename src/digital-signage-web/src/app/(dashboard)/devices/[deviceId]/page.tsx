@@ -24,6 +24,7 @@ import { Modal } from '@/components/ui/Modal'
 import { cn } from '@/lib/utils'
 import { useDeviceDetail, useDeviceConfiguration, useDeactivateDevice, useRestartDevice } from '@/hooks/useDeviceDetail'
 import { DeviceConfigurationModal } from '@/features/devices/components/DeviceConfigurationModal'
+import { ChangeDeviceGroupModal } from '@/features/devices/components/ChangeDeviceGroupModal'
 
 /**
  * Device status indicator component
@@ -116,6 +117,7 @@ export default function DeviceDetailsPage() {
   const [showEditModal, setShowEditModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [showConfigModal, setShowConfigModal] = useState(false)
+  const [showChangeGroupModal, setShowChangeGroupModal] = useState(false)
 
   // Handlers
   const handleBack = () => {
@@ -381,8 +383,18 @@ export default function DeviceDetailsPage() {
                     <p className="text-sm text-gray-900">{device.manufacturer || 'N/A'}</p>
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Device Group</p>
-                    <Badge variant="info">{device.deviceGroupId ? `Group ${device.deviceGroupId}` : 'None'}</Badge>
+                    <p className="text-sm font-medium text-gray-600 mb-1">Device Group</p>
+                    <div className="flex items-center space-x-2">
+                      <Badge variant="info">{device.deviceGroupId ? `Group ${device.deviceGroupId}` : 'None'}</Badge>
+                      <Button 
+                        size="sm" 
+                        variant="ghost"
+                        onClick={() => setShowChangeGroupModal(true)}
+                        className="text-xs"
+                      >
+                        Change
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </CardContent>
@@ -581,6 +593,19 @@ export default function DeviceDetailsPage() {
             </div>
           </div>
         </Modal>
+
+        {/* Change Device Group Modal */}
+        <ChangeDeviceGroupModal
+          isOpen={showChangeGroupModal}
+          onClose={() => setShowChangeGroupModal(false)}
+          deviceId={deviceId}
+          deviceName={device.name}
+          currentGroupId={device.deviceGroupId}
+          onSuccess={() => {
+            // Refetch device data to show updated group
+            window.location.reload()
+          }}
+        />
 
         {/* Device Configuration Modal */}
         {showConfigModal && (

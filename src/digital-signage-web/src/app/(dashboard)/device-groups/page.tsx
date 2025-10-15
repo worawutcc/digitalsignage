@@ -9,6 +9,7 @@ import { Plus, Folder, FolderOpen, Edit, Trash2, MoreVertical, Users, GripVertic
 
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { ManageDevicesModal } from '@/features/devices/components/ManageDevicesModal';
 import {
   DndContext,
   closestCenter,
@@ -43,13 +44,14 @@ interface DeviceGroupNodeProps {
   onDelete: (group: DeviceGroup) => void;
   onAddSubGroup: (parentGroup: DeviceGroup) => void;
   onMove: (groupId: number, newParentId?: number) => void;
+  onManageDevices: (group: DeviceGroup) => void;
 }
 
 /**
  * Sortable Device Group Tree Node Component  
  * Displays individual group with expand/collapse, drag-and-drop, and actions
  */
-function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove }: DeviceGroupNodeProps) {
+function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove, onManageDevices }: DeviceGroupNodeProps) {
   const [isExpanded, setIsExpanded] = useState(group.isExpanded ?? true);
   const [showActions, setShowActions] = useState(false);
   
@@ -153,6 +155,16 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove
               <div className="py-1">
                 <button
                   onClick={() => {
+                    onManageDevices(group);
+                    setShowActions(false);
+                  }}
+                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <Users className="w-4 h-4 mr-2" />
+                  Manage Devices
+                </button>
+                <button
+                  onClick={() => {
                     onEdit(group);
                     setShowActions(false);
                   }}
@@ -202,6 +214,7 @@ function DeviceGroupNode({ group, level, onEdit, onDelete, onAddSubGroup, onMove
               onDelete={onDelete}
               onAddSubGroup={onAddSubGroup}
               onMove={onMove}
+              onManageDevices={onManageDevices}
             />
           ))}
         </SortableContext>
@@ -220,6 +233,8 @@ export default function DeviceGroupsPage() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [editingGroup, setEditingGroup] = useState<DeviceGroup | null>(null);
   const [parentGroup, setParentGroup] = useState<DeviceGroup | null>(null);
+  const [showManageDevicesModal, setShowManageDevicesModal] = useState(false);
+  const [managingGroup, setManagingGroup] = useState<DeviceGroup | null>(null);
   
   // Use React Query hook for device groups tree data (with populated children)
   const { 
@@ -297,6 +312,18 @@ export default function DeviceGroupsPage() {
         alert(`Failed to delete device group: ${error instanceof Error ? error.message : 'Unknown error'}`);
       },
     });
+  };
+
+  const handleManageDevices = (group: DeviceGroup) => {
+    setManagingGroup(group);
+    setShowManageDevicesModal(true);
+  };
+
+  const handleManageDevicesClose = () => {
+    setShowManageDevicesModal(false);
+    setManagingGroup(null);
+    // Refresh data
+    refetch();
   };
 
   const handleFormSubmit = (result: DeviceGroup) => {
@@ -520,6 +547,7 @@ export default function DeviceGroupsPage() {
                         onDelete={handleDeleteGroup}
                         onAddSubGroup={handleAddSubGroup}
                         onMove={handleMoveGroup}
+                        onManageDevices={handleManageDevices}
                       />
                     ))}
                   </div>
@@ -555,6 +583,17 @@ export default function DeviceGroupsPage() {
               mode={editingGroup ? 'edit' : 'create'}
             />
           </Modal>
+        )}
+
+        {/* Manage Devices Modal */}
+        {managingGroup && (
+          <ManageDevicesModal
+            isOpen={showManageDevicesModal}
+            onClose={handleManageDevicesClose}
+            groupId={managingGroup.id}
+            groupName={managingGroup.name}
+            onSuccess={() => refetch()}
+          />
         )}
       </div>
     </div>

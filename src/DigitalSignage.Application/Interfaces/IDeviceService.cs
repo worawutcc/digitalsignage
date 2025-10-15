@@ -98,4 +98,13 @@ public interface IDeviceService
     /// </summary>
     /// <returns>Device statistics including total, online, offline counts and average uptime</returns>
     Task<DeviceStatsDto> GetDeviceStatsAsync();
+
+    /// <summary>
+    /// Update device group assignment
+    /// </summary>
+    /// <param name="deviceId">Device ID to update</param>
+    /// <param name="updateDto">Device group update information</param>
+    /// <param name="userId">User ID performing the update</param>
+    /// <returns>Updated device group information</returns>
+    Task<DeviceGroupUpdateResponseDto> UpdateDeviceGroupAsync(int deviceId, UpdateDeviceGroupDto updateDto, int userId);
 }
