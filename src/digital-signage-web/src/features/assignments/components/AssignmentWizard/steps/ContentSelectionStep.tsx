@@ -32,6 +32,9 @@ export function ContentSelectionStep() {
   );
   const [content, setContent] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Track if initial sync has happened to prevent infinite loops
+  const [isInitialSyncDone, setIsInitialSyncDone] = useState(false);
 
   // Debug: Log current selection states
   console.log('🔧 ContentSelection State:', {
@@ -41,17 +44,20 @@ export function ContentSelectionStep() {
     dataContentId: data.content?.contentId
   });
 
-  // Sync local state with wizard context data
+  // Sync local state with wizard context data ONLY on initial mount
   useEffect(() => {
-    if (data.content?.assignmentType && data.content.assignmentType !== selectedType) {
-      console.log('🔄 Syncing selectedType from wizard context:', data.content.assignmentType);
-      setSelectedType(data.content.assignmentType);
+    if (!isInitialSyncDone) {
+      if (data.content?.assignmentType && data.content.assignmentType !== selectedType) {
+        console.log('🔄 Initial sync selectedType from wizard context:', data.content.assignmentType);
+        setSelectedType(data.content.assignmentType);
+      }
+      if (data.content?.contentId !== undefined && data.content.contentId !== selectedContent) {
+        console.log('🔄 Initial sync selectedContent from wizard context:', data.content.contentId);
+        setSelectedContent(data.content.contentId || null);
+      }
+      setIsInitialSyncDone(true);
     }
-    if (data.content?.contentId !== undefined && data.content.contentId !== selectedContent) {
-      console.log('🔄 Syncing selectedContent from wizard context:', data.content.contentId);
-      setSelectedContent(data.content.contentId || null);
-    }
-  }, [data.content?.assignmentType, data.content?.contentId, selectedType, selectedContent]);
+  }, []);
 
   // Fetch content when type changes
   useEffect(() => {
@@ -98,37 +104,45 @@ export function ContentSelectionStep() {
     (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
-  // Update wizard data when selections change
+  // Update wizard data when selections change - debounced to prevent flickering
   useEffect(() => {
-    const selectedItem = content.find(item => item.id === selectedContent);
+    // Only update if we have meaningful changes and initial sync is done
+    if (!isInitialSyncDone) return;
     
-    console.log('🎯 ContentSelection - Selection updated:', {
-      selectedType,
-      selectedContent,
-      selectedItem: selectedItem?.name,
-      hasValidSelection: !!(selectedType && selectedContent && selectedItem)
-    });
-    
-    if (selectedType && selectedContent && selectedItem) {
-      const contentData = {
-        assignmentType: selectedType,
-        contentId: selectedContent,
-        contentName: selectedItem.name,
-        contentType: selectedItem.type as 'schedule' | 'playlist' | 'media',
-      };
+    // Use a timeout to debounce rapid state changes
+    const timeoutId = setTimeout(() => {
+      const selectedItem = content.find(item => item.id === selectedContent);
       
-      console.log('✅ ContentSelection - Updating content data:', contentData);
-      updateContentData(contentData);
-    } else if (selectedType !== undefined) {
-      // Update assignment type but don't clear contentId to 0 if no content selected yet
-      console.log('🔄 ContentSelection - Updating assignment type only');
-      updateContentData({
-        assignmentType: selectedType,
-        // Don't update contentId unless there's a valid selection
-        ...(selectedContent ? { contentId: selectedContent } : {}),
+      console.log('🎯 ContentSelection - Selection updated:', {
+        selectedType,
+        selectedContent,
+        selectedItem: selectedItem?.name,
+        hasValidSelection: !!(selectedType && selectedContent && selectedItem)
       });
-    }
-  }, [selectedType, selectedContent, updateContentData, content]);
+      
+      if (selectedType && selectedContent && selectedItem) {
+        const contentData = {
+          assignmentType: selectedType,
+          contentId: selectedContent,
+          contentName: selectedItem.name,
+          contentType: selectedItem.type as 'schedule' | 'playlist' | 'media',
+        };
+        
+        console.log('✅ ContentSelection - Updating content data:', contentData);
+        updateContentData(contentData);
+      } else if (selectedType !== undefined) {
+        // Update assignment type but don't clear contentId to 0 if no content selected yet
+        console.log('🔄 ContentSelection - Updating assignment type only');
+        updateContentData({
+          assignmentType: selectedType,
+          // Don't update contentId unless there's a valid selection
+          ...(selectedContent ? { contentId: selectedContent } : {}),
+        });
+      }
+    }, 100); // 100ms debounce
+    
+    return () => clearTimeout(timeoutId);
+  }, [selectedType, selectedContent, content, isInitialSyncDone]);
 
   return (
     <div className="space-y-6">

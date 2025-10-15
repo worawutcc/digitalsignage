@@ -195,6 +195,34 @@ export const deviceApi = {
   },
 
   /**
+   * Update device group assignment
+   */
+  async updateDeviceGroup(
+    deviceId: number, 
+    deviceGroupId: number | null
+  ): Promise<ApiResponse<{
+    deviceId: number
+    deviceName: string
+    previousGroupId: number | null
+    previousGroupName: string | null
+    newGroupId: number | null
+    newGroupName: string | null
+    updatedAt: string
+    message: string
+  }>> {
+    return await api.put<{
+      deviceId: number
+      deviceName: string
+      previousGroupId: number | null
+      previousGroupName: string | null
+      newGroupId: number | null
+      newGroupName: string | null
+      updatedAt: string
+      message: string
+    }>(`/api/device/${deviceId}/group`, { deviceGroupId })
+  },
+
+  /**
    * Get device statistics
    */
   async getDeviceStatistics(): Promise<ApiResponse<{

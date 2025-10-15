@@ -328,6 +328,70 @@ public class DeviceController : ControllerBase
     }
 
     /// <summary>
+    /// Update device group assignment
+    /// </summary>
+    /// <param name="deviceId">Device ID to update</param>
+    /// <param name="request">Device group update request</param>
+    /// <returns>Updated device group information</returns>
+    [HttpPut("{deviceId}/group")]
+    [ProducesResponseType(typeof(DeviceGroupUpdateResponseDto), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ValidationProblemDetails), StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+    public async Task<ActionResult<DeviceGroupUpdateResponseDto>> UpdateDeviceGroup(
+        int deviceId,
+        [FromBody] UpdateDeviceGroupDto request)
+    {
+        try
+        {
+            // Extract userId from JWT claims
+            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ??
+                             User.FindFirst("sub")?.Value ??
+                             User.FindFirst("userId")?.Value;
+
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var userId))
+            {
+                _logger.LogWarning("User ID not found in claims for device group update");
+                return Unauthorized(new ProblemDetails
+                {
+                    Title = "Unauthorized",
+                    Detail = "User authentication required",
+                    Status = StatusCodes.Status401Unauthorized
+                });
+            }
+
+            _logger.LogInformation(
+                "User {UserId} updating device {DeviceId} group to {DeviceGroupId}",
+                userId, deviceId, request.DeviceGroupId);
+
+            var result = await _deviceService.UpdateDeviceGroupAsync(deviceId, request, userId);
+
+            return Ok(result);
+        }
+        catch (InvalidOperationException ex)
+        {
+            _logger.LogWarning(ex, "Invalid operation updating device {DeviceId} group", deviceId);
+            return NotFound(new ProblemDetails
+            {
+                Title = "Not Found",
+                Detail = ex.Message,
+                Status = StatusCodes.Status404NotFound
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating device {DeviceId} group", deviceId);
+            return StatusCode(StatusCodes.Status500InternalServerError, new ProblemDetails
+            {
+                Title = "Internal Server Error",
+                Detail = "An error occurred while updating device group",
+                Status = StatusCodes.Status500InternalServerError
+            });
+        }
+    }
+
+    /// <summary>
     /// Extract device key from Authorization header
     /// </summary>
     /// <returns>Device key or null if not found</returns>

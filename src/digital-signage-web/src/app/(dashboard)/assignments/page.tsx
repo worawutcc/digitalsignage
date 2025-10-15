@@ -5,9 +5,10 @@
 
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Plus, Download, Upload, Filter, LayoutGrid, LayoutList, Calendar, AlertCircle, Search } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { EmptyState } from '@/components/ui/EmptyState';
@@ -53,6 +54,7 @@ type ViewMode = 'list' | 'grid' | 'calendar';
  */
 export default function AssignmentsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch<AppDispatch>();
 
   // Redux state
@@ -68,6 +70,30 @@ export default function AssignmentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showWizard, setShowWizard] = useState(false);
   const pageSize = 20;
+
+  // Check for quick assign from media upload
+  useEffect(() => {
+    const quickAssign = searchParams.get('quickAssign');
+    const mediaId = sessionStorage.getItem('quickAssignMediaId');
+    const mediaName = sessionStorage.getItem('quickAssignMediaName');
+    
+    if (quickAssign === 'true' && mediaId) {
+      // Clear the session storage
+      sessionStorage.removeItem('quickAssignMediaId');
+      sessionStorage.removeItem('quickAssignMediaName');
+      
+      // Show toast notification
+      toast.success(`Quick assign for: ${mediaName || 'Media'}`);
+      
+      // Open the wizard automatically
+      setShowWizard(true);
+      
+      // Clean up URL parameter
+      const newUrl = new URL(window.location.href);
+      newUrl.searchParams.delete('quickAssign');
+      window.history.replaceState({}, '', newUrl.toString());
+    }
+  }, [searchParams]);
 
   // Fetch assignments with React Query
   const { data, isLoading, isError, error } = useAssignments({
